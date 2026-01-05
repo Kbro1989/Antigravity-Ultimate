@@ -1,0 +1,5 @@
+C:\Users\Destiny\Desktop\New folder\POG-Ultimate\src\services\game\rsmv\wasm\target\release\build\wasm-bindgen-shared-bf46aa45e3d3c2bd\build_script_build-bf46aa45e3d3c2bd.d: C:\Users\Destiny\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wasm-bindgen-shared-0.2.106\build.rs
+
+C:\Users\Destiny\Desktop\New folder\POG-Ultimate\src\services\game\rsmv\wasm\target\release\build\wasm-bindgen-shared-bf46aa45e3d3c2bd\build_script_build-bf46aa45e3d3c2bd.exe: C:\Users\Destiny\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wasm-bindgen-shared-0.2.106\build.rs
+
+C:\Users\Destiny\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wasm-bindgen-shared-0.2.106\build.rs:

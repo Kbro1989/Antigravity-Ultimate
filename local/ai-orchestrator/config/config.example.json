@@ -1,0 +1,36 @@
+{
+  "$schema": "./schema.json",
+  "cloudflare": {
+    "accountId": "your-cloudflare-account-id",
+    "apiToken": "your-cloudflare-api-token",
+    "models": {
+      "primary": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "secondary": "@cf/meta/llama-3.1-8b-instruct",
+      "fast": "@cf/meta/llama-3.1-8b-instruct"
+    },
+    "gateway": {
+      "enabled": true,
+      "cacheTtl": 300
+    }
+  },
+  "ollama": {
+    "baseUrl": "http://localhost:11434",
+    "models": {
+      "code": "codellama:13b",
+      "reasoning": "llama2:13b"
+    },
+    "timeout": 30000
+  },
+  "project": {
+    "root": "/path/to/your/project",
+    "watchPatterns": ["**/*.ts", "**/*.tsx"],
+    "ignorePatterns": ["node_modules/**", "dist/**", "build/**"],
+    "maxErrorIterations": 5,
+    "autoFix": true
+  },
+  "memory": {
+    "maxEntries": 1000,
+    "vectorDimensions": 384,
+    "compactionThreshold": 0.8
+  }
+}

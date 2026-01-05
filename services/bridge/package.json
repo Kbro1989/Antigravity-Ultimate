@@ -1,0 +1,17 @@
+{
+    "name": "pog-bridge",
+    "version": "1.0.0",
+    "description": "The Spine of POG Trinity",
+    "main": "src/index.ts",
+    "scripts": {
+        "dev": "wrangler dev",
+        "deploy": "wrangler deploy"
+    },
+    "dependencies": {
+        "wrangler": "^3.25.0"
+    },
+    "devDependencies": {
+        "@cloudflare/workers-types": "^4.20240117.0",
+        "typescript": "^5.0.0"
+    }
+}

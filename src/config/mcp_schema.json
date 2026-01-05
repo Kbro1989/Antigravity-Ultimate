@@ -1,0 +1,60 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "providers": {
+            "type": "object",
+            "properties": {
+                "cloudflare": {
+                    "type": "object"
+                },
+                "gemini": {
+                    "type": "object"
+                },
+                "ollama": {
+                    "type": "object"
+                },
+                "external": {
+                    "type": "object"
+                }
+            }
+        },
+        "routing": {
+            "type": "object"
+        },
+        "mcpServers": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string"
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "env": {
+                        "type": "object"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "enabled"
+                ]
+            }
+        }
+    },
+    "required": [
+        "providers",
+        "routing",
+        "mcpServers"
+    ]
+}

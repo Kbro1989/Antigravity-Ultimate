@@ -1,0 +1,139 @@
+﻿cargo :    Compiling 
+proc-macro2 v1.0.104
+At line:1 char:35
++ ... cargo\bin"; 
+cargo build --target w
+asm32-unknown-unknown 
+--release 2>& ...
++                 ~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (   Compili   
+ ng proc-macro2 v1    
+.0.104:String) []    
+, RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+   Compiling quote 
+v1.0.42
+   Compiling 
+wasm-bindgen-shared 
+v0.2.106
+   Compiling 
+rustversion v1.0.22
+   Compiling 
+serde_core v1.0.228
+   Compiling zmij 
+v1.0.7
+   Compiling 
+serde_json v1.0.148
+   Compiling serde 
+v1.0.228
+   Compiling crc 
+v1.8.1
+   Compiling lzma-rs 
+v0.2.0
+   Compiling 
+wasm-bindgen v0.2.106
+   Compiling syn 
+v2.0.112
+   Compiling wasm-bind
+gen-macro-support 
+v0.2.106
+   Compiling 
+serde_derive v1.0.228
+   Compiling 
+wasm-bindgen-macro 
+v0.2.106
+   Compiling js-sys 
+v0.3.83
+   Compiling console_e
+rror_panic_hook v0.1.7
+   Compiling 
+serde-wasm-bindgen 
+v0.4.5
+   Compiling 
+rsmv-wasm v0.1.0 (C:\U
+sers\Destiny\Desktop\N
+ew folder\POG-Ultimate
+\src\services\game\rsm
+v\wasm)
+warning: unused 
+imports: `SeekFrom` 
+and `Seek`
+ --> 
+src\schema.rs:3:29
+  |
+3 | use 
+std::io::{Cursor, 
+Read, Seek, SeekFrom};
+  |                   
+          ^^^^  
+^^^^^^^^
+  |
+  = note: `#[warn(unus
+ed_imports)]` (part 
+of `#[warn(unused)]`) 
+on by default
+
+warning: unused 
+import: `LittleEndian`
+ --> 
+src\schema.rs:4:28
+  |
+4 | use byteorder::{Bi
+gEndian, 
+LittleEndian, 
+ReadBytesExt};
+  |                   
+         ^^^^^^^^^^^^
+
+warning: unused 
+import: `SchemaError`
+ --> src\lib.rs:2:33
+  |
+2 | use schema::{Schem
+aInterpreter, 
+SchemaError};
+  |                   
+              
+^^^^^^^^^^^
+
+warning: unused 
+variable: `model_id`
+  --> src\lib.rs:28:41
+   |
+28 | pub fn extract_mo
+del(cache_data: 
+&[u8], model_id: u32) 
+-> Result<JsValue, 
+JsValue> {
+   |                  
+                      
+ ^^^^^^^^ help: if 
+this is intentional, 
+prefix it with an 
+underscore: 
+`_model_id`
+   |
+   = note: `#[warn(unu
+sed_variables)]` 
+(part of 
+`#[warn(unused)]`) on 
+by default
+
+warning: `rsmv-wasm` 
+(lib) generated 4 
+warnings (run `cargo 
+fix --lib -p 
+rsmv-wasm` to apply 4 
+suggestions)
+    Finished 
+`release` profile 
+[optimized] target(s) 
+in 20.37s

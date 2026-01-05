@@ -1,0 +1,13 @@
+﻿≡ƒôï Listing Vectorize indexes...
+[
+  {
+    "created_on": "2026-01-02T13:06:13.705428Z",
+    "modified_on": "2026-01-02T13:06:13.705428Z",
+    "name": "pog-memory",
+    "description": "",
+    "config": {
+      "dimensions": 1536,
+      "metric": "cosine"
+    }
+  }
+]

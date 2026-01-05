@@ -1,0 +1,11 @@
+{
+    "allowedRoots": [
+        "src/editor",
+        "src/adapters",
+        "src/config",
+        "src/types"
+    ],
+    "forbiddenRoots": [
+        "src/agents"
+    ]
+}

@@ -1,0 +1,73 @@
+name = "pog-ultimate"
+main = "src/index.ts"
+compatibility_date = "2024-11-12"
+compatibility_flags = [ "nodejs_compat" ]
+account_id = "6872653edcee9c787c1b783173793"
+
+# [build]
+# command = "npm run build:wasm && npm run build"
+
+[[rules]]
+type = "Text"
+globs = ["**/*.glsl", "**/*.glsl.c", "**/*.c"]
+fallthrough = true
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+# [observability.traces]
+# enabled = false
+# persist = true
+# head_sampling_rate = 1
+
+# Serve the built frontend
+[site]
+bucket = "./dist"
+
+# Durable Objects for Agents
+[durable_objects]
+bindings = [
+  { name = "SESSION_AGENT", class_name = "SessionAgent" },
+  { name = "COLLABORATION", class_name = "Collaboration" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["SessionAgent", "Collaboration"]
+
+# AI Binding
+[ai]
+binding = "AI"
+
+# R2 Bucket for Assets
+[[r2_buckets]]
+binding = "ASSETS_BUCKET"
+bucket_name = "antigravity-assets"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "d1-starter-sessions-api"
+database_id = "12379596-0374-4278-b8e3-4f707a126af0"
+
+# KV Namespace for Cache
+[[kv_namespaces]]
+binding = "CACHE"
+id = "3015b76d2d1b408a99066d1e793d8435"
+
+# KV Namespace for Agent Memory (Brain)
+[[kv_namespaces]]
+binding = "BRAIN"
+id = "624458956eec4dbb9c927e29385cf667"
+
+# Vectorize Index for RAG
+[[vectorize]]
+binding = "VECTOR_INDEX"
+index_name = "pog-memory"

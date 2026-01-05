@@ -1,0 +1,8 @@
+{
+    "name": "POG Vibe Extension",
+    "version": "1.0.0",
+    "capabilities": [
+        "AI_INFERENCE",
+        "EXECUTE_COMMAND"
+    ]
+}

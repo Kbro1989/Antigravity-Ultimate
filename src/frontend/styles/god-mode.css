@@ -1,0 +1,58 @@
+/* ==================== GOD FLIP ANIMATION ==================== */
+.god-flip-container {
+    perspective: 1000px;
+    display: inline-block;
+}
+
+.god-flip-text {
+    display: inline-block;
+    animation: god-flip 6s ease-in-out infinite;
+    transform-style: preserve-3d;
+}
+
+@keyframes god-flip {
+
+    0%,
+    45% {
+        transform: rotateX(0deg);
+    }
+
+    50%,
+    95% {
+        transform: rotateX(180deg);
+    }
+
+    100% {
+        transform: rotateX(360deg);
+    }
+}
+
+/* Ensure the text is readable when flipped if it's meant to be "GOd" vs "POG" upside down */
+/* Actually, for POG to look like GOd upside down, we might need simple 180 rotation */
+/* But if we rotate X 180, it mirrors it vertical. */
+/* P -> b (mirrored vertical) */
+/* Let's try clear rotateZ(180) ? */
+/* POG rotated 180 is "dOd" or "GOd" depending on font. */
+/* User asked for "rotate POG clockwise". That's rotateZ. */
+
+@keyframes god-spin {
+
+    0%,
+    45% {
+        transform: rotate(0deg);
+    }
+
+    50%,
+    95% {
+        transform: rotate(180deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.god-spin-text {
+    display: inline-block;
+    animation: god-spin 8s ease-in-out infinite;
+}

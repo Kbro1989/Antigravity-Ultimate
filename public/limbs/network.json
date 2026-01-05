@@ -1,0 +1,8 @@
+{
+  "id": "network",
+  "version": "6.5.0-CORE",
+  "status": "READY",
+  "endpoint": "/limbs/network",
+  "payload": "/dist/network.bin",
+  "capabilities": []
+}

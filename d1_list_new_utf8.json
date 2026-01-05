@@ -1,0 +1,92 @@
+﻿[
+  {
+    "uuid": "e3ec5409-de12-4672-a8c6-2544ce0ef7e9",
+    "name": "auth-db",
+    "created_at": "2025-12-14T00:20:40.571Z",
+    "version": "production",
+    "num_tables": 0,
+    "file_size": 12288,
+    "jurisdiction": null
+  },
+  {
+    "uuid": "d021ab5b-ab13-47b8-9287-1aabebfe51df",
+    "name": "rsc-d1",
+    "created_at": "2025-12-06T04:42:07.214Z",
+    "version": "production",
+    "num_tables": 0,
+    "file_size": 12288,
+    "jurisdiction": null
+  },
+  {
+    "uuid": "dfcdb955-f128-4294-aa8e-2e05a33221f0",
+    "name": "elderscape-d1",
+    "created_at": "2025-10-26T10:49:36.307Z",
+    "version": "production",
+    "num_tables": 0,
+    "file_size": 12288,
+    "jurisdiction": null
+  },
+  {
+    "uuid": "89ee0ee2-21bd-4d1c-ba12-77f7dab9f11b",
+    "name": "prod-d1-tutorial",
+    "created_at": "2025-10-24T01:19:46.968Z",
+    "version": "production",
+    "num_tables": 0,
+    "file_size": 16384,
+    "jurisdiction": null
+  },
+  {
+    "uuid": "fe38dbd0-70b3-468a-9d4e-575ff1cc2375",
+    "name": "openauth-template-auth-db",
+    "created_at": "2025-10-22T07:47:40.015Z",
+    "version": "production",
+    "num_tables": 0,
+    "file_size": 53248,
+    "jurisdiction": null
+  },
+  {
+    "uuid": "9e59dfb4-bfba-4edd-9b8e-53095170f7e2",
+    "name": "rs3-ai-bot-api-db",
+    "created_at": "2025-10-16T21:31:12.703Z",
+    "version": "production",
+    "num_tables": 0,
+    "file_size": 53248,
+    "jurisdiction": null
+  },
+  {
+    "uuid": "0320a702-6d07-44e1-a76d-f5a1e68fd06d",
+    "name": "openapi-template-db1",
+    "created_at": "2025-10-09T05:04:59.429Z",
+    "version": "production",
+    "num_tables": 0,
+    "file_size": 12288,
+    "jurisdiction": null
+  },
+  {
+    "uuid": "12379596-0374-4278-b8e3-4f707a126af0",
+    "name": "d1-starter-sessions-api",
+    "created_at": "2025-10-08T20:57:50.479Z",
+    "version": "production",
+    "num_tables": 0,
+    "file_size": 12288,
+    "jurisdiction": null
+  },
+  {
+    "uuid": "e9026f1d-674f-443e-baae-07ef7181b5b0",
+    "name": "openapi-template-db",
+    "created_at": "2025-10-03T10:26:25.991Z",
+    "version": "production",
+    "num_tables": 0,
+    "file_size": 81920,
+    "jurisdiction": null
+  },
+  {
+    "uuid": "833a184b-0089-4d65-baf4-6ce8cd264ec7",
+    "name": "d1-template-database",
+    "created_at": "2025-10-03T10:22:48.927Z",
+    "version": "production",
+    "num_tables": 0,
+    "file_size": 28672,
+    "jurisdiction": null
+  }
+]

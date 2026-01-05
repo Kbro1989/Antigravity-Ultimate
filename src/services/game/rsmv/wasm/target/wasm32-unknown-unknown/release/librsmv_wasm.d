@@ -1,0 +1,1 @@
+C:\Users\Destiny\Desktop\New\ folder\POG-Ultimate\src\services\game\rsmv\wasm\target\wasm32-unknown-unknown\release\librsmv_wasm.rlib: C:\Users\Destiny\Desktop\New\ folder\POG-Ultimate\src\services\game\rsmv\wasm\src\lib.rs C:\Users\Destiny\Desktop\New\ folder\POG-Ultimate\src\services\game\rsmv\wasm\src\schema.rs

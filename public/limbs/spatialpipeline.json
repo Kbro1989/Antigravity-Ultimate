@@ -1,0 +1,8 @@
+{
+  "id": "spatialpipeline",
+  "version": "6.5.0-CORE",
+  "status": "READY",
+  "endpoint": "/limbs/spatialpipeline",
+  "payload": "/dist/spatialpipeline.bin",
+  "capabilities": []
+}
