@@ -52,3 +52,14 @@ cli_error.log
 firebase-debug.log
 typecheck_output.txt
 build_error_analysis.log
+
+# Reference Data
+reference/rsc-cloudflare/**
+!reference/rsc-cloudflare/*.json
+!reference/rsc-cloudflare/*.md
+!reference/rsc-cloudflare/*.js
+!reference/rsc-cloudflare/*.cjs
+
+# OKComputer sub-repos
+**/node_modules
+**/dist
