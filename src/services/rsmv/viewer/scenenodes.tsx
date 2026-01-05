@@ -1739,7 +1739,7 @@ function CacheDiffScript(p: UiScriptProps) {
 			})
 
 			return () => {
-				prom.then(models => models.forEach(q => q.cleanup()));
+				prom.then((models: any[]) => models.forEach(q => q.cleanup()));
 			}
 		}
 	}, [result, showmodels]);

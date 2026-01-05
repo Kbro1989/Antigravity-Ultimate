@@ -37,7 +37,8 @@
         "node_modules",
         "dist",
         "webviewer-deconstructed",
-        "local"
+        "local",
+        "src/services/ai/logic/okcomputer"
     ],
     "references": [
         {

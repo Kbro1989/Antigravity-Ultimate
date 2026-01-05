@@ -117,7 +117,7 @@ export class Standard3DService {
 
         return new Promise((resolve, reject) => {
             if (extension === 'glb' || extension === 'gltf') {
-                this.gltfLoader.parse(buffer as any, '', (gltf) => {
+                this.gltfLoader.parse(buffer as any, '', (gltf: any) => {
                     resolve({
                         scene: gltf.scene,
                         metadata: gltf.userData,
