@@ -8,11 +8,13 @@ import * as THREE from 'three';
 interface Props {
     modelUrl?: string;
     localPath?: string;
+    autoRotate?: boolean;
+    className?: string;
     onLoad?: (model: LoadedModel) => void;
     onError?: (error: Error) => void;
 }
 
-export function Standard3DViewer({ modelUrl, localPath, onLoad, onError }: Props) {
+export function Standard3DViewer({ modelUrl, localPath, autoRotate = false, className = '', onLoad, onError }: Props) {
     const [loadedModel, setLoadedModel] = useState<LoadedModel | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +56,7 @@ export function Standard3DViewer({ modelUrl, localPath, onLoad, onError }: Props
     }
 
     return (
-        <div className="w-full h-full relative group">
+        <div className={`w-full h-full relative group ${className}`}>
             <Canvas shadows className="w-full h-full">
                 <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={45} />
                 <Suspense fallback={null}>
@@ -71,7 +73,7 @@ export function Standard3DViewer({ modelUrl, localPath, onLoad, onError }: Props
                         <Vignette eskil={false} offset={0.1} darkness={1.1} />
                     </EffectComposer> */}
                 </Suspense>
-                <OrbitControls makeDefault autoRotate autoRotateSpeed={0.3} />
+                <OrbitControls makeDefault autoRotate={autoRotate} autoRotateSpeed={0.3} />
             </Canvas>
 
             {/* Viewport Overlay HUD */}

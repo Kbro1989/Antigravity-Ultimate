@@ -10,7 +10,7 @@ export function PhysicsWorkspace() {
 
     const handleStep = async () => {
         try {
-            await callLimb('physics', 'step_simulation', { gravity, time_scale: timeScale });
+            await callLimb('physics', 'physics_step_simulation', { gravity, time_scale: timeScale });
             addNotification('info', 'Continuum Engine: Simulation Step Commanded');
         } catch (e: any) {
             addNotification('error', `Physics Fault: ${e.message}`);

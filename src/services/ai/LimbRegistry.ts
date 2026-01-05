@@ -1,7 +1,8 @@
-import { CLIBridge } from '../cli/CLIBridge';
+import { CLIBridge } from '../cli';
 import { AgentCapability } from './AgentConstitution';
 import { ExtensionManager } from './ExtensionManager';
 import { RealityAnchorService } from './RealityAnchorService';
+import { BaseIntent } from './AITypes';
 
 export class LimbRegistry {
     private limbs: Map<string, any> = new Map();
@@ -80,7 +81,7 @@ export class LimbRegistry {
         return Array.from(this.limbs.keys());
     }
 
-    public async processIntent(intent: any) {
+    public async processIntent(intent: BaseIntent & { modelId?: string; provider?: string }) {
         const limbId = intent.limbId || this.mapActionToLimb(intent.action);
         const limb = this.getLimb(limbId);
 
@@ -91,6 +92,7 @@ export class LimbRegistry {
 
         this.emit('execution_started', { action: intent.action, limbId });
         try {
+            console.log(`[LimbRegistry] Routing ${intent.action} -> ${limbId} | Override: ${intent.provider}/${intent.modelId}`);
             const result = await limb.process(intent);
             this.emit('execution_success', { action: intent.action, result });
 
@@ -138,7 +140,13 @@ export class LimbRegistry {
             'relic_': 'relic',
             'landscape_': 'landscape',
             'audit_': 'id_auditor',
-            'version_': 'version_control'
+            'version_': 'version_control',
+            'quantum_': 'quantum',
+            'spatial_': 'spatial_pipeline',
+            'reality_': 'reality',
+            'divine_': 'divine',
+            'proxy_': 'proxy',
+            'live_game_': 'live_game'
         };
 
         for (const [prefix, limb] of Object.entries(mapping)) {

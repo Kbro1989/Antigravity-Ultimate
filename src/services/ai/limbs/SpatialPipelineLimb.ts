@@ -1,7 +1,7 @@
-
 import { NeuralLimb } from './NeuralLimb';
 import { AgentCapability } from '../AgentConstitution';
 import { SpatialPipelineService } from '../SpatialPipelineService';
+import { BaseIntent } from '../AITypes';
 
 export class SpatialPipelineLimb extends NeuralLimb {
     private spatialService: SpatialPipelineService;
@@ -13,31 +13,23 @@ export class SpatialPipelineLimb extends NeuralLimb {
         this.spatialService = (globalThis as any).spatialService;
     }
 
-    async process(intent: any) {
-        const { action, prompt, config } = intent;
+    async synthesize_3d(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        this.enforceCapability(AgentCapability.MESH_OPERATIONS);
+        const { prompt, config } = params;
 
-        await this.logActivity(`spatial_${action}`, 'pending', { prompt });
+        await this.logActivity('spatial_synthesize_3d', 'pending', { prompt });
+        const result = await this.spatialService.synthesizeAsset(prompt, config);
+        await this.logActivity('spatial_synthesize_3d', 'success', { status: result.status });
+        return result;
+    }
 
-        try {
-            switch (action) {
-                case 'synthesize_3d':
-                    this.enforceCapability(AgentCapability.AI_INFERENCE);
-                    this.enforceCapability(AgentCapability.MESH_OPERATIONS);
-
-                    const result = await this.spatialService.synthesizeAsset(prompt, config);
-                    await this.logActivity(`spatial_${action}`, 'success', { status: result.status });
-                    return result;
-
-                case 'get_pipeline_status':
-                    this.enforceCapability(AgentCapability.MEMORY_QUERY);
-                    return { status: 'stable', nodes: 7, modules: ['concept', 'geometry', 'segmentation', 'polygen', 'uv', 'pbr', 'anim'] };
-
-                default:
-                    throw new Error(`Unknown spatial action: ${action}`);
-            }
-        } catch (e: any) {
-            await this.logActivity(`spatial_${action}`, 'failure', { error: e.message });
-            return { status: 'error', error: e.message };
-        }
+    async get_pipeline_status() {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        return {
+            status: 'stable',
+            nodes: 7,
+            modules: ['concept', 'geometry', 'segmentation', 'polygen', 'uv', 'pbr', 'anim']
+        };
     }
 }

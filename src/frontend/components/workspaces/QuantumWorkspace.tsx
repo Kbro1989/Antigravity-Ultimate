@@ -13,7 +13,7 @@ export function QuantumWorkspace() {
     const handleGenerateVariants = async () => {
         setIsEntangling(true);
         try {
-            const result = await callLimb('quantum', 'generate_variants', {
+            const result = await callLimb('quantum', 'quantum_generate_variants', {
                 basePrompt,
                 count: 4,
                 mode: mutationMode,

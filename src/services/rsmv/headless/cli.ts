@@ -3,7 +3,7 @@
 import { cliArguments, filesource } from "../cliparser";
 import * as cmdts from "cmd-ts";
 import { renderAppearance, runServer } from "./api";
-import { EngineCache, ThreejsSceneCache } from "../3d/modeltothree";
+import { EngineCache, ThreejsSceneCache } from "../3d/enginecache";
 const fs = (typeof process !== 'undefined' && process.versions && process.versions.node) ? require("fs").promises : null;
 
 

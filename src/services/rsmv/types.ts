@@ -22,6 +22,7 @@ export interface RSMVServiceConfig {
     cacheUrl?: string;
     glbBaseUrl?: string;
     useGlbFirst?: boolean;
+    stagedPath?: string;
 }
 
 export interface IRSMVService {

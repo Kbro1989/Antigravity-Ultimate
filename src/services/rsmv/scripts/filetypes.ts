@@ -9,7 +9,7 @@ import { ScriptFS, ScriptOutput } from "../scriptrunner";
 import { JSONSchema6Definition } from "json-schema";
 import { parseLegacySprite, parseSprite, parseTgaSprite, spriteHash } from "../3d/sprite";
 import { pixelsToImageFile } from "../imgutils";
-// import { getModelHashes, EngineCache } from "../3d/modeltothree";
+// import { getModelHashes, EngineCache } from "../3d/enginecache";
 import { ParsedTexture } from "../3d/textures";
 import { parseMusic } from "./musictrack";
 import { legacyGroups, legacyMajors } from "../cache/legacycache";

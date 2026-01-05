@@ -12,7 +12,7 @@ export function RealityWorkspace() {
     const handleAnchor = async () => {
         setIsAnchoring(true);
         try {
-            const result = await callLimb('reality', 'anchor_convergence', {
+            const result = await callLimb('reality', 'reality_anchor_convergence', {
                 target: anchorTarget,
                 payload: { description: `Convergence via ${anchorTarget} Portal` }
             });

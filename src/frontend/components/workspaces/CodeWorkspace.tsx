@@ -14,7 +14,7 @@ export function CodeWorkspace() {
 // Real-time AI execution enabled.
 
 async function synthesizeReality() {
-  const kernel = await callLimb('system', 'query_health');
+  const kernel = await callLimb('system', 'system_query_health');
   
   if (kernel.status === 'optimal') {
     return "Neural state synchronized.";
@@ -38,7 +38,7 @@ synthesizeReality();`);
         const fetchSystemState = async () => {
             try {
                 // Fetch Agents
-                const agentResult = await callLimb('orchestrator', 'get_symphony_status', {}) as any;
+                const agentResult = await callLimb('orchestrator', 'orchestrate_get_symphony_status', {}) as any;
                 if (agentResult?.status === 'success') {
                     setNeuralAgents(agentResult.agents);
                 }
@@ -65,7 +65,7 @@ synthesizeReality();`);
         setIsAnalyzing(true);
         try {
             // Use Real Backup Logic (Hybrid approach for speed, but ultimately Truthful to the Limb)
-            const result = await callLimb('code', 'analyze_complexity', {
+            const result = await callLimb('code', 'code_analyze_complexity', {
                 action: 'analyze_complexity',
                 payload: { code: content }
             }) as any;
@@ -139,7 +139,7 @@ synthesizeReality();`);
         setRefactorResult(null);
         try {
             addNotification('info', 'Neural Refactoring: Analyzing code structure...');
-            const result = await callLimb('code', 'refactor', {
+            const result = await callLimb('code', 'code_refactor', {
                 action: 'refactor',
                 payload: { code, filename: 'workspace.ts' }
             }) as any;
@@ -166,7 +166,7 @@ synthesizeReality();`);
         setExplainResult(null);
         try {
             // Updated message handled by setAgentStatus above
-            const result = await callLimb('code', 'explain', {
+            const result = await callLimb('code', 'code_explain', {
                 action: 'explain',
                 payload: { code: selectedCode, language: 'typescript' }
             }) as any;
@@ -186,7 +186,7 @@ synthesizeReality();`);
         setAgentStatus('executing', 'Neural Synthesis: Generating code for prompt...');
         try {
             // Message handled by setAgentStatus
-            const result = await callLimb('code', 'generate_code', {
+            const result = await callLimb('code', 'code_generate_code', {
                 action: 'generate_code',
                 prompt,
                 payload: { prompt, context: code }
@@ -206,7 +206,7 @@ synthesizeReality();`);
     const handleArchitect = async (prompt: string) => {
         setAgentStatus('thinking', 'Neural Architecture: Forging blueprint...');
         try {
-            const result = await callLimb('orchestrator', 'architect_solution', {
+            const result = await callLimb('orchestrator', 'orchestrate_architect_solution', {
                 action: 'architect_solution',
                 prompt,
                 payload: { request: prompt }

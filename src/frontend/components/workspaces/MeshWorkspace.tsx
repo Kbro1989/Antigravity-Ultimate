@@ -30,7 +30,7 @@ export function MeshWorkspace() {
     const handleMeshOp = async (op: string) => {
         setIsProcessing(true);
         try {
-            const result = await hub.callLimb('mesh', 'process_mesh', {
+            const result = await hub.callLimb('mesh', 'mesh_process_mesh', {
                 operation: op,
                 parameters: { mode: sculptMode, ratio: 0.45, assetId: activeAsset?.id }
             });

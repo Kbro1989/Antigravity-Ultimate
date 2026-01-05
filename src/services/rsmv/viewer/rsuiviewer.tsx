@@ -1,7 +1,7 @@
 import * as React from "react";
 import { RsInterfaceComponent, RsInterfaceDomTree, UiRenderContext, loadRsInterfaceData, renderRsInterfaceDOM } from "../scripts/renderrsinterface";
 import { DomWrap } from "./scriptsui";
-import type { ThreejsSceneCache } from "../3d/modeltothree";
+import type { ThreejsSceneCache } from "../3d/enginecache";
 import { ThreeJsRenderer } from "./threejsrender";
 import { CacheFileSource } from "../cache";
 

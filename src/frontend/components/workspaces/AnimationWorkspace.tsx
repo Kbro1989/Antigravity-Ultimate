@@ -14,24 +14,24 @@ export function AnimationWorkspace() {
     const handleRetarget = async () => {
         setIsProcessing(true);
         try {
-            const result: any = await callLimb('animation', 'retarget_motion', {
+            const result = (await callLimb('animation', 'animation_retarget_motion', {
                 source_rig: 'humanoid_generic',
                 target_rig: 'custom_mesh_v1',
                 use_ik: true,
                 preserve_volume: true,
                 prompt: `Retarget motion for layer ${activeLayer}`
-            });
+            })) as any;
 
             if (result.status === 'success') {
                 setAnimationUrl(result.clipUrl);
-                addNotification('info', 'Kinetics Engine: Calibrating Neural IK Solver...');
+                addNotification('info' as any, 'Kinetics Engine: Calibrating Neural IK Solver...');
                 setTimeout(() => {
-                    addNotification('success', 'Motion Retargeting Complete');
+                    addNotification('success' as any, 'Motion Retargeting Complete');
                     setIsProcessing(false);
                 }, 1500);
             }
         } catch (e: any) {
-            addNotification('error', `IK Fault: ${e.message}`);
+            addNotification('error' as any, `IK Fault: ${e.message}`);
             setIsProcessing(false);
         }
     };

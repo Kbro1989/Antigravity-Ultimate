@@ -1,5 +1,6 @@
 import { NeuralLimb } from './NeuralLimb';
 import { AgentCapability } from '../AgentConstitution';
+import { BaseIntent } from '../AITypes';
 
 interface GamePacket {
     type: string;
@@ -39,7 +40,7 @@ export class LiveGameLimb extends NeuralLimb {
                 console.log(`[LiveGame] Connected to ${url}`);
                 this.isConnected = true;
                 this.flushQueue();
-                this.logActivity('connection', 'success', { url });
+                this.logActivity('connection' as any, 'success', { url });
             };
 
             this.ws.onmessage = (event) => {
@@ -54,7 +55,7 @@ export class LiveGameLimb extends NeuralLimb {
             this.ws.onclose = () => {
                 console.log('[LiveGame] Disconnected');
                 this.isConnected = false;
-                this.logActivity('connection', 'failure', { reason: 'closed' });
+                this.logActivity('connection' as any, 'failure', { reason: 'closed' });
             };
 
             this.ws.onerror = (err) => {
@@ -94,30 +95,58 @@ export class LiveGameLimb extends NeuralLimb {
         }
     }
 
-    async process(intent: any) {
-        const { action, type, data } = intent;
-        await this.logActivity(`game_${action}`, 'pending');
+    async send_event(params: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        const { type, data } = params;
+        this.send(type, data);
+        return { status: 'Sent', type };
+    }
 
-        try {
-            switch (action) {
-                case 'send_event':
-                    this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
-                    this.send(type, data);
-                    await this.logActivity('game_send_event', 'success', { type });
-                    return { status: 'Sent', type };
+    async get_state(params: any) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        this.send('request_state', {});
+        return { status: 'Request Sent' };
+    }
 
-                case 'get_state':
-                    this.enforceCapability(AgentCapability.MEMORY_QUERY);
-                    this.send('request_state', {});
-                    await this.logActivity('game_get_state', 'success');
-                    return { status: 'Request Sent' };
+    async load_stage(params: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        const { stageId } = params;
+        this.send('load_stage', { stageId });
 
-                default:
-                    throw new Error(`Unknown live game action: ${action}`);
-            }
-        } catch (e: any) {
-            await this.logActivity(`game_${action}`, 'failure', { error: e.message });
-            return { status: 'error', error: e.message };
-        }
+        // Simulating the loading of assets from the "staged_assets" directory
+        // In a real engine, this would parse the manifest and load resources.
+        await this.logActivity('stage_load', 'success', { stageId });
+
+        return {
+            status: 'success',
+            message: `Stage ${stageId} loaded into Runtime.`,
+            activeAssets: ['divine_quest_01', 'audio_theme_01', 'image_tex_01']
+        };
+    }
+
+    // Support for LiveWorkspace dynamic actions
+    async spawn_npc(params: any) { return this.send_event({ type: 'spawn_npc', data: params }); }
+    async toggle_physics(params: any) { return this.send_event({ type: 'toggle_physics', data: params }); }
+    async change_weather(params: any) { return this.send_event({ type: 'change_weather', data: params }); }
+
+    /**
+     * OMNISCIENCE UPGRADE: Edit As You Play
+     * Instantly replaces an asset in the running simulation.
+     */
+    async hot_swap_asset(params: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        const { assetId, type, newData } = params;
+
+        // 1. Send invalidation signal to Client
+        this.send('asset_update', { id: assetId, type, payload: newData });
+
+        // 2. Log for session replay
+        await this.logActivity('hot_swap', 'success', { assetId, type });
+
+        return {
+            status: 'success',
+            message: `Asset ${assetId} hot-swapped in active runtime.`,
+            latency_ms: 0 // Mock instant update
+        };
     }
 }

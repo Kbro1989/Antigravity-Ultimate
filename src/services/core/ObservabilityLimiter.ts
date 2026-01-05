@@ -9,10 +9,10 @@
 export class ObservabilityLimiter {
     private static instance: ObservabilityLimiter;
 
-    // Config: 200k/day
+    // Config: 200k/day (Per system spec)
     private readonly DAILY_LIMIT = 200000;
-    private readonly REFILL_RATE_MS = this.DAILY_LIMIT / (24 * 60 * 60 * 1000); // ~0.0023 tokens/ms
-    private readonly BUCKET_CAPACITY = 100; // Burst size allowed
+    private readonly REFILL_RATE_MS = this.DAILY_LIMIT / (24 * 60 * 60 * 1000); // 200000 / 86,400,000
+    private readonly BUCKET_CAPACITY = 1000; // Increased burst size to 1k for high-freq spikes
 
     private tokens: number;
     private lastRefill: number;
@@ -42,11 +42,8 @@ export class ObservabilityLimiter {
             return true;
         }
 
+        // Daily reset for dropped tracker if a new day starts in refill
         this.droppedCount++;
-        if (this.droppedCount % 50 === 0) {
-            // Force emit a warning every 50 dropped logs, bypass bucket check safely?
-            // No, we don't want to spam warnings either.
-        }
         return false;
     }
 

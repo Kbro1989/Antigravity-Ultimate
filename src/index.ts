@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { routePartykitRequest } from 'partyserver';
 import { SessionAgent } from './agents/SessionAgent';
-import { CollaborationServer } from './services/network/CollaborationServer';
+import { Collaboration } from './services/network/CollaborationServer';
 import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
 // @ts-ignore
 import manifestJSON from '__STATIC_CONTENT_MANIFEST';
@@ -273,4 +273,4 @@ export default {
 };
 
 // Export DO classes so Cloudflare can find them
-export { SessionAgent, CollaborationServer as Collaboration };
+export { SessionAgent, Collaboration };

@@ -14,7 +14,7 @@ export function SecurityWorkspace() {
         const fetchStatus = async () => {
             try {
                 // Fetch real audit logs from the SecurityLimb
-                const logResult = await callLimb('security', 'get_logs', {});
+                const logResult = await callLimb('security', 'security_get_logs', {});
                 if (logResult && logResult.data) {
                     setLogs(logResult.data.reverse().slice(0, 50)); // Last 50 logs
 
@@ -41,7 +41,7 @@ export function SecurityWorkspace() {
     const handleLockdown = async () => {
         setIsLocking(true);
         try {
-            await callLimb('security', 'emergency_lockdown', {
+            await callLimb('security', 'security_emergency_lockdown', {
                 scope: 'global',
                 key_rotation: true
             });

@@ -1,7 +1,7 @@
-import { Env } from '../../index';
-import { ModelRouter } from './ModelRouter';
+import { Env } from '../../types/env';
+import type { ModelRouter } from './ModelRouter';
 import { OrchestratorLimb } from './limbs/OrchestratorLimb';
-import { AIIntent } from '../../types';
+import { BaseIntent } from './AITypes';
 
 import { VectorMemory } from './VectorMemory';
 
@@ -18,15 +18,15 @@ export class NeuralRegistry {
         this.memory = new VectorMemory(env);
     }
 
-    async executeCapability(limbId: string, intent: AIIntent) {
-        console.log(`[NeuralRegistry] Executing capability: ${limbId}.${intent.verb}`);
+    async executeCapability(limbId: string, intent: BaseIntent) {
+        console.log(`[NeuralRegistry] Executing capability: ${limbId}.${intent.action}`);
 
-        if (intent.verb === 'symphony') {
-            return this.orchestrator.conductSymphony(intent);
+        if (intent.action === 'orchestrate_negotiate') {
+            return this.orchestrator.conductSymphony(intent as any);
         }
 
         // RAG Capability (Infinite Memory)
-        if (limbId === 'memory' || intent.verb === 'explain') {
+        if (limbId === 'memory' || intent.action === 'world_query') {
             const context = await this.memory.search(intent.payload.text, 3);
             // Augment prompt with context
             intent.payload.text += `\n\n[Context from Memory]:\n${JSON.stringify(context)}`;
@@ -35,7 +35,7 @@ export class NeuralRegistry {
         // Map limb + verb to ModelRequest
         let requestType: 'text' | 'code' | 'image' = 'text';
 
-        if (limbId === 'code' || intent.verb === 'refactor') {
+        if (limbId === 'code' || intent.action === 'code_refactor') {
             requestType = 'code';
         } else if (limbId === 'image') {
             requestType = 'image';

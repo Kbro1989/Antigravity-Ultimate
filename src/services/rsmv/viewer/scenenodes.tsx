@@ -1,4 +1,4 @@
-import { ThreejsSceneCache, EngineCache, constModelsIds } from '../3d/modeltothree';
+import { ThreejsSceneCache, EngineCache, constModelsIds } from '../3d/enginecache';
 import { delay, packedHSL2HSL, HSL2RGB, RGB2HSL, HSL2packHSL, ModelModifications, stringToFileRange, stringToMapArea, checkObject } from '../utils';
 import { boundMethod } from 'autobind-decorator';
 import { CacheFileSource } from '../cache';
@@ -20,7 +20,9 @@ import { drawTexture, findImageBounds, makeImageData } from "../imgutils";
 import type { avataroverrides } from "../generated/avataroverrides";
 import { InputCommitted, StringInput, JsonDisplay, IdInput, LabeledInput, TabStrip, IdInputSearch, CanvasView, PasteButton, CopyButton } from "./commoncontrols";
 import type { items } from "../generated/items";
-import { castModelInfo, itemToModel, locToModel, modelToModel, npcBodyToModel, npcToModel, playerDataToModel, playerToModel, RSMapChunk, RSMapChunkGroup, RSModel, SimpleModelDef, SimpleModelInfo, spotAnimToModel } from "../3d/modelnodes";
+import { castModelInfo, SimpleModelDef, SimpleModelInfo } from '../3d/modelutils';
+import { itemToModel, locToModel, modelToModel, npcBodyToModel, npcToModel, playerDataToModel, playerToModel, RSMapChunk, RSMapChunkGroup, spotAnimToModel } from "../3d/modelnodes";
+import { RSModel } from "../3d/modeltothree";
 // using global fetch
 import type { mapsquare_overlays } from '../generated/mapsquare_overlays';
 import type { mapsquare_underlays } from '../generated/mapsquare_underlays';
@@ -173,12 +175,12 @@ function convertScenarioComponent(comp: ScenarioComponent<"simple">): ScenarioCo
 	if (comp.simpleModel.length != 0) {
 		let firstmodel = comp.simpleModel[0];
 		for (let col of firstmodel.mods.replaceColors ?? []) {
-			if (comp.simpleModel.every(q => q.mods.replaceColors?.some(q => q[0] == col[0] && q[1] == col[1]))) {
+			if (comp.simpleModel.every((q: any) => q.mods.replaceColors?.some((q: any) => q[0] == col[0] && q[1] == col[1]))) {
 				mods.replaceColors!.push(col);
 			}
 		}
 		for (let mat of firstmodel.mods.replaceMaterials ?? []) {
-			if (comp.simpleModel.every(q => q.mods.replaceMaterials?.some(q => q[0] == mat[0] && q[1] == mat[1]))) {
+			if (comp.simpleModel.every((q: any) => q.mods.replaceMaterials?.some((q: any) => q[0] == mat[0] && q[1] == mat[1]))) {
 				mods.replaceMaterials!.push(mat);
 			}
 		}
@@ -186,8 +188,8 @@ function convertScenarioComponent(comp: ScenarioComponent<"simple">): ScenarioCo
 	let models = comp.simpleModel.map(model => ({
 		...model,
 		mods: {
-			replaceColors: model.mods.replaceColors?.filter(q => !mods.replaceColors.some(col => col[0] == q[0] && col[1] == q[1])) ?? [],
-			replaceMaterials: model.mods.replaceMaterials?.filter(q => !mods.replaceMaterials.some(mat => mat[0] == q[0] && mat[1] == q[1])) ?? []
+			replaceColors: model.mods.replaceColors?.filter((q: any) => !mods.replaceColors.some(col => col[0] == q[0] && col[1] == q[1])) ?? [],
+			replaceMaterials: model.mods.replaceMaterials?.filter((q: any) => !mods.replaceMaterials.some(mat => mat[0] == q[0] && mat[1] == q[1])) ?? []
 		}
 	}));
 	let json = customModelJson(models, mods);
@@ -1057,30 +1059,13 @@ function ExportSceneMenu(p: { ctx: UIContextReady, renderopts: ThreeJsSceneEleme
 	}
 
 
-	let saveimg = async () => {
-		if (!img) { return; }
-		let blob = await new Promise<Blob | null>(d => img!.cnv.toBlob(d));
-		if (!blob) { return; }
-		downloadBlob("runeapps_image_export.png", blob);
-	}
+	let saveimg = () => { if (img) { img.cnv.toBlob(q => q && downloadBlob(`render_${img.data.width}x${img.data.height}.png`, q)); } }
 
-	let copyimg = async () => {
-		//@ts-ignore
-		navigator.clipboard.write([
-			//@ts-ignore
-			new ClipboardItem({ 'image/png': await new Promise<Blob | null>(d => img!.cnv.toBlob(d)) })
-		]);
-	}
+	let copyimg = () => { if (img) { img.cnv.toBlob((q: any) => q && navigator.clipboard.write([new ClipboardItem({ [q.type]: q })])); } }
 
-	let saveGltf = async () => {
-		let file = await (exportThreeJsGltf as any)(p.ctx.renderer.getModelNode());
-		downloadBlob(`model_${(p.ctx.renderer as any).modelid}.glb`, new Blob([file as any]));
-	}
+	let saveGltf = () => exportThreeJsGltf(p.ctx.renderer.getModelNode()).then((q: any) => downloadBlob(`render.glb`, new Blob([q])));
 
-	let saveStl = async () => {
-		let file = await (exportThreeJsStl as any)(p.ctx.renderer.getModelNode());
-		downloadBlob(`model_${(p.ctx.renderer as any).modelid}.stl`, new Blob([file as any]));
-	}
+	let saveStl = () => exportThreeJsStl(p.ctx.renderer.getModelNode()).then((q: any) => downloadBlob(`render.stl`, new Blob([q])));
 
 	let clicktab = (v: typeof tab) => {
 		settab(v);
@@ -1104,7 +1089,7 @@ function ExportSceneMenu(p: { ctx: UIContextReady, renderopts: ThreeJsSceneEleme
 					<div style={{ display: "grid", gridTemplateColumns: "1fr minmax(0,1fr)" }}>
 						Export image size
 						<select value={exportimgsizes.indexOf(imgsize)} onChange={e => changeImg(undefined, exportimgsizes[+e.currentTarget.value])}>
-							{exportimgsizes.map((q, i) => (
+							{exportimgsizes.map((q: any, i: any) => (
 								q.mode == p.renderopts!.camMode && <option key={i} value={i}>{q.name}{q.w != 0 ? ` ${q.w}x${q.h} ` : ""}</option>
 							))}
 						</select>
@@ -1240,7 +1225,7 @@ function useAsyncModelData<ID, T>(ctx: UIContextReady | null, getter: (cache: Th
 				model.setAnimation(visible.anims.default);
 			}
 			model.addToScene(ctx.renderer);
-			model.model.then(m => {
+			model.model.then((m: any) => {
 				if (visible && pendingId.current == visible.id) {
 					setLoadedModel(model);
 				}
@@ -1271,12 +1256,12 @@ async function materialIshToModel(sceneCache: ThreejsSceneCache, reqid: Material
 	let underlay: mapsquare_underlays | null = null;
 	if (reqid.mode == "overlay") {
 		overlay = sceneCache.engine.mapOverlays[reqid.id];
-		if (overlay.material) { matid = overlay.material; }
-		if (overlay.color) { color = overlay.color; }
+		if (overlay && overlay.material) { matid = overlay.material; }
+		if (overlay && overlay.color) { color = overlay.color; }
 	} else if (reqid.mode == "underlay") {
 		underlay = sceneCache.engine.mapUnderlays[reqid.id];
-		if (underlay.material) { matid = underlay.material; }
-		if (underlay.color) { color = underlay.color; }
+		if (underlay && underlay.material) { matid = underlay.material; }
+		if (underlay && underlay.color) { color = underlay.color; }
 	} else if (reqid.mode == "material") {
 		matid = reqid.id;
 	} else if (reqid.mode == "texture") {
@@ -1334,7 +1319,7 @@ function SceneMaterialIsh(p: LookupModeProps) {
 				</React.Fragment>
 			)}
 			<div className="mv-sidebar-scroll">
-				{data && Object.entries(data.info.texs).map(([name, img]) => (
+				{data && Object.entries(data.info.texs).map(([name, img]: [string, any]) => (
 					<div key={name}>
 						{isproc && data && p.ctx && (
 							<input type="button" className="sub-btn" value="Debug proc" onClick={async () => {
@@ -1554,8 +1539,8 @@ function SceneNpc(p: LookupModeProps) {
 			{model && data && (<label><input type="checkbox" checked={initid.head} onChange={e => setId({ id: initid.id, head: e.currentTarget.checked })} />Head</label>)}
 			{model && data && (
 				<LabeledInput label="Animation">
-					<select onChange={e => { model.setAnimation(+e.currentTarget.value); forceUpdate() }} value={model.targetAnimId}>
-						{Object.entries(data.anims).map(([k, v]) => <option key={k} value={v}>{k}</option>)}
+					<select onChange={e => { model.setAnimation(+e.currentTarget.value); forceUpdate() }} value={model.targetAnimId as any}>
+						{Object.entries(data.anims).map(([k, v]) => <option key={k} value={v as any}>{k}</option>)}
 					</select>
 				</LabeledInput>
 			)}
@@ -1712,7 +1697,7 @@ function CacheDiffScript(p: UiScriptProps) {
 
 	React.useEffect(() => {
 		if (result && showmodels && cache2 && p.ctx.sceneCache) {
-			let prom = EngineCache.create(cache2).then(async engine => {
+			let prom = EngineCache.create(cache2).then(async (engine: any) => {
 				let oldscene = await ThreejsSceneCache.create(engine);
 				let models: RSModel[] = [];
 				const xstep = 5 * 512;

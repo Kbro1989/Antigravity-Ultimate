@@ -3,11 +3,33 @@ import { ParticleSystem } from './ParticleSystem';
 import { BubbleWorldHUD } from './BubbleWorldHUD';
 import { AIDashboardHead } from './AIDashboardHead';
 import { WorkspaceSpine } from './WorkspaceSpine';
+import { NeuralTerminal } from './NeuralTerminal';
 import { CodeWorkspace } from '../workspaces/CodeWorkspace';
 import { CreativeWorkspace } from '../workspaces/CreativeWorkspace';
 import { AudioWorkspace } from '../workspaces/AudioWorkspace';
 import { FlowWorkspace } from '../workspaces/FlowWorkspace';
 import { Workspace3D } from '../workspaces/Workspace3D';
+import { VideoWorkspace } from '../workspaces/VideoWorkspace';
+import { ImageWorkspace } from '../workspaces/ImageWorkspace';
+import { MeshWorkspace } from '../workspaces/MeshWorkspace';
+import { AnimationWorkspace } from '../workspaces/AnimationWorkspace';
+import { WorldWorkspace } from '../workspaces/WorldWorkspace';
+import { EntityWorkspace } from '../workspaces/EntityWorkspace';
+import { PhysicsWorkspace } from '../workspaces/PhysicsWorkspace';
+import { MaterialWorkspace } from '../workspaces/MaterialWorkspace';
+import { DataWorkspace } from '../workspaces/DataWorkspace';
+import { SecurityWorkspace } from '../workspaces/SecurityWorkspace';
+import { NetworkWorkspace } from '../workspaces/NetworkWorkspace';
+import { SystemWorkspace } from '../workspaces/SystemWorkspace';
+import { FileWorkspace } from '../workspaces/FileWorkspace';
+import { OrchestratorWorkspace } from '../workspaces/OrchestratorWorkspace';
+import { LiveWorkspace } from '../workspaces/LiveWorkspace';
+import { GhostWorkspace } from '../workspaces/GhostWorkspace';
+import { RealityWorkspace } from '../workspaces/RealityWorkspace';
+import { QuantumWorkspace } from '../workspaces/QuantumWorkspace';
+import { DivineWorkspace } from '../workspaces/DivineWorkspace';
+import { RelicWorkspace } from '../workspaces/RelicWorkspace';
+import { ClassicWorkspace } from '../workspaces/ClassicWorkspace';
 import { useStateManager } from '../../../services/core/StateManager';
 import { WorkspaceMode } from '../../../services/core/ModeManager';
 import '../../styles/hub.css';
@@ -16,6 +38,7 @@ import '../../styles/hub.css';
 export function AntigravityDashboard() {
     const [view, setView] = useState<'hub' | 'workspace'>('hub');
     const { activeWorkspace, setActiveWorkspace } = useStateManager();
+    const [isTerminalVisible, setIsTerminalVisible] = useState(true);
     const alerts = ["SYSTEM OPTIMAL", "NEURAL LINK ESTABLISHED", "CREATIVE MODE READY"];
     const [alertIndex, setAlertIndex] = useState(0);
 
@@ -36,12 +59,33 @@ export function AntigravityDashboard() {
         setTimeout(() => setActiveWorkspace(null), 400);
     };
 
-    const WorkspaceComponents: Partial<Record<WorkspaceMode, React.ComponentType>> = {
+    const WorkspaceComponents: Record<string, React.ComponentType> = {
         code: CodeWorkspace,
         creative: CreativeWorkspace,
         audio: AudioWorkspace,
         flow: FlowWorkspace,
-        '3d': Workspace3D
+        '3d': Workspace3D,
+        video: VideoWorkspace,
+        image: ImageWorkspace,
+        mesh: MeshWorkspace,
+        animation: AnimationWorkspace,
+        world: WorldWorkspace,
+        entity: EntityWorkspace,
+        physics: PhysicsWorkspace,
+        material: MaterialWorkspace,
+        data: DataWorkspace,
+        security: SecurityWorkspace,
+        network: NetworkWorkspace,
+        system: SystemWorkspace,
+        filesystem: FileWorkspace,
+        orchestrator: OrchestratorWorkspace,
+        live: LiveWorkspace,
+        ghost: GhostWorkspace,
+        reality: RealityWorkspace,
+        quantum: QuantumWorkspace,
+        divine: DivineWorkspace,
+        relic: RelicWorkspace,
+        classic: ClassicWorkspace
     };
 
     const WorkspaceComponent = activeWorkspace ? WorkspaceComponents[activeWorkspace as WorkspaceMode] : null;
@@ -102,10 +146,27 @@ export function AntigravityDashboard() {
                             <AIDashboardHead workspace={activeWorkspace as WorkspaceMode} />
 
                             <div className="flex-1 flex overflow-hidden">
-                                {activeWorkspace && <WorkspaceSpine workspace={activeWorkspace as WorkspaceMode} />}
-                                <div className="flex-1 ml-28 glass-dark rounded-2xl border border-cyan-500/20 overflow-hidden relative">
+                                {activeWorkspace && (
+                                    <WorkspaceSpine
+                                        workspace={activeWorkspace as WorkspaceMode}
+                                        onToolSelect={(toolId) => {
+                                            console.log(`[Dashboard] Pulsing Tool: ${toolId} in ${activeWorkspace}`);
+                                            // Proactive: We could trigger limb actions here, 
+                                            // but many tools are just UI modes. 
+                                            // For now, let's just log and notify for critical ones.
+                                        }}
+                                    />
+                                )}
+                                <div className="flex-1 ml-28 glass-dark rounded-2xl border border-cyan-500/20 overflow-hidden relative mr-4">
                                     {WorkspaceComponent && <WorkspaceComponent />}
                                 </div>
+                                {activeWorkspace && (
+                                    <NeuralTerminal
+                                        workspace={activeWorkspace as WorkspaceMode}
+                                        isVisible={isTerminalVisible}
+                                        onClose={() => setIsTerminalVisible(false)}
+                                    />
+                                )}
                             </div>
                         </div>
                     </div>

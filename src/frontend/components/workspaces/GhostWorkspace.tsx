@@ -10,7 +10,7 @@ export function GhostWorkspace() {
     const handleStabilize = async () => {
         setIsStabilizing(true);
         try {
-            await callLimb('ghost', 'stabilize', {
+            await callLimb('ghost', 'ghost_stabilize', {
                 target_dimension: 'symphony_core',
                 neural_gain: 1.2
             });

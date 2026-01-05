@@ -98,13 +98,18 @@ export const runOrchestration = async (
  */
 export const generateImage = async (
     prompt: string,
-    aspectRatio: "1:1" | "16:9" | "9:16" = "1:1"
+    options: {
+        aspectRatio?: "1:1" | "16:9" | "9:16",
+        modelId?: string,
+        provider?: string
+    } = {}
 ) => {
     try {
+        const { aspectRatio = "1:1", modelId = 'FLUX', provider = 'cloudflare' } = options;
         const response = await fetch(`${WORKER_URL}/api/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, model: 'FLUX', aspectRatio })
+            body: JSON.stringify({ prompt, model: modelId, aspectRatio, provider })
         });
 
         if (!response.ok) {
@@ -123,12 +128,19 @@ export const generateImage = async (
 /**
  * Speech Synthesis - Uses Cloudflare TTS
  */
-export const synthesizeSpeech = async (text: string) => {
+export const synthesizeSpeech = async (
+    text: string,
+    options: {
+        modelId?: string,
+        provider?: string
+    } = {}
+) => {
     try {
+        const { modelId = 'deepgram/aura-2-en', provider = 'cloudflare' } = options;
         const response = await fetch(`${WORKER_URL}/api/speech`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text })
+            body: JSON.stringify({ text, model: modelId, provider })
         });
 
         if (!response.ok) {
@@ -147,12 +159,19 @@ export const synthesizeSpeech = async (text: string) => {
 /**
  * Video Generation
  */
-export const generateVideo = async (prompt: string) => {
+export const generateVideo = async (
+    prompt: string,
+    options: {
+        modelId?: string,
+        provider?: string
+    } = {}
+) => {
     try {
+        const { modelId = 'runway/gen-3', provider = 'fireworks' } = options;
         const response = await fetch(`${WORKER_URL}/api/video`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt })
+            body: JSON.stringify({ prompt, model: modelId, provider })
         });
 
         if (!response.ok) {
@@ -174,13 +193,18 @@ export const generateVideo = async (prompt: string) => {
 export const getCodeCompletions = async (
     prefix: string,
     suffix: string,
-    filename: string
+    filename: string,
+    options: {
+        modelId?: string,
+        provider?: string
+    } = {}
 ): Promise<CodeCompletion[]> => {
     try {
+        const { modelId = 'qwen/qwen2.5-coder-32b-instruct', provider = 'cloudflare' } = options;
         const response = await fetch(`${WORKER_URL}/api/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prefix, suffix, filename })
+            body: JSON.stringify({ prefix, suffix, filename, model: modelId, provider })
         });
 
         if (!response.ok) {

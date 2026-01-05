@@ -11,10 +11,16 @@ interface Tool {
 
 interface WorkspaceSpineProps {
     workspace: WorkspaceMode;
+    onToolSelect?: (toolId: string) => void;
 }
 
-export function WorkspaceSpine({ workspace }: WorkspaceSpineProps) {
+export function WorkspaceSpine({ workspace, onToolSelect }: WorkspaceSpineProps) {
     const [selectedTool, setSelectedTool] = useState<string | null>(null);
+
+    const handleToolClick = (toolId: string) => {
+        setSelectedTool(toolId);
+        if (onToolSelect) onToolSelect(toolId);
+    };
 
     const tools: Record<WorkspaceMode, Tool[]> = useMemo(() => ({
         code: [
@@ -186,6 +192,11 @@ export function WorkspaceSpine({ workspace }: WorkspaceSpineProps) {
             { id: 'deploy', icon: '🚀', label: 'Deploy', hotkey: 'D', color: '#00ff80' },
             { id: 'test', icon: '🧪', label: 'Test', hotkey: 'T', color: '#ffff00' },
         ],
+        classic: [
+            { id: 'import', icon: '📦', label: 'Legacy Import', hotkey: 'I', color: '#ff8000' },
+            { id: 'view', icon: '👁️', label: 'Viewer', hotkey: 'V', color: '#00ffff' },
+            { id: 'convert', icon: '♻️', label: 'Transcode', hotkey: 'T', color: '#00ff80' },
+        ],
     }), []);
 
     const currentTools = tools[workspace] || tools.code;
@@ -200,7 +211,7 @@ export function WorkspaceSpine({ workspace }: WorkspaceSpineProps) {
                                 ${selectedTool === tool.id
                                     ? 'bg-white/10 border-white/40 shadow-[0_0_25px_rgba(255,255,255,0.2)]'
                                     : 'bg-black/20 border-white/5 hover:border-white/20 hover:bg-white/5'}`}
-                            onClick={() => setSelectedTool(tool.id)}
+                            onClick={() => handleToolClick(tool.id)}
                             style={{ animationDelay: `${index * 0.1}s` }}
                         >
                             <div className="text-2xl filter drop-shadow-[0_0_8px_var(--tool-color)]" style={{ '--tool-color': tool.color } as any}>

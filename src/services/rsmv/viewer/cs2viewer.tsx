@@ -4,7 +4,7 @@ import { clientscript } from "../generated/clientscript";
 import { ClientScriptInterpreter } from "../clientscript/interpreter";
 import { getOpName } from "../clientscript/definitions";
 import { useForceUpdate } from "./scriptsui";
-import { ThreejsSceneCache } from "../3d/modeltothree";
+import { ThreejsSceneCache } from "../3d/enginecache";
 import { prepareClientScript, renderClientScript } from "../clientscript";
 import { ClientscriptObfuscation } from "../clientscript/callibrator";
 import classNames from "classnames";

@@ -93,7 +93,7 @@ export function useServiceHub(userId: string = 'default-user') {
     }, []);
 
     // Neural Limbs
-    const callLimb = useCallback(async (limbId: string, capability: string, params: any) => {
+    const callLimb = useCallback(async (limbId: string, capability: string, params: any): Promise<any> => {
         return ServiceHub.limbs.call(limbId, capability, params);
     }, []);
 

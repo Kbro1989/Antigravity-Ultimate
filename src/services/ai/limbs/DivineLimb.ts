@@ -1,70 +1,112 @@
 import { NeuralLimb } from './NeuralLimb';
 import { AgentCapability } from '../AgentConstitution';
 import { modelRouter } from '../ModelRouter';
+import { BaseIntent } from '../AITypes';
 
 export class DivineLimb extends NeuralLimb {
-    async process(intent: any) {
-        const { action } = intent;
-        await this.logActivity(`divine_${action}`, 'pending');
+    async synthesize_world(params: any, intent: BaseIntent & { modelId?: string; provider?: string }) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        const { biome, scale, seed } = params || {};
+        const worldResp: any = await modelRouter.route({
+            type: 'text',
+            prompt: `Architect a level design for a game world with biome: ${biome || 'tropical'}, scale: ${scale || 'massive'}, seed: ${seed || 'null'}. 
+                    Include heightmap characteristics, landmark placements, and ecosystem details.`,
+            systemPrompt: 'You are a World Architect AI. Return ONLY a valid JSON object describing the world layout.',
+            modelId: intent.modelId,
+            provider: intent.provider
+        });
 
+        let worldData;
         try {
-            switch (action) {
-                case 'synthesize_world':
-                    this.enforceCapability(AgentCapability.AI_INFERENCE);
-                    const { biome, scale, seed } = intent.payload || {};
-                    const worldResp: any = await modelRouter.route({
-                        type: 'text',
-                        prompt: `Architect a level design for a game world with biome: ${biome || 'tropical'}, scale: ${scale || 'massive'}, seed: ${seed || 'null'}. 
-                                Include heightmap characteristics, landmark placements, and ecosystem details.`,
-                        systemPrompt: 'You are a World Architect AI. Return ONLY a valid JSON object describing the world layout.'
-                    });
-
-                    let worldData;
-                    try {
-                        worldData = JSON.parse(worldResp.content.replace(/```json\n?|\n?```/g, '').trim());
-                    } catch (e) {
-                        worldData = { description: worldResp.content };
-                    }
-
-                    const manifestationId = `divine_${Date.now()}`;
-                    await this.persistAsset('world_blueprint', `divine://${manifestationId}`, {
-                        biome,
-                        scale,
-                        data: worldData
-                    });
-
-                    return {
-                        status: 'success',
-                        world: worldData,
-                        manifestationId,
-                        provider: worldResp.provider
-                    };
-
-                case 'forge_omnipotence':
-                    this.enforceCapability(AgentCapability.AI_INFERENCE);
-                    // Orchestrate a "God-Tier" asset creation
-                    return {
-                        status: 'executing',
-                        task: 'Infinite Synthesis Protocol',
-                        layers: ['Geometry', 'Material', 'Spirit', 'Logic'],
-                        eta: '10s'
-                    };
-
-                case 'manifest_reality':
-                    this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
-                    return {
-                        status: 'success',
-                        manifestationId: `divine_${Date.now()}`,
-                        realityScale: 'infinite',
-                        resonance: 1.0,
-                        timestamp: Date.now()
-                    };
-                default:
-                    throw new Error(`Unknown divine action: ${action}`);
-            }
-        } catch (e: any) {
-            await this.logActivity(`divine_${action}`, 'failure', { error: e.message });
-            return { status: 'error', error: e.message };
+            worldData = JSON.parse(worldResp.content.replace(/```json\n?|\n?```/g, '').trim());
+        } catch (e) {
+            worldData = { description: worldResp.content };
         }
+
+        const manifestationId = `divine_${Date.now()}`;
+        await this.persistAsset('world_blueprint', `divine://${manifestationId}`, {
+            biome,
+            scale,
+            data: worldData
+        });
+
+        return {
+            status: 'success',
+            world: worldData,
+            manifestationId,
+            provider: worldResp.provider
+        };
+    }
+
+    async forge_omnipotence(params: any) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        return {
+            status: 'executing',
+            task: 'Infinite Synthesis Protocol',
+            layers: ['Geometry', 'Material', 'Spirit', 'Logic'],
+            eta: '10s'
+        };
+    }
+
+    async inspire_creation(params: any, intent: BaseIntent & { modelId?: string; provider?: string }) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        const { sourceRelic, creationType } = params || {};
+
+        // 1. Fetch Source Truth (if a relic ID is provided)
+        let context = "";
+        if (sourceRelic && sourceRelic.id) {
+            // In a real scenario, we'd fetch the actual content content here using RelicLimb.read_record
+            // For now, we simulate the "Truth" context derived from the relic metadata
+            context = `Source Inspiration: ${JSON.stringify(sourceRelic)}`;
+        }
+
+        // 2. Inference for New Creation
+        const prompt = `Based on the following Ancient Relic data: ${context}
+        
+        Create a new "${creationType || 'Quest'}" that fits perfectly into this world but expands the lore.
+        Return a JSON object with: title, description, objectives, validation_hash.`;
+
+        const creationResp: any = await modelRouter.route({
+            type: 'text',
+            prompt,
+            systemPrompt: 'You are a Divine Creator AI. You create production-ready game assets from ancient source truth.',
+            modelId: intent.modelId,
+            provider: intent.provider
+        });
+
+        let creationData;
+        try {
+            creationData = JSON.parse(creationResp.content.replace(/```json\n?|\n?```/g, '').trim());
+        } catch (e) {
+            creationData = { description: creationResp.content };
+        }
+
+        // 3. Staging (Production)
+        const creationId = `divine_${Date.now()}`;
+        const stagedPath = `divine/${creationType}s/${creationId}.json`;
+
+        // We would write this to staged_assets, but assume persistAsset handles the abstraction
+        await this.persistAsset('quest_data', `staged://${stagedPath}`, {
+            parentRelic: sourceRelic?.id || 'genesis',
+            data: creationData
+        });
+
+        return {
+            status: 'success',
+            creation: creationData,
+            path: stagedPath,
+            message: `New ${creationType} created from Relic Source.`
+        };
+    }
+
+    async manifest_reality(params: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        return {
+            status: 'success',
+            manifestationId: `divine_${Date.now()}`,
+            realityScale: 'infinite',
+            resonance: 1.0,
+            timestamp: Date.now()
+        };
     }
 }

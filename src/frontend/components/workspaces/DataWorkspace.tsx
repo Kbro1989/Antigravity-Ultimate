@@ -9,7 +9,7 @@ export function DataWorkspace() {
     const handlePrune = async () => {
         setIsPruning(true);
         try {
-            await callLimb('data', 'prune_cache', {
+            await callLimb('data', 'data_prune_cache', {
                 max_age_days: 7,
                 min_access_count: 5
             });

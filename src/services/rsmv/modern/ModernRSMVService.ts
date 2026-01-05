@@ -122,15 +122,23 @@ export class ModernRSMVService implements IRSMVService {
     }
 
     async saveModel(id: number, rawData: any): Promise<boolean> {
-        if (!this.engineCache || !this.wasmLoader || !this.cachePath) return false;
+        // --- READ ONLY PROTECTION ---
+        // We never overwrite the original cache if a stagedPath is provided
+        const targetPath = this.config.stagedPath || this.cachePath;
+
+        if (!this.engineCache || !this.wasmLoader || !targetPath) return false;
         try {
             const encoded = parse.models.write(rawData);
             await this.wasmLoader.putFile(cacheMajors.models, id, new Uint8Array(encoded));
             const dbData = await this.wasmLoader.saveCache(cacheMajors.models);
+
             const filename = `js5-${cacheMajors.models}.jcache`;
-            const fullPath = `${this.cachePath}\\${filename}`;
+            const fullPath = `${targetPath}\\${filename}`;
+
             const base64Content = btoa(String.fromCharCode(...new Uint8Array(dbData)));
             const result = await localBridgeClient.writeLocalFile(fullPath, base64Content, true);
+
+            console.log(`[RSMV] Model ${id} saved to ${this.config.stagedPath ? 'STAGING' : 'CACHE'}: ${fullPath}`);
             return result.success;
         } catch (e) {
             console.error(`RSMV: Save model ${id} failed:`, e);

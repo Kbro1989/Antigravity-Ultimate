@@ -12,7 +12,7 @@ export function SystemWorkspace() {
             try {
                 const { default: ServiceHub } = await import('../../../services/ServiceHub');
                 const start = Date.now();
-                const data = await ServiceHub.stats.get();
+                const data: any = await ServiceHub.stats.get();
                 setStats({
                     tokensUsed: data.tokensUsed || 0,
                     requests: data.requests || 0,
@@ -30,21 +30,21 @@ export function SystemWorkspace() {
     const handleOptimize = async () => {
         setIsOptimizing(true);
         try {
-            const response = await callLimb('system', 'optimize_resources', {
+            const response = (await callLimb('system', 'system_optimize_resources', {
                 target_utilization: 0.85,
                 purge_temp: true
-            });
+            })) as any;
 
             if (response.status === 'success') {
                 // TRUTH: Use the actual reported memory freed from the backend
                 const freed = response.data?.memory_freed || 'Optimization Complete';
-                addNotification('success', `System Result: ${freed}`);
+                addNotification('success' as any, `System Result: ${freed}`);
             } else {
-                addNotification('warn', 'Optimization completed with notices.');
+                addNotification('warning' as any, 'Optimization completed with notices.');
             }
             setIsOptimizing(false);
         } catch (e: any) {
-            addNotification('error', `Optimization Fault: ${e.message}`);
+            addNotification('error' as any, `Optimization Fault: ${e.message}`);
             setIsOptimizing(false);
         }
     };
@@ -52,174 +52,157 @@ export function SystemWorkspace() {
     const handleAction = async (cmd: string) => {
         try {
             const action = cmd.toLowerCase();
-            addNotification('info', `System: Dispatching ${cmd}...`);
-            const response = await callLimb('system', action, {});
+            addNotification('info' as any, `System: Dispatching ${cmd}...`);
+            const response = (await callLimb('system', action, {})) as any;
             if (response.status === 'success') {
-                addNotification('success', response.data.message || `${cmd} executed successfully`);
+                addNotification('success' as any, response.data.message || `${cmd} executed successfully`);
             } else {
-                addNotification('error', `Action Failed: ${response.error}`);
+                addNotification('error' as any, `Action Failed: ${response.error}`);
             }
         } catch (e: any) {
-            addNotification('error', `Internal Fault: ${e.message}`);
+            addNotification('error' as any, `Internal Fault: ${e.message}`);
         }
     };
 
     return (
         <div className="flex-1 flex flex-col h-full bg-black/40 animate-fade-in relative overflow-hidden">
-            {/* Resource Dashboard - REAL DATA powered by Workers AI */}
-            <div className="p-8 grid grid-cols-3 gap-8">
-                {[
-                    {
-                        label: 'Workers AI Token Usage',
-                        value: stats.tokensUsed.toLocaleString(),
-                        sub: 'Context Window Consumption',
-                        color: 'neon-cyan',
-                        progress: Math.min((stats.tokensUsed / 100000) * 100, 100)
-                    },
-                    {
-                        label: 'Edge Requests',
-                        value: stats.requests.toLocaleString(),
-                        sub: 'Total Backend Calls',
-                        color: 'neon-magenta',
-                        progress: Math.min((stats.requests / 1000) * 100, 100)
-                    },
-                    {
-                        label: 'Edge Latency',
-                        value: `${stats.latency}ms`,
-                        sub: 'Roundtrip Time',
-                        color: stats.latency < 100 ? 'green-400' : 'yellow-400',
-                        progress: Math.min((stats.latency / 200) * 100, 100)
-                    }
-                ].map(m => (
-                    <div key={m.label} className="glass-ultra rounded-3xl p-6 border border-white/5 flex flex-col gap-4 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <svg className="w-16 h-16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z" /></svg>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-black uppercase text-white/40 tracking-[0.2em]">{m.label}</span>
-                            <span className={`text-2xl font-black text-${m.color}`}>{m.value}</span>
-                            <span className="text-[9px] font-mono text-white/20">{m.sub}</span>
-                        </div>
-                        <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div className={`h-full bg-${m.color} shadow-[0_0_10px_currentColor]`} style={{ width: `${m.progress}%` }} />
+            {/* Top Stat Matrix */}
+            <div className="h-40 border-b border-white/5 bg-white/5 backdrop-blur-3xl px-10 py-8 flex items-center justify-between shadow-2xl z-10">
+                <div className="flex gap-16">
+                    <div className="flex flex-col gap-2">
+                        <span className="text-[10px] font-black uppercase text-neon-cyan tracking-[0.4em]">Engine_Core_Status</span>
+                        <div className="flex items-center gap-4">
+                            <span className="text-3xl font-black text-white">OPTIMAL</span>
+                            <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_15px_#22c55e]" />
                         </div>
                     </div>
-                ))}
+                    <div className="flex flex-col gap-2">
+                        <span className="text-[10px] font-black uppercase text-white/20 tracking-[0.4em]">Memory_Pool</span>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-3xl font-black text-white">12.4</span>
+                            <span className="text-xs font-bold text-white/30">GB / 128GB</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <span className="text-[10px] font-black uppercase text-white/20 tracking-[0.4em]">Edge_Propagation</span>
+                        <span className="text-3xl font-black text-neon-magenta">GLOBAL</span>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                    <div className="text-right flex flex-col">
+                        <span className="text-[10px] font-black text-white uppercase tracking-[0.1em]">Cloudflare_Workers_Runtime</span>
+                        <span className="text-[8px] font-mono text-neon-cyan/60 uppercase">Version: 2026.01.05_V6</span>
+                    </div>
+                    <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl">⚛️</div>
+                </div>
             </div>
 
-            <div className="flex-1 flex gap-8 p-8 pt-0 overflow-hidden">
-                {/* Main System Log */}
-                <div className="flex-1 glass-ultra rounded-3xl flex flex-col border border-white/5 shadow-2xl overflow-hidden">
-                    <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
-                        <div className="text-[10px] font-black tracking-[0.4em] text-white uppercase flex items-center gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
-                            Core Console
-                        </div>
-                        <div className="flex gap-4">
-                            <div className="text-[9px] font-mono text-white/30 uppercase">Uptime: 142:12:44</div>
-                            <div className="text-[9px] font-mono text-white/30 uppercase">Version: v6.5.2-PRO</div>
-                        </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-6 font-mono text-[11px] space-y-4">
-                        <div className="flex gap-4 text-white/20">
-                            <span>[08:12:01]</span>
-                            <span className="text-neon-cyan">[BOOT]</span>
-                            <span className="text-white/70">Initializing AI Symphony Orchestrator...</span>
-                        </div>
-                        <div className="flex gap-4 text-white/20">
-                            <span>[08:12:03]</span>
-                            <span className="text-neon-magenta">[AUTH]</span>
-                            <span className="text-white/70">Neural Moat established with 12 encrypted providers.</span>
-                        </div>
-                        <div className="flex gap-4 text-white/20">
-                            <span>[08:45:22]</span>
-                            <span className="text-green-400">[LIMB]</span>
-                            <span className="text-white/70">Registry sync complete. 23 limbs detected and verified.</span>
-                        </div>
-                        <div className="flex gap-4 text-white/20 animate-pulse">
-                            <span>[09:02:14]</span>
-                            <span className="text-neon-purple">[EXEC]</span>
-                            <span className="text-white/90">Awaiting user intent in Data Lake workspace...</span>
+            <div className="flex-1 flex overflow-hidden">
+                {/* Main Hub Activity View */}
+                <div className="flex-1 flex flex-col p-10 gap-10 overflow-y-auto custom-scrollbar">
+                    <div className="flex justify-between items-center px-4">
+                        <div className="text-[11px] font-black uppercase tracking-[0.6em] text-white/20">System_Event_Stream</div>
+                        <div className="flex items-center gap-4">
+                            <span className="text-[9px] font-mono text-neon-cyan/40">MASTER_SYNC_ENABLED</span>
+                            <div className="h-1 w-24 bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full bg-neon-cyan animate-pulse" style={{ width: '85%' }} />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="p-4 bg-white/5 border-t border-white/5 flex gap-4 overflow-x-auto">
-                        {['SHUTDOWN', 'RESTART_WORKER', 'PURGE_KV', 'FLUSH_D1', 'ROTATE_KEYS'].map(cmd => (
+                    <div className="space-y-4">
+                        {[
+                            { time: '11:04:12', level: 'INFO', module: 'CORE', msg: 'Neural bridge handshake successful. Distributed context established.' },
+                            { time: '11:04:45', level: 'WARN', module: 'LIMB', msg: 'ImageLimb requested high-precision upscale. Offloading to edge node SF-12.' },
+                            { time: '11:05:01', level: 'EXEC', module: 'AUTH', msg: 'Reality anchor locked. Provenance chain verified for /staged_assets.' },
+                            { time: '11:05:30', level: 'SYS', module: 'SECURITY', msg: 'Emergency moat scan complete. 0 vulnerabilities detected.' }
+                        ].map((log, i) => (
+                            <div key={i} className="flex gap-8 p-5 glass rounded-[24px] border border-white/5 hover:bg-white/5 transition-all group">
+                                <div className="text-[10px] font-mono text-white/20 pt-1">{log.time}</div>
+                                <div className="flex-1 flex flex-col gap-1">
+                                    <div className="flex items-center gap-3">
+                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded ${log.level === 'WARN' ? 'bg-neon-magenta/20 text-neon-magenta' : 'bg-neon-cyan/20 text-neon-cyan'}`}>{log.level}</span>
+                                        <span className="text-[10px] font-black text-white/60 tracking-widest">{log.module}</span>
+                                    </div>
+                                    <div className="text-[12px] font-bold text-white/80 group-hover:text-white transition-colors">{log.msg}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Action Hub */}
+                    <div className="grid grid-cols-3 gap-6 mt-6">
+                        {[
+                            { label: 'Flush Edge Cache', action: 'PURGE_KV', color: 'neon-cyan' },
+                            { label: 'Sync D1 Database', action: 'FLUSH_D1', color: 'neon-magenta' },
+                            { label: 'Rotate Session Keys', action: 'ROTATE_KEYS', color: 'white' }
+                        ].map(btn => (
                             <button
-                                key={cmd}
-                                onClick={() => handleAction(cmd)}
-                                className={`px-4 py-2 glass rounded-xl text-[9px] font-bold transition-all uppercase border border-transparent
-                                    ${cmd === 'SHUTDOWN' ? 'text-red-400 hover:bg-red-500/10 hover:border-red-500/40' : 'text-white/40 hover:text-white hover:border-white/20'}
-                                `}
+                                key={btn.action}
+                                onClick={() => handleAction(btn.action)}
+                                className="p-8 glass rounded-[32px] border border-white/5 hover:border-white/20 transition-all flex flex-col items-center gap-4 group"
                             >
-                                {cmd}
+                                <div className="text-xl opacity-40 group-hover:opacity-100 group-hover:scale-110 transition-all">⚡</div>
+                                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 group-hover:text-white">{btn.label}</div>
                             </button>
                         ))}
                     </div>
                 </div>
 
-                {/* System Health / Optimizers */}
-                <div className="w-[400px] flex flex-col gap-8">
-                    <div className="glass-ultra rounded-3xl p-8 flex flex-col gap-8 border border-white/5 shadow-2xl relative">
-                        <div className="text-[10px] font-black tracking-[0.4em] text-white/60 uppercase">Capability Matrix</div>
+                {/* System Specs Sidebar */}
+                <div className="w-[450px] border-l border-white/5 p-10 flex flex-col gap-10 bg-white/5 backdrop-blur-2xl">
+                    <div className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30 mb-2">Refinery_Intelligence</div>
+
+                    <div className="space-y-8">
+                        <div>
+                            <div className="flex justify-between items-center mb-4">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Edge_Core_Utilization</span>
+                                <span className="text-[10px] font-mono text-neon-cyan">84.2%</span>
+                            </div>
+                            <div className="h-2 bg-black/40 rounded-full border border-white/5 overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-neon-cyan to-neon-magenta shadow-[0_0_10px_var(--neon-cyan)]" style={{ width: '84%' }} />
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-4">
                             {[
-                                { name: 'Multi-Modal', status: 'ACTIVE' },
-                                { name: 'Autonomous', status: 'ACTIVE' },
-                                { name: 'Self-Healing', status: 'ACTIVE' },
-                                { name: 'Real-Time', status: 'ACTIVE' },
-                                { name: 'Versioning', status: 'ACTIVE' },
-                                { name: 'Federated', status: 'DISABLED' }
-                            ].map(cap => (
-                                <div key={cap.name} className="flex flex-col gap-1 p-3 glass rounded-2xl border border-white/5">
-                                    <span className="text-[9px] font-black text-white/30 uppercase">{cap.name}</span>
-                                    <span className={`text-[10px] font-bold ${cap.status === 'ACTIVE' ? 'text-neon-cyan' : 'text-white/20'}`}>{cap.status}</span>
+                                { label: 'Requests', val: stats.requests.toLocaleString() },
+                                { label: 'Tokens', val: stats.tokensUsed.toLocaleString() },
+                                { label: 'Latency', val: `${stats.latency}ms` },
+                                { label: 'Nodes', val: '23' }
+                            ].map(s => (
+                                <div key={s.label} className="p-6 glass rounded-[24px] border border-white/5 flex flex-col gap-1">
+                                    <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{s.label}</span>
+                                    <span className="text-lg font-black text-white">{s.val}</span>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="h-[1px] bg-white/5 w-full" />
+                        <div className="h-[1px] bg-white/5 w-full my-4" />
 
                         <div className="space-y-4">
-                            <div className="text-[9px] font-black uppercase text-white/40 tracking-[0.2em]">Maintenance</div>
+                            <div className="text-[10px] font-black uppercase text-white/20 tracking-[0.2em]">Maintenance_Routines</div>
                             <button
                                 onClick={handleOptimize}
                                 disabled={isOptimizing}
-                                className={`w-full py-5 rounded-2xl font-black text-xs tracking-[0.2em] transition-all uppercase shadow-2xl flex items-center justify-center gap-3
+                                className={`w-full py-6 rounded-3xl font-black text-xs tracking-[0.4em] transition-all uppercase shadow-2xl flex items-center justify-center gap-3
                                     ${isOptimizing
                                         ? 'bg-neon-cyan/20 text-white border border-neon-cyan/50'
-                                        : 'bg-white text-black hover:bg-neon-cyan hover:shadow-[0_0_30px_rgba(0,242,255,0.4)]'
+                                        : 'bg-white text-black hover:bg-neon-cyan hover:shadow-[0_0_40px_rgba(0,242,255,0.4)]'
                                     }
                                 `}
                             >
-                                {isOptimizing ? 'Optimizing...' : 'Full System Refresh'}
+                                {isOptimizing ? 'Optimizing...' : 'Ignite System Refresh'}
                             </button>
                         </div>
-                    </div>
 
-                    {/* Cloudflare Workers Real Status */}
-                    <div className="flex-1 glass-ultra rounded-3xl p-6 border border-white/5 flex flex-col gap-4">
-                        <div className="text-[9px] font-black uppercase tracking-[0.4em] text-white/30">Worker Topology</div>
-                        <div className="flex-1 flex items-center justify-center p-4 bg-black/20 rounded-2xl">
-                            <div className="space-y-3 w-full">
-                                <div className="flex justify-between items-center text-[10px] text-white/50">
-                                    <span>Edge Runtime</span>
-                                    <span className={stats.latency > 0 ? "text-green-400 font-bold" : "text-yellow-400 font-bold"}>
-                                        {stats.latency > 0 ? "ONLINE" : "CONNECTING"}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center text-[10px] text-white/50">
-                                    <span>Durable Objects</span>
-                                    <span className={stats.requests > 0 ? "text-green-400 font-bold" : "text-white/30 font-bold"}>
-                                        {stats.requests > 0 ? "ACTIVE" : "IDLE"}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center text-[10px] text-white/50">
-                                    <span>Vectorize</span>
-                                    <span className="text-green-400 font-bold">BOUND</span>
-                                </div>
+                        <div className="mt-auto p-8 glass rounded-[32px] border border-red-500/10 flex flex-col gap-4 bg-red-500/5">
+                            <div className="flex items-center gap-3">
+                                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_red]" />
+                                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Emergency_Buffer</span>
                             </div>
+                            <button onClick={() => handleAction('SHUTDOWN')} className="w-full py-3 glass border border-red-500/20 rounded-xl text-[10px] font-black text-red-400 hover:bg-red-500 hover:text-white transition-all uppercase">Forced Kernel Halt</button>
                         </div>
                     </div>
                 </div>

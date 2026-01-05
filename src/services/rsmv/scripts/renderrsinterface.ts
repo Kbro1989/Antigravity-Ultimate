@@ -1,6 +1,6 @@
 import { interfaces } from "../generated/interfaces";
 import { RSModel } from "../3d/modeltothree";
-import { EngineCache, ThreejsSceneCache } from "../3d/modeltothree";
+import { EngineCache, ThreejsSceneCache } from "../3d/enginecache";
 import { expandSprite, parseSprite } from "../3d/sprite";
 import { CacheFileSource } from "../cache";
 import { prepareClientScript } from "../clientscript";

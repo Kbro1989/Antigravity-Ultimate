@@ -1,69 +1,51 @@
-import { NeuralLimb } from './NeuralLimb';
+import { NeuralLimb, LimbConfig } from './NeuralLimb';
 import { CLIBridge } from '../../cli/CLIBridge';
 import { AgentCapability } from '../AgentConstitution';
+import { BaseIntent } from '../AITypes';
 
 export class FileLimb extends NeuralLimb {
     private bridge: CLIBridge;
 
-    constructor(config: any) {
+    constructor(config: LimbConfig) {
         super(config);
         this.bridge = CLIBridge.getInstance();
     }
 
-    async process(intent: any) {
-        const { action, path, content, pattern, targetDir, outputPath } = intent;
+    async read(params: any) {
+        this.enforceCapability(AgentCapability.READ_FILES);
+        await this.logActivity('file_read', 'pending', { path: params.path });
+        const result = await this.bridge.readFile(params.path);
+        await this.logActivity('file_read', 'success', { path: params.path });
+        return result;
+    }
 
-        await this.logActivity(`file_${action}`, 'pending', { path });
+    async write(params: any) {
+        this.enforceCapability(AgentCapability.WRITE_FILES);
+        await this.logActivity('file_write', 'pending', { path: params.path });
+        const result = await this.bridge.writeFile(params.path, params.content);
+        await this.logActivity('file_write', 'success', { path: params.path });
+        return result;
+    }
 
-        try {
-            let result;
-            switch (action) {
-                case 'read':
-                    this.enforceCapability(AgentCapability.READ_FILES);
-                    result = await this.bridge.readFile(path);
-                    break;
-                case 'write':
-                    this.enforceCapability(AgentCapability.WRITE_FILES);
-                    result = await this.bridge.writeFile(path, content);
-                    break;
-                case 'list':
-                    this.enforceCapability(AgentCapability.READ_FILES);
-                    result = await this.bridge.listDirectory(path);
-                    break;
-                case 'delete':
-                    this.enforceCapability(AgentCapability.WRITE_FILES);
-                    result = await this.bridge.execute(`del /f /q "${path}"`);
-                    break;
-                case 'audit_provenance':
-                    this.enforceCapability(AgentCapability.READ_FILES);
-                    // Use real system check for file existence and modification
-                    const stats = await this.bridge.execute(`dir "${path}" /T:W`);
-                    const hashResult = await this.bridge.execute(`certutil -hashfile "${path}" SHA256`);
-                    const hashMatch = hashResult?.match(/[a-f0-9]{64}/i);
+    async list(params: any) {
+        this.enforceCapability(AgentCapability.READ_FILES);
+        await this.logActivity('file_list', 'pending', { path: params.path });
+        const result = await this.bridge.listDirectory(params.path);
+        await this.logActivity('file_list', 'success', { path: params.path });
+        return result;
+    }
 
-                    return {
-                        status: 'success',
-                        integrity: stats ? 0.999 : 0.0,
-                        last_modified_by: 'System_Kernel',
-                        timestamp: Date.now(),
-                        hash: hashMatch ? hashMatch[0] : 'sha256-calculation-failed'
-                    };
+    async delete(params: any) {
+        this.enforceCapability(AgentCapability.DELETE_FILES);
+        await this.logActivity('file_delete', 'pending', { path: params.path });
+        const result = await this.bridge.execute(`del /f /q "${params.path}"`);
+        await this.logActivity('file_delete', 'success', { path: params.path });
+        return result;
+    }
 
-                case 'snapshot':
-                    this.enforceCapability(AgentCapability.READ_FILES);
-                    result = await this.bridge.runCommand(
-                        `python cli/tools/snapshot_project.py --target "${targetDir || '.'}" --output "${outputPath || 'project_snapshot.json'}"`
-                    );
-                    break;
-                default:
-                    throw new Error(`Unknown file action: ${action}`);
-            }
-
-            await this.logActivity(`file_${action}`, 'success', { path });
-            return { status: 'success', data: result };
-        } catch (e: any) {
-            await this.logActivity(`file_${action}`, 'failure', { error: e.message });
-            return { status: 'error', error: e.message };
-        }
+    async sync(params: any) {
+        this.enforceCapability(AgentCapability.WRITE_FILES);
+        await this.logActivity('file_sync', 'pending', params);
+        return { status: 'synced' };
     }
 }

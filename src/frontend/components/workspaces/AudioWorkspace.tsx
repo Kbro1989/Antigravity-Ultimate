@@ -12,24 +12,52 @@ interface AudioTrack {
 
 function WaveformLane({ track, isPlaying }: { track: AudioTrack; isPlaying: boolean }) {
     const glowColor = track.color === 'cyan' ? 'var(--neon-cyan)' : track.color === 'magenta' ? 'var(--neon-magenta)' : track.color === 'purple' ? 'var(--neon-purple)' : '#4ade80';
+    const [mockBars, setMockBars] = useState(track.waveform);
+
+    useEffect(() => {
+        if (isPlaying && track.active) {
+            const interval = setInterval(() => {
+                setMockBars(prev => prev.map(b => Math.max(10, Math.min(100, b + (Math.random() - 0.5) * 20))));
+            }, 100);
+            return () => clearInterval(interval);
+        }
+    }, [isPlaying, track.active]);
 
     return (
-        <div className={`flex items-center gap-6 p-4 rounded-3xl transition-all duration-500 border ${track.active ? 'bg-white/5 border-white/10' : 'opacity-20 border-transparent scale-95'}`}>
-            <div className={`w-32 text-[10px] font-black uppercase tracking-[0.3em]`} style={{ color: glowColor }}>{track.name}</div>
+        <div className={`flex items-center gap-6 p-5 rounded-[32px] transition-all duration-700 border ${track.active ? 'bg-white/5 border-white/10 shadow-xl' : 'opacity-20 border-transparent scale-[0.98]'}`}>
+            <div className="flex flex-col gap-1 w-32">
+                <div className="text-[10px] font-black uppercase tracking-[0.4em] mb-1" style={{ color: glowColor }}>{track.name}</div>
+                <div className="flex gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: glowColor, boxShadow: `0 0 10px ${glowColor}` }} />
+                    <span className="text-[7px] font-mono text-white/40 uppercase tracking-widest">LAYER_0{track.id === 'drums' ? 1 : track.id === 'bass' ? 2 : track.id === 'synth' ? 3 : 4}</span>
+                </div>
+            </div>
 
-            <div className="flex-1 h-16 glass rounded-2xl overflow-hidden flex items-end gap-[2px] p-2 relative group border border-white/5">
-                {isPlaying && <div className="absolute top-0 bottom-0 w-[2px] bg-white shadow-[0_0_15px_white] z-10 animate-scan-slow" />}
-                {track.waveform.map((bar, i) => (
-                    <div key={i} className="flex-1 rounded-full transition-all duration-300"
-                        style={{ height: `${bar}%`, backgroundColor: track.active ? glowColor : 'rgba(255,255,255,0.1)', opacity: isPlaying && track.active ? 0.9 : 0.4 }}
+            <div className="flex-1 h-20 glass rounded-2xl overflow-hidden flex items-end gap-[2px] p-3 relative group border border-white/5 bg-black/40">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+                {isPlaying && <div className="absolute top-0 bottom-0 w-[1px] bg-white shadow-[0_0_20px_white] z-10 animate-scan-slow opacity-60" />}
+                {mockBars.map((bar, i) => (
+                    <div key={i} className="flex-1 rounded-full transition-all duration-150"
+                        style={{
+                            height: `${bar}%`,
+                            backgroundColor: track.active ? glowColor : 'rgba(255,255,255,0.05)',
+                            opacity: isPlaying && track.active ? 0.8 : 0.3,
+                            boxShadow: isPlaying && track.active && bar > 70 ? `0 0 15px ${glowColor}` : 'none'
+                        }}
                     />
                 ))}
             </div>
 
-            <div className="flex flex-col gap-2 scale-75 origin-right">
-                <div className="flex gap-2">
-                    <button className="w-8 h-8 rounded-xl glass border border-white/10 text-[9px] font-black text-white/40 hover:text-white transition-all uppercase">M</button>
-                    <button className="w-8 h-8 rounded-xl glass border border-white/10 text-[9px] font-black text-white/40 hover:text-white transition-all uppercase">S</button>
+            <div className="flex items-center gap-4 px-4">
+                <div className="flex flex-col items-center gap-1">
+                    <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">Gain</span>
+                    <div className="w-1 h-12 bg-white/5 rounded-full relative overflow-hidden">
+                        <div className="absolute bottom-0 w-full bg-white/40 transition-all" style={{ height: `${track.volume * 100}%` }} />
+                    </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                    <button className={`w-9 h-9 rounded-xl glass border transition-all flex items-center justify-center text-[9px] font-black ${track.active ? 'border-neon-cyan/40 text-neon-cyan' : 'border-white/5 text-white/20'}`}>M</button>
+                    <button className="w-9 h-9 rounded-xl glass border border-white/5 text-[9px] font-black text-white/20 hover:text-white transition-all">S</button>
                 </div>
             </div>
         </div>
@@ -39,12 +67,15 @@ function WaveformLane({ track, isPlaying }: { track: AudioTrack; isPlaying: bool
 function FXKnob({ label, value, color = 'var(--neon-cyan)' }: { label: string; value: number; color?: string }) {
     const rotation = (value / 100) * 270 - 135;
     return (
-        <div className="flex flex-col items-center gap-3 group">
-            <div className="w-16 h-16 rounded-full border border-white/10 relative flex items-center justify-center glass-ultra shadow-2xl cursor-pointer hover:border-white/40 transition-all">
-                <div className="absolute w-1 h-4 top-1 rounded-full origin-bottom transition-transform duration-500 shadow-[0_0_10px_currentColor]" style={{ transform: `rotate(${rotation}deg) translateY(2px)`, backgroundColor: color, color }} />
-                <div className="w-10 h-10 rounded-full bg-white/5 shadow-inner" />
+        <div className="flex flex-col items-center gap-4 group cursor-pointer">
+            <div className="w-20 h-20 rounded-full border border-white/5 relative flex items-center justify-center glass-ultra shadow-2xl transition-all group-hover:border-white/20">
+                <div className="absolute inset-2 rounded-full border border-white/5 border-dashed animate-spin-slow opacity-20" />
+                <div className="absolute w-1 h-5 top-2 rounded-full origin-bottom transition-transform duration-700 shadow-[0_0_15px_currentColor]" style={{ transform: `rotate(${rotation}deg) translateY(2px)`, backgroundColor: color, color }} />
+                <div className="w-12 h-12 rounded-full bg-black/40 shadow-inner flex items-center justify-center">
+                    <div className="text-[8px] font-mono text-white/40">{value}%</div>
+                </div>
             </div>
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30 group-hover:text-white transition-colors">{label}</div>
+            <div className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30 group-hover:text-white group-hover:tracking-[0.4em] transition-all">{label}</div>
         </div>
     );
 }
@@ -63,29 +94,26 @@ export function AudioWorkspace() {
         { id: 'fx', name: 'Atmosphere', active: false, volume: 0.5, color: 'green', waveform: Array(50).fill(0).map(() => Math.random() * 40 + 10) },
     ]);
 
+    const [mode, setMode] = useState<'SYNTH' | 'INSPIRE'>('SYNTH');
+
     const handleIgnite = async () => {
         if (!isPlaying) {
             setIsGenerating(true);
             try {
                 addNotification('info', 'Sonic Refinery: Generating Neural Audio Stems...');
 
-                const result = await callLimb('audio', 'generate_music', {
-                    action: 'generate_music',
+                const result = await callLimb('audio', 'audio_generate', { // Fixed method name from audio_generate_music
                     prompt,
                     options: {
                         title: 'Neural Genesis',
                         duration: '3:00',
-                        bpm: 128,
-                        key: 'C Minor',
-                        genre: 'Cinematic'
+                        bpm: 128
                     }
                 }) as any;
 
                 if (result.status === 'success') {
                     setIsPlaying(true);
                     addNotification('success', `Audio synthesized: ${result.title || 'Neural Genesis'}`);
-                } else {
-                    addNotification('warning', 'Audio generation returned unexpected status');
                 }
             } catch (e: any) {
                 addNotification('error', `Sonic Fault: ${e.message}`);
@@ -97,24 +125,59 @@ export function AudioWorkspace() {
         }
     };
 
+    const handleInspire = async () => {
+        setIsGenerating(true);
+        try {
+            // Mock source relic
+            const sourceRelic = { id: 'track_autumn_voyage', type: 'audio_config', tags: ['melancholy', 'flute', 'midi'] };
+
+            addNotification('info', 'Constructing new composition from Ancient Relic...');
+            const result = await callLimb('audio', 'audio_inspire_audio', {
+                sourceRelic,
+                mood: 'Epic Orchestral'
+            });
+
+            if (result.status === 'success') {
+                setIsPlaying(true);
+                addNotification('success', `Relic Theme Inspired: ${result.audioUrl}`);
+            }
+        } catch (e: any) {
+            addNotification('error', `Inspiration Fault: ${e.message}`);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     return (
         <div className="flex-1 flex flex-col h-full bg-black/40 animate-fade-in relative overflow-hidden">
             {/* Transport Header */}
             <div className="h-24 border-b border-white/5 flex items-center px-10 gap-8 bg-white/5 backdrop-blur-3xl shadow-2xl">
                 <div className="w-14 h-14 rounded-3xl bg-neon-purple/20 flex items-center justify-center text-2xl shadow-[0_0_20px_rgba(188,0,255,0.2)] border border-neon-purple/30">🎻</div>
                 <div className="flex-1 max-w-2xl">
-                    <input
-                        value={prompt} onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="Define sonic vectors (e.g., 'Ethereal Techno with heavy sub pulse')..."
-                        className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-xs text-neon-cyan outline-none focus:border-neon-cyan/50 transition-all font-mono shadow-inner"
-                    />
+                    <div className="flex gap-4 mr-4">
+                        <button onClick={() => setMode('SYNTH')} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'SYNTH' ? 'bg-white text-black' : 'bg-black/40 text-white/40'}`}>Free Synth</button>
+                        <button onClick={() => setMode('INSPIRE')} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'INSPIRE' ? 'bg-white text-black' : 'bg-black/40 text-white/40'}`}>Relic Inspire</button>
+                    </div>
+
+                    {mode === 'SYNTH' ? (
+                        <input
+                            value={prompt} onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="Define sonic vectors (e.g., 'Ethereal Techno with heavy sub pulse')..."
+                            className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-xs text-neon-cyan outline-none focus:border-neon-cyan/50 transition-all font-mono shadow-inner"
+                        />
+                    ) : (
+                        <div className="flex-1 bg-cyan-900/20 border border-cyan-500/20 rounded-2xl px-6 py-4 flex items-center justify-between">
+                            <div className="text-[10px] font-mono text-cyan-200">SOURCE: <strong>RSC_ARCHIVE_SECTOR_7G</strong> (Reverb Echoes)</div>
+                            <div className="text-[9px] font-black text-cyan-500 uppercase">READY</div>
+                        </div>
+                    )}
                 </div>
-                <button onClick={handleIgnite} disabled={isGenerating}
+                <button onClick={mode === 'SYNTH' ? handleIgnite : handleInspire} disabled={isGenerating}
                     className={`h-14 px-10 rounded-[20px] font-black uppercase text-[11px] tracking-[0.4em] transition-all shadow-2xl
                         ${isPlaying ? 'bg-neon-magenta text-white hover:shadow-[0_0_30px_rgba(255,0,225,0.4)]' : 'bg-white text-black hover:bg-neon-cyan hover:shadow-[0_0_30px_rgba(0,242,255,0.4)]'}
                     `}
                 >
-                    {isGenerating ? 'Synthesizing...' : isPlaying ? 'Stop Sequence' : 'Ignite Engine'}
+                    {isGenerating ? 'Synthesizing...' : isPlaying ? 'Stop Sequence' : (mode === 'SYNTH' ? 'Ignite Engine' : 'Inspire Theme')}
                 </button>
             </div>
 

@@ -1,6 +1,7 @@
 import { NeuralLimb } from './NeuralLimb';
 import { CLIBridge } from '../../cli/CLIBridge';
 import { AgentCapability } from '../AgentConstitution';
+import { BaseIntent } from '../AITypes';
 
 /**
  * ProxyLimb.ts
@@ -17,23 +18,22 @@ export class ProxyLimb extends NeuralLimb {
         this.bridge = CLIBridge.getInstance();
     }
 
-    async process(intent: any) {
-        const { action } = intent;
-
-        await this.logActivity(`ext_${this.extensionId}_${action}`, 'pending', intent.payload);
+    async forward(params: any, intent: BaseIntent) {
+        // Log forwarding activity
+        await this.logActivity(`ext_${this.extensionId}_forward` as any, 'pending', params);
 
         try {
             // Forward request to local bridge
             const result = await this.bridge.sendRequest('dynamic_limb_request', {
                 extensionId: this.extensionId,
-                action,
-                payload: intent.payload || {}
+                action: intent.action,
+                payload: params || {}
             });
 
-            await this.logActivity(`ext_${this.extensionId}_${action}`, 'success', result);
+            await this.logActivity(`ext_${this.extensionId}_forward` as any, 'success', result);
             return result;
         } catch (e: any) {
-            await this.logActivity(`ext_${this.extensionId}_${action}`, 'failure', { error: e.message });
+            await this.logActivity(`ext_${this.extensionId}_forward` as any, 'failure', { error: e.message });
             return { status: 'error', error: e.message };
         }
     }

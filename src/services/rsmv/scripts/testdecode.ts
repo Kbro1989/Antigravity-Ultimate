@@ -8,7 +8,7 @@ import { compareCacheMajors } from "./cachediff";
 import { Openrs2CacheSource, validOpenrs2Caches } from "../cache/openrs2loader";
 import { cacheMajors } from "../constants";
 import { FileRange } from "../utils";
-import { EngineCache } from "../3d/modeltothree";
+import { EngineCache } from "../3d/enginecache";
 
 
 export type DecodeErrorJson = {

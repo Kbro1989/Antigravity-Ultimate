@@ -10,7 +10,7 @@ export function LiveWorkspace() {
 
     const handleSimulationAction = async (action: string, data: any = {}) => {
         try {
-            const result = await callLimb('live_game', action, data);
+            const result = await callLimb('live_game', ('live_game_' + action) as any, data);
             addNotification('info', `Simulation: ${action.toUpperCase()} Triggered`);
             if (action === 'spawn_npc') setEntities(prev => prev + 1);
         } catch (e: any) {
@@ -18,9 +18,18 @@ export function LiveWorkspace() {
         }
     };
 
-    const toggleSimulation = () => {
+    const toggleSimulation = async () => {
+        if (!isSimulating) {
+            try {
+                // Load the staged environment
+                await callLimb('live_game', 'live_game_load_stage', { stageId: 'latest_build' });
+                addNotification('success', 'Staged Assets Injected into Runtime');
+            } catch (e) {
+                console.error("Stage load failed", e);
+            }
+        }
         setIsSimulating(!isSimulating);
-        addNotification(isSimulating ? 'warning' : 'success', isSimulating ? 'Simulation Suspended' : 'Live Session Started');
+        addNotification(isSimulating ? 'warning' : 'info', isSimulating ? 'Simulation Suspended' : 'Live Session Started');
     };
 
     return (
@@ -49,8 +58,18 @@ export function LiveWorkspace() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
                         {!isSimulating && (
-                            <div className="absolute inset-0 flex items-center justify-center z-10">
-                                <button onClick={toggleSimulation} className="px-12 py-5 bg-white text-black font-black uppercase tracking-[0.5em] rounded-2xl hover:bg-neon-cyan transition-all shadow-2xl">Initialize Play Session</button>
+                            <div className="absolute inset-0 flex items-center justify-center z-10 flex-col gap-4">
+                                <div className="glass px-8 py-6 rounded-3xl border border-white/10 flex flex-col items-center gap-4 bg-black/60 backdrop-blur-xl">
+                                    <div className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Staged Content Detected</div>
+                                    <div className="flex gap-2">
+                                        {['QUEST_DATA', 'AUDIO_THEME', 'TEXTURE_SET'].map(t => (
+                                            <span key={t} className="px-2 py-1 bg-cyan-500/10 text-cyan-400 text-[8px] font-bold rounded border border-cyan-500/20">{t}</span>
+                                        ))}
+                                    </div>
+                                    <button onClick={toggleSimulation} className="px-12 py-4 bg-white text-black font-black uppercase tracking-[0.2em] rounded-xl hover:bg-neon-cyan transition-all shadow-2xl mt-2 flex items-center gap-3">
+                                        <span>▶</span> Load & Play Scene
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -74,42 +93,45 @@ export function LiveWorkspace() {
 
                 {/* Debug Console / Statistics */}
                 <div className="w-96 glass-ultra rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden flex flex-col bg-black/40">
-                    <div className="p-6 border-b border-white/5">
+                    <div className="p-6 border-b border-white/5 flex justify-between items-center">
                         <div className="text-[10px] font-black uppercase tracking-[0.4em] text-neon-cyan flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse"></span>
-                            Session Debug HUD
+                            God Mode
                         </div>
+                        <div className="text-[8px] font-mono text-white/30">v9.9.PRO</div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                        {/* Live Injector */}
+                        <div className="space-y-3">
+                            <div className="text-[9px] font-black text-white/30 uppercase border-b border-white/5 pb-2">Live Injectors</div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button onClick={() => handleSimulationAction('hot_swap_asset', { assetId: 'skybox_night', type: 'texture', newData: 'nebula_v2' })}
+                                    className="p-3 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-xl text-[8px] font-black uppercase hover:bg-indigo-500 hover:text-white transition-all text-center">
+                                    Swap Skybox
+                                </button>
+                                <button onClick={() => handleSimulationAction('hot_swap_asset', { assetId: 'hero_color', type: 'shader', newData: '#ff00ff' })}
+                                    className="p-3 bg-pink-500/20 text-pink-300 border border-pink-500/30 rounded-xl text-[8px] font-black uppercase hover:bg-pink-500 hover:text-white transition-all text-center">
+                                    Reskin Hero
+                                </button>
+                                <button onClick={() => handleSimulationAction('hot_swap_asset', { assetId: 'gravity', type: 'variable', newData: 0.5 })}
+                                    className="p-3 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-xl text-[8px] font-black uppercase hover:bg-purple-500 hover:text-white transition-all text-center">
+                                    Low Gravity
+                                </button>
+                                <button onClick={() => handleSimulationAction('spawn_npc', { id: `clone_${Date.now()}` })}
+                                    className="p-3 bg-green-500/20 text-green-300 border border-green-500/30 rounded-xl text-[8px] font-black uppercase hover:bg-green-500 hover:text-white transition-all text-center">
+                                    Clone Target
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="p-4 glass rounded-2xl border border-white/5 space-y-4">
-                            <div className="text-[9px] font-black text-white/30 uppercase">CPU Frame Time</div>
+                            <div className="text-[9px] font-black text-white/30 uppercase">Runtime Profiler</div>
                             <div className="flex items-end gap-1 h-12">
                                 {[4, 7, 5, 9, 12, 6, 4, 8, 15, 5, 4, 9].map((h, i) => (
                                     <div key={i} className="flex-1 bg-neon-cyan/40 rounded-t-sm" style={{ height: `${h * 4}%` }} />
                                 ))}
                             </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 glass rounded-2xl border border-white/5">
-                                <div className="text-[8px] font-black text-white/20 uppercase mb-1">Draw Calls</div>
-                                <div className="text-sm font-bold text-white">1,245</div>
-                            </div>
-                            <div className="p-4 glass rounded-2xl border border-white/5">
-                                <div className="text-[8px] font-black text-white/20 uppercase mb-1">Triangles</div>
-                                <div className="text-sm font-bold text-white">4.2M</div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <div className="text-[9px] font-black text-white/30 uppercase border-b border-white/5 pb-2">Profiler Hotspots</div>
-                            {['Shaders/Skinning', 'Physics/Collision', 'Audio/Reverb'].map(h => (
-                                <div key={h} className="flex justify-between items-center text-[10px] font-bold text-white/60">
-                                    <span>{h}</span>
-                                    <span className="text-neon-magenta">{(Math.random() * 20).toFixed(1)}ms</span>
-                                </div>
-                            ))}
                         </div>
                     </div>
                 </div>

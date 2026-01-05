@@ -5,6 +5,7 @@ import { ServiceContainer } from '../services/backend/ServiceContainer';
 import { AINegotiationProtocol } from '../services/ai/AINegotiationProtocol';
 import { SharedMemorySystem } from '../services/ai/SharedMemorySystem';
 import { chronoshell } from '../services/core/Chronoshell';
+import { AIAction } from '../services/ai/AITypes';
 
 export interface AssetMetadata {
     id: string;
@@ -81,7 +82,8 @@ export class SessionAgent extends DurableObject<Env> {
                     prompt: body.message,
                     history: body.history,
                     systemPrompt: body.systemPrompt,
-                    model: body.model,
+                    modelId: body.modelId || body.model,
+                    provider: body.provider,
                     ...body.options
                 });
 
@@ -98,9 +100,10 @@ export class SessionAgent extends DurableObject<Env> {
             try {
                 const result = await this.services.limbs.processIntent({
                     limbId: 'image',
-                    action: 'generate',
-                    prompt: body.prompt,
-                    payload: body
+                    action: 'image_generate' as AIAction,
+                    payload: body,
+                    modelId: body.modelId,
+                    provider: body.provider
                 });
                 return c.json(result);
             } catch (e: any) {
@@ -114,8 +117,10 @@ export class SessionAgent extends DurableObject<Env> {
             try {
                 const result = await this.services.limbs.processIntent({
                     limbId: 'code',
-                    action: 'complete',
-                    payload: body
+                    action: 'code_complete' as AIAction,
+                    payload: body,
+                    modelId: body.modelId,
+                    provider: body.provider
                 });
                 return c.json(result);
             } catch (e: any) {
@@ -134,8 +139,10 @@ export class SessionAgent extends DurableObject<Env> {
             try {
                 const result = await this.services.limbs.processIntent({
                     limbId,
-                    action,
-                    payload
+                    action: action as AIAction,
+                    payload,
+                    modelId: payload?.modelId,
+                    provider: payload?.provider
                 });
                 return c.json(result);
             } catch (e: any) {

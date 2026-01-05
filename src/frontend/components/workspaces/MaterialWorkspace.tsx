@@ -12,7 +12,7 @@ export function MaterialWorkspace() {
     const handleCompile = async () => {
         setIsCompiling(true);
         try {
-            await callLimb('material', 'generate_shader', {
+            await callLimb('material', 'material_generate_shader', {
                 properties: params,
                 base_color: '#00f2ff',
                 transparency: false

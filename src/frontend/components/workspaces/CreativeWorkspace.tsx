@@ -57,7 +57,7 @@ export function CreativeWorkspace() {
         try {
             addNotification('info', 'Neural Compositor: Weaving Reality Matrix...');
 
-            const result = await callLimb('image', 'generate', {
+            const result = await callLimb('image', 'image_generate', {
                 action: 'synthesize_image',
                 prompt: Object.entries(layers)
                     .filter(([_, l]) => l.active)

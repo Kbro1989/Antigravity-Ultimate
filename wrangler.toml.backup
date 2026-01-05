@@ -4,6 +4,9 @@ compatibility_date = "2024-11-12"
 compatibility_flags = [ "nodejs_compat" ]
 account_id = "6872653edcee9c787c1b783173793"
 
+# [build]
+# command = "npm run build:wasm && npm run build"
+
 [[rules]]
 type = "Text"
 globs = ["**/*.glsl", "**/*.glsl.c", "**/*.c"]
@@ -19,6 +22,11 @@ head_sampling_rate = 1
 persist = true
 invocation_logs = true
 
+# [observability.traces]
+# enabled = false
+# persist = true
+# head_sampling_rate = 1
+
 # Serve the built frontend
 [site]
 bucket = "./dist"
@@ -27,7 +35,7 @@ bucket = "./dist"
 [durable_objects]
 bindings = [
   { name = "SESSION_AGENT", class_name = "SessionAgent" },
-  { name = "COLLABORATION_SERVER", class_name = "Collaboration" }
+  { name = "COLLABORATION", class_name = "Collaboration" }
 ]
 
 [[migrations]]
@@ -43,7 +51,7 @@ binding = "AI"
 binding = "ASSETS_BUCKET"
 bucket_name = "antigravity-assets"
 
-# D1 Database (ID from your dashboard)
+# D1 Database
 [[d1_databases]]
 binding = "DB"
 database_name = "d1-starter-sessions-api"

@@ -4,15 +4,36 @@ import { useServiceHub, useNotification } from '../../hooks';
 export function FileWorkspace() {
     const { callLimb } = useServiceHub();
     const { addNotification } = useNotification();
-    const [selectedFile, setSelectedFile] = useState<string | null>(null);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [currentPath, setCurrentPath] = useState<string>('C:/Users/Destiny/Desktop/New folder/POG-Ultimate');
+    const [files, setFiles] = useState<any[]>([]);
+
+    const fetchFiles = React.useCallback(async () => {
+        try {
+            const result = await callLimb('file', 'file_list_directory', { path: currentPath });
+            if (result.status === 'success') {
+                setFiles(result.files || []);
+            }
+        } catch (e) {
+            console.error('File list failed', e);
+            // Fallback for demo if offline
+            setFiles([]);
+        }
+    }, [currentPath, callLimb]);
+
+    React.useEffect(() => {
+        fetchFiles();
+    }, [fetchFiles]);
+
+    const handleNavigate = (newPath: string) => {
+        setCurrentPath(newPath);
+    };
 
     const handleAudit = async () => {
         if (!selectedFile) return;
         setIsAnalyzing(true);
         try {
-            await callLimb('file', 'audit_provenance', {
-                file_path: selectedFile,
+            await callLimb('file', 'file_audit_provenance', {
+                file_path: `${currentPath}/${selectedFile}`,
                 deep_scan: true
             });
             addNotification('info', `Data Lake: Indexing ${selectedFile}...`);
@@ -26,39 +47,33 @@ export function FileWorkspace() {
         }
     };
 
-    const files = [
-        { name: 'mesh_v01.obj', type: '3D', size: '124MB', health: 'Optimal' },
-        { name: 'config_neural.json', type: 'JSON', size: '4KB', health: 'Corrupted' },
-        { name: 'texture_albedo.png', type: 'IMAGE', size: '12MB', health: 'Optimal' },
-        { name: 'audio_stem_01.wav', type: 'AUDIO', size: '45MB', health: 'Locked' },
-        { name: 'script_main.js', type: 'CODE', size: '89KB', health: 'Optimal' },
-    ];
-
     return (
         <div className="flex-1 flex gap-6 h-full p-6 bg-black/40 animate-fade-in relative overflow-hidden">
             {/* Explorer */}
             <div className="flex-1 glass-ultra rounded-3xl flex flex-col border border-white/5 shadow-2xl overflow-hidden">
                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
                     <div className="text-[10px] font-black tracking-[0.4em] text-white uppercase">Neural File Explorer</div>
-                    <div className="text-[9px] font-mono text-white/30">C:\SYMPHONY\CORE\PROJECT_DELTA</div>
+                    <div className="text-[9px] font-mono text-white/30 truncate max-w-[400px]">{currentPath}</div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    {currentPath !== 'C:/' && (
+                        <div onClick={() => handleNavigate(currentPath.split('/').slice(0, -1).join('/') || 'C:/')} className="p-4 rounded-2xl cursor-pointer hover:bg-white/5 border border-transparent flex items-center gap-4 opacity-50">
+                            <div className="text-xl">🔙</div> <div className="text-xs font-bold text-white">..</div>
+                        </div>
+                    )}
                     {files.map(f => (
                         <div
                             key={f.name}
-                            onClick={() => setSelectedFile(f.name)}
+                            onClick={() => f.isDirectory ? handleNavigate(`${currentPath}/${f.name}`) : setSelectedFile(f.name)}
                             className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all border ${selectedFile === f.name ? 'bg-neon-cyan/10 border-neon-cyan/40' : 'hover:bg-white/5 border-transparent'}`}
                         >
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${f.type === '3D' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                                {f.type === '3D' ? '📦' : '📄'}
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${f.isDirectory ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                {f.isDirectory ? '📁' : '📄'}
                             </div>
                             <div className="flex-1">
                                 <div className="text-xs font-bold text-white/90">{f.name}</div>
-                                <div className="text-[9px] font-mono text-white/40 uppercase tracking-widest">{f.type} • {f.size}</div>
-                            </div>
-                            <div className={`px-2 py-1 rounded text-[8px] font-black uppercase ${f.health === 'Optimal' ? 'bg-green-500/10 text-green-400' : f.health === 'Corrupted' ? 'bg-red-500/10 text-red-400' : 'bg-yellow-500/10 text-yellow-400'}`}>
-                                {f.health}
+                                <div className="text-[9px] font-mono text-white/40 uppercase tracking-widest">{f.isDirectory ? 'DIR' : f.type || 'FILE'} • {f.size || '0KB'}</div>
                             </div>
                         </div>
                     ))}

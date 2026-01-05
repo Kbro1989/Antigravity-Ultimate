@@ -2,7 +2,7 @@ import * as React from "react";
 import { boundMethod } from "autobind-decorator";
 import prettyJson from "json-stringify-pretty-compact";
 import classNames from "classnames";
-import { EngineCache } from "../3d/modeltothree";
+import { EngineCache } from "../3d/enginecache";
 import { cacheFileJsonModes } from "../scripts/filetypes";
 import { JsonSearch, JsonSearchFilter, useJsonCacheSearch } from "./jsonsearch";
 

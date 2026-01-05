@@ -2,6 +2,7 @@ import { nexusBus } from '../../core/NexusCommandBus';
 import { logTask } from '../../core/LoggingService';
 import { AgentCapability, assertCapability, AgentLaw } from '../AgentConstitution';
 import { chronoshell, Chronoshell } from '../../core/Chronoshell';
+import { BaseIntent } from '../AITypes';
 
 export interface LimbConfig {
     id: string;
@@ -27,9 +28,29 @@ export abstract class NeuralLimb {
     }
 
     /**
-     * Main entry point for the Limb to process an Intent
+     * Main entry point for the Limb to process an Intent.
+     * Automatically dispatches to public methods based on action name.
      */
-    abstract process(intent: any): Promise<any>;
+    async process(intent: BaseIntent & { modelId?: string; provider?: string }): Promise<any> {
+        const { action, payload } = intent;
+
+        // Remove limb prefix if present (e.g., 'audio_generate' -> 'generate')
+        const methodSuffix = action.includes('_') ? action.split('_').slice(1).join('_') : action;
+
+        // Strategy: Look for specific method first, then fallback to general action method
+        const targetMethod = (this as any)[methodSuffix] || (this as any)[action];
+
+        if (typeof targetMethod === 'function') {
+            return await targetMethod.call(this, payload, intent);
+        }
+
+        // Fallback or explicit implementation requirement
+        return await this.handleUnknownAction(intent);
+    }
+
+    protected async handleUnknownAction(intent: BaseIntent): Promise<any> {
+        throw new Error(`Limb ${this.id} does not implement support for action: ${intent.action}`);
+    }
 
     protected async logActivity(step: string, status: 'success' | 'failure' | 'pending', metadata?: any) {
         // Legacy system log

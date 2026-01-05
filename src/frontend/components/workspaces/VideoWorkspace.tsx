@@ -29,13 +29,24 @@ export function VideoWorkspace() {
                 {/* Cinema Viewport */}
                 <div className="flex-1 glass-ultra rounded-3xl relative overflow-hidden border border-white/5 flex flex-col group shadow-2xl">
                     <div className="absolute inset-0 bg-black">
-                        {/* Video Placeholder */}
-                        <div className="w-full h-full opacity-40 bg-[url('https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200')] bg-cover bg-center" />
+                        {/* Real Video Player Layer */}
+                        <video
+                            id="cinema-player"
+                            className={`w-full h-full object-cover transition-opacity duration-1000 ${isProcessing ? 'opacity-20' : 'opacity-80'}`}
+                            poster="https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200"
+                            loop
+                            muted
+                            playsInline
+                        >
+                            <source src="https://assets.mixkit.co/videos/preview/mixkit-stars-in-the-night-sky-slow-motion-from-below-41225-large.mp4" type="video/mp4" />
+                        </video>
+
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+
                         {isProcessing && (
                             <div className="absolute inset-0 flex items-center justify-center z-20">
                                 <div className="flex flex-col items-center gap-4">
-                                    <div className="w-16 h-16 border-4 border-neon-cyan/20 border-t-neon-cyan rounded-full animate-spin" />
+                                    <div className="w-16 h-16 border-4 border-neon-cyan/20 border-t-neon-cyan rounded-full animate-spin shadow-[0_0_20px_var(--neon-cyan)]" />
                                     <div className="text-[10px] font-black uppercase tracking-[0.6em] text-neon-cyan animate-pulse">Choreographing Scene...</div>
                                 </div>
                             </div>
@@ -46,30 +57,53 @@ export function VideoWorkspace() {
                     <div className="absolute top-6 left-6 z-10 flex gap-3">
                         <div className="glass px-4 py-2 rounded-full text-[10px] font-black tracking-widest text-white border border-white/10 uppercase bg-white/5 backdrop-blur-md">Active_Scene: Cinematic_01</div>
                         <div className="glass px-4 py-2 rounded-full text-[10px] font-black tracking-widest text-neon-cyan border border-neon-cyan/30 uppercase bg-neon-cyan/5 backdrop-blur-md animate-pulse">Director Mode</div>
+                        <div className="glass px-4 py-2 rounded-full text-[10px] font-black tracking-widest text-white/40 border border-white/10 uppercase bg-black/40 backdrop-blur-md">4K_ULTRA_RENDER</div>
                     </div>
 
                     {/* Timeline Scrubber */}
-                    <div className="mt-auto p-8 z-10 space-y-4">
-                        <div className="flex justify-between text-[10px] font-mono text-white/50 px-2 tracking-0.2em uppercase">
-                            <span>00:04:15:12</span>
-                            <span>00:12:45:00</span>
-                        </div>
-                        <div className="h-6 relative group/scrub cursor-pointer">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full h-[2px] bg-white/10 rounded-full" />
+                    <div className="mt-auto p-8 z-10 space-y-4 bg-gradient-to-t from-black to-transparent">
+                        <div className="flex justify-between items-end text-[10px] font-mono text-white/50 px-2 tracking-0.2em uppercase">
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[8px] text-neon-cyan/60">SMTPE_TIMECODE</span>
+                                <span className="text-white">00:04:15:12</span>
                             </div>
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-[35%] h-[2px] bg-gradient-to-r from-neon-cyan to-neon-magenta rounded-full shadow-[0_0_15px_rgba(0,242,255,0.5)]" />
+                            <div className="text-right flex flex-col gap-1">
+                                <span className="text-[8px] text-white/20">TOTAL_DURATION</span>
+                                <span>00:12:45:00</span>
                             </div>
-                            <div className="absolute top-1/2 left-[35%] -translate-y-1/2 w-4 h-4 rounded-full bg-white shadow-xl scale-0 group-hover/scrub:scale-100 transition-transform duration-300" />
                         </div>
 
-                        <div className="flex items-center justify-center gap-8">
-                            <button className="text-white/40 hover:text-white transition-colors">⏮</button>
-                            <button className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center border border-white/20 hover:border-white/50 hover:bg-white/20 transition-all">
-                                <span className="text-white text-xl">▶</span>
+                        {/* Multi-track Timeline Mock */}
+                        <div className="h-16 relative group/scrub cursor-pointer flex flex-col gap-1">
+                            <div className="flex-1 relative glass rounded-lg border border-white/5 overflow-hidden">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full h-[1px] bg-white/10" />
+                                </div>
+                                <div className="absolute inset-y-0 left-[20%] w-[30%] bg-neon-cyan/10 border-x border-neon-cyan/30 flex items-center px-4">
+                                    <span className="text-[7px] text-neon-cyan font-black uppercase tracking-widest">Clip_01_Intro</span>
+                                </div>
+                                <div className="absolute inset-y-0 left-[55%] w-[40%] bg-neon-magenta/10 border-x border-neon-magenta/30 flex items-center px-4">
+                                    <span className="text-[7px] text-neon-magenta font-black uppercase tracking-widest">Action_Sequence_A</span>
+                                </div>
+
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-[35%] h-full bg-neon-cyan/5 border-r-2 border-neon-cyan shadow-[0_0_15px_rgba(0,242,255,0.5)] z-20" />
+                                </div>
+                            </div>
+                            {/* Audio track mock */}
+                            <div className="h-4 glass rounded-md border border-white/5 flex items-center gap-[1px] px-2">
+                                {Array.from({ length: 40 }).map((_, i) => (
+                                    <div key={i} className="flex-1 bg-white/10 rounded-full" style={{ height: `${Math.random() * 80 + 20}%` }} />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-center gap-10">
+                            <button className="text-white/40 hover:text-white transition-all scale-150 hover:scale-[1.7]">⏮</button>
+                            <button className="w-14 h-14 rounded-full bg-white text-black flex items-center justify-center border border-white/20 hover:bg-neon-cyan hover:shadow-[0_0_30px_rgba(0,242,255,0.8)] transition-all transform hover:scale-110">
+                                <span className="text-xl">▶</span>
                             </button>
-                            <button className="text-white/40 hover:text-white transition-colors">⏭</button>
+                            <button className="text-white/40 hover:text-white transition-all scale-150 hover:scale-[1.7]">⏭</button>
                         </div>
                     </div>
                 </div>
@@ -120,7 +154,7 @@ export function VideoWorkspace() {
 
                         {/* Execute Button */}
                         <button
-                            onClick={() => handleDirectorAction('render_cutscene')}
+                            onClick={() => handleDirectorAction('video_render_cutscene')}
                             disabled={isProcessing}
                             className={`w-full py-5 rounded-2xl mt-auto font-black text-xs tracking-[0.2em] transition-all uppercase shadow-2xl flex items-center justify-center gap-3
                                 ${isProcessing

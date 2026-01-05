@@ -12,7 +12,7 @@ export function EntityWorkspace() {
         if (!thought.trim()) return;
         setIsTransmitting(true);
         try {
-            await callLimb('entity', 'inject_thought', {
+            await callLimb('entity', 'entity_inject_thought', {
                 target_id: activeEntity,
                 content: thought,
                 priority: 'urgent'
@@ -83,19 +83,47 @@ export function EntityWorkspace() {
                 {/* Params Rack */}
                 <div className="w-80 flex flex-col gap-8 h-full">
                     <div className="glass-ultra rounded-[40px] p-8 border border-white/5 shadow-2xl flex flex-col gap-8 flex-1">
-                        <div className="text-[10px] font-black tracking-[0.4em] text-white/40 uppercase">Biological Vectors</div>
-                        <div className="space-y-6">
-                            {['Aggression', 'Curiosity', 'Metabolism', 'Latency'].map(v => (
-                                <div key={v} className="space-y-3">
-                                    <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-white/40">
-                                        <span>{v}</span>
-                                        <span className="text-neon-magenta">{(Math.random() * 10).toFixed(1)}</span>
-                                    </div>
-                                    <div className="h-1 bg-black/40 rounded-full overflow-hidden border border-white/5">
-                                        <div className="h-full bg-gradient-to-r from-neon-magenta to-neon-purple shadow-[0_0_8px_var(--neon-magenta)]" style={{ width: `${Math.random() * 80 + 20}%` }} />
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="text-[10px] font-black tracking-[0.4em] text-white/40 uppercase">Omni-Biologist Controls</div>
+
+                        {/* Define Species */}
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-3">
+                            <div className="text-[9px] font-black uppercase text-neon-magenta flex items-center gap-2">
+                                <span>🧬</span> Genetic Definition
+                            </div>
+                            <button onClick={async () => {
+                                setIsTransmitting(true);
+                                await callLimb('entity', 'define_species', { name: activeEntity + '_MKII', stats: { attack: 40, defense: 40, strength: 60, hits: 55 } });
+                                addNotification('success', 'New Species Definition Composed');
+                                setIsTransmitting(false);
+                            }} className="w-full py-2 bg-neon-magenta/20 text-neon-magenta border border-neon-magenta/40 rounded-xl text-[9px] font-black uppercase hover:bg-neon-magenta hover:text-white transition-all">
+                                Mutate Species
+                            </button>
+                        </div>
+
+                        {/* Assign Patrol */}
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-3">
+                            <div className="text-[9px] font-black uppercase text-cyan-400 flex items-center gap-2">
+                                <span>🗺️</span> Patrol Vector
+                            </div>
+                            <button onClick={async () => {
+                                await callLimb('entity', 'assign_patrol', { id: activeEntity, waypoints: [[3222, 3222], [3222, 3230]] });
+                                addNotification('success', 'Patrol Route Uploaded to Entity Cortex');
+                            }} className="w-full py-2 bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 rounded-xl text-[9px] font-black uppercase hover:bg-cyan-500 hover:text-white transition-all">
+                                Assign Sector Log
+                            </button>
+                        </div>
+
+                        {/* Equip Entity */}
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-3">
+                            <div className="text-[9px] font-black uppercase text-yellow-400 flex items-center gap-2">
+                                <span>⚔️</span> Equipment Loadout
+                            </div>
+                            <button onClick={async () => {
+                                await callLimb('entity', 'equip_entity', { id: activeEntity, items: ['rune_scimitar', 'rune_platebody'] });
+                                addNotification('success', 'Entity Gear Configured for Combat');
+                            }} className="w-full py-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/40 rounded-xl text-[9px] font-black uppercase hover:bg-yellow-500 hover:text-white transition-all">
+                                Grant Wieldables
+                            </button>
                         </div>
 
                         <div className="mt-auto flex flex-col gap-6">

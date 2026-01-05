@@ -9,7 +9,7 @@ export function NetworkWorkspace() {
     const handlePing = async () => {
         setIsPinging(true);
         try {
-            await callLimb('network', 'ping_limbs', {
+            await callLimb('network', 'network_ping_limbs', {
                 include_latency_matrix: true,
                 distributed_trace: true
             });

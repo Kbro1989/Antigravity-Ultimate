@@ -1,7 +1,7 @@
 import { useStateManager } from './StateManager';
 import { cloudflareProvider } from '../ai/providers/CloudflareProvider';
 import { ollamaProvider } from '../ai/providers/OllamaProvider';
-export { WorkspaceMode } from '../../types/workspace';
+export type { WorkspaceMode } from '../../types/workspace';
 
 export type AIMode = 'online' | 'offline' | 'hybrid';
 

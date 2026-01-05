@@ -14,7 +14,8 @@ import {
     FlowEngine,
     IntelRegistry,
     GoldContextService,
-    RealityAnchorService
+    RealityAnchorService,
+    modelRegistry
 } from './ai';
 
 // Core Services
@@ -44,27 +45,64 @@ export class ServiceHubClass {
     public snapshots = new GoldContextService({} as any);
     public anchors = new RealityAnchorService();
 
-    // AI Generation
     public ai = {
         chat: runOrchestration,
-        image: generateImage,
-        speech: synthesizeSpeech,
+        image: (prompt: string, size?: string) => {
+            const definition = modelRegistry.getModel('imageGeneration');
+            return generateImage(prompt, {
+                aspectRatio: size as any,
+                modelId: definition.id,
+                provider: definition.provider
+            });
+        },
+        speech: (text: string) => {
+            const definition = modelRegistry.getModel('textToSpeech');
+            return synthesizeSpeech(text, {
+                modelId: definition.id,
+                provider: definition.provider
+            });
+        },
         video: generateVideo,
-        codeComplete: getCodeCompletions,
+        codeComplete: (prompt: string, suffix: string, filename: string) => {
+            const definition = modelRegistry.getModel('codeGeneration');
+            return getCodeCompletions(prompt, suffix, filename, {
+                modelId: definition.id,
+                provider: definition.provider
+            });
+        },
         audit: auditCode,
         refactor: refactorCode,
         search: searchSimilarAssets,
         process: async (intent: any) => {
             console.log('[ServiceHub] Routing intent to agent:', intent);
+
+            // Auto-inject model overrides based on action/workspace
+            const capability = this.mapActionToCapability(intent.action);
+            const definition = modelRegistry.getModel(capability);
+
             const response = await fetch('/api/session/default/ai/complete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(intent)
+                body: JSON.stringify({
+                    ...intent,
+                    modelId: definition.id,
+                    provider: definition.provider
+                })
             });
             return response.json();
         },
         route: async (request: any) => costOptimizer.route(request)
     };
+
+    private mapActionToCapability(action: string): any {
+        if (action.includes('image')) return 'imageGeneration';
+        if (action.includes('code')) return 'codeGeneration';
+        if (action.includes('speech') || action.includes('voice')) return 'textToSpeech';
+        if (action.includes('audio')) return 'speechToText';
+        if (action.includes('3d')) return 'model3D';
+        if (action.includes('video')) return 'videoGeneration';
+        return 'textGeneration';
+    }
 
     // Infrastructure
     public infra = {
@@ -163,13 +201,17 @@ export class ServiceHubClass {
      */
     public async initClassicPipeline() {
         const { getClassicRSMV } = await import('./rsmv');
-        this.rsmv.classic = getClassicRSMV();
+        this.rsmv.classic = await getClassicRSMV({
+            stagedPath: 'C:\\Users\\Destiny\\Desktop\\New folder\\POG-Ultimate\\staged_assets'
+        });
         return this.rsmv.classic;
     }
 
     public async initModernPipeline() {
         const { getModernRSMV } = await import('./rsmv');
-        this.rsmv.modern = getModernRSMV();
+        this.rsmv.modern = await getModernRSMV({
+            stagedPath: 'C:\\Users\\Destiny\\Desktop\\New folder\\POG-Ultimate\\staged_assets'
+        });
         return this.rsmv.modern;
     }
 }

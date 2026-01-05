@@ -1,5 +1,5 @@
 import { VectorMemory } from './VectorMemory';
-import type { Env } from '../../index';
+import type { Env } from '../../types/env';
 
 /**
  * IntelRegistry.ts

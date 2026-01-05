@@ -39,6 +39,8 @@ export interface ModelRequest {
     subRequests?: ModelRequest[];
     domain?: '3D' | 'MEDIA' | 'AI' | 'SYSTEM';
     source?: 'RSMV' | 'NIF' | 'GLTF' | 'REMOTE';
+    modelId?: string;
+    provider?: string;
 }
 
 export interface ModelResponse {
@@ -127,13 +129,20 @@ export async function route(request: ModelRequest): Promise<ModelResponse | Read
 
     const pipeline: PipelineStep[] = [];
 
-    // "Cloudflare First" Doctrine
-    if (hardBlockEnforcer.canUseProvider('cloudflare')) {
-        pipeline.push({ provider: 'cloudflare', executor: routeToCloudflare });
-    }
+    if (request.modelId && request.provider) {
+        // Explicit Override Mode
+        console.log(`[ROUTER] Using explicit override: ${request.provider}/${request.modelId}`);
+        const executor = request.provider === 'gemini' ? routeToGemini : routeToCloudflare;
+        pipeline.push({ provider: request.provider as any, executor });
+    } else {
+        // Default "Cloudflare First" Doctrine
+        if (hardBlockEnforcer.canUseProvider('cloudflare')) {
+            pipeline.push({ provider: 'cloudflare', executor: routeToCloudflare });
+        }
 
-    if (geminiProvider.isAvailable() && hardBlockEnforcer.canUseProvider('gemini')) {
-        pipeline.push({ provider: 'gemini', executor: routeToGemini });
+        if (geminiProvider.isAvailable() && hardBlockEnforcer.canUseProvider('gemini')) {
+            pipeline.push({ provider: 'gemini', executor: routeToGemini });
+        }
     }
 
     if (pipeline.length === 0) {
@@ -190,7 +199,8 @@ export async function route(request: ModelRequest): Promise<ModelResponse | Read
                 success: true
             });
 
-            hardBlockEnforcer.trackUsage(resp.provider as any, resp.cost);
+            const actualProvider = resp.model === 'triposr' ? 'paid' : resp.provider;
+            hardBlockEnforcer.trackUsage(actualProvider as any, resp.cost);
 
             // Cache Success
             await aiCacheService.setCachedResponse(request, resp);
@@ -243,7 +253,8 @@ async function routeToCloudflare(request: ModelRequest, signal?: AbortSignal): P
             const response = await cloudflareProvider.textChat({
                 history,
                 prompt: request.prompt,
-                systemPrompt: request.systemPrompt
+                systemPrompt: request.systemPrompt,
+                model: request.modelId
             });
             return {
                 content: (response as any).content || response,

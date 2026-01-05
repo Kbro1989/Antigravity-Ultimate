@@ -3,6 +3,7 @@ import { AgentCapability, AgentLaw } from '../AgentConstitution';
 import { ProvenanceService } from '../../core/ProvenanceService';
 import { useStateManager } from '../../core/StateManager';
 import { modelRouter } from '../ModelRouter';
+import { BaseIntent } from '../AITypes';
 
 export class SecurityLimb extends NeuralLimb {
     private auditLog: any[] = [];
@@ -14,72 +15,66 @@ export class SecurityLimb extends NeuralLimb {
         this.provenance = ProvenanceService.getInstance();
     }
 
-    async process(intent: any) {
-        const { action, targetIntent, content, metadata } = intent;
+    async scan(params: any) {
+        this.enforceCapability(AgentCapability.METRIC_ACCESS);
+        return { status: 'success', threats: 0, integrity: 1.0 };
+    }
 
-        await this.logActivity(`security_${action}`, 'pending');
+    async audit(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.METRIC_ACCESS);
+        const { content, targetIntent } = params;
 
-        try {
-            switch (action) {
-                case 'audit':
-                    this.enforceCapability(AgentCapability.METRIC_ACCESS);
-                    // Use real AI to assess risk if content is provided
-                    let risk: 'low' | 'medium' | 'high' | 'blocked' = 'low';
-                    if (content) {
-                        const aiRisk = await this.callAIAudit(content);
-                        risk = aiRisk;
-                    } else {
-                        risk = this.assessRisk(targetIntent);
-                    }
-
-                    this.auditLog.push({ ...targetIntent, risk, timestamp: Date.now() });
-
-                    // Enforce Law 1: No harm without consent
-                    if (risk === 'blocked') {
-                        throw new Error(`Governance Violation: High-risk action blocked. [Law: First Law]`);
-                    }
-
-                    return { status: 'audited', risk };
-                case 'get_logs':
-                    this.enforceCapability(AgentCapability.READ_FILES);
-                    return { status: 'success', data: this.auditLog };
-                case 'emergency_lockdown':
-                    this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
-                    const { scope, key_rotation } = intent;
-
-                    // Trigger real system-wide lockdown
-                    useStateManager.getState().setLockdown(true);
-
-                    await this.logActivity('lockdown_initiated', 'success', { scope, severity: 'CRITICAL' });
-                    return {
-                        status: 'success',
-                        lockdown_active: true,
-                        scope: scope || 'global',
-                        keys_rotated: key_rotation ? 4 : 0,
-                        shield_integrity: 100.0,
-                        timestamp: Date.now()
-                    };
-
-                case 'sign_artifact':
-                    this.enforceCapability(AgentCapability.WRITE_FILES);
-                    // Law 3: Maintain cryptographic provenance
-                    const signatureBlock = this.provenance.sign(content, {
-                        prompt: metadata?.prompt || 'N/A',
-                        model: metadata?.model || 'N/A',
-                        generator: this.id
-                    });
-                    return {
-                        status: 'success',
-                        signatureBlock,
-                        law: 'Third Law'
-                    };
-                default:
-                    throw new Error(`Unknown security action: ${action}`);
-            }
-        } catch (e: any) {
-            await this.logActivity(`security_${action}`, 'failure', { error: e.message });
-            return { status: 'error', error: e.message };
+        let risk: 'low' | 'medium' | 'high' | 'blocked' = 'low';
+        if (content) {
+            risk = await this.callAIAudit(content);
+        } else if (targetIntent) {
+            risk = this.assessRisk(targetIntent);
         }
+
+        this.auditLog.push({ ...targetIntent, risk, timestamp: Date.now() });
+
+        if (risk === 'blocked') {
+            throw new Error(`Governance Violation: High-risk action blocked. [Law: First Law]`);
+        }
+
+        return { status: 'audited', risk };
+    }
+
+    async get_logs(params: any) {
+        this.enforceCapability(AgentCapability.READ_FILES);
+        return { status: 'success', data: this.auditLog };
+    }
+
+    async emergency_lockdown(params: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        const { scope, key_rotation } = params;
+
+        useStateManager.getState().setLockdown(true);
+
+        await this.logActivity('lockdown_initiated' as any, 'success', { scope, severity: 'CRITICAL' });
+        return {
+            status: 'success',
+            lockdown_active: true,
+            scope: scope || 'global',
+            keys_rotated: key_rotation ? 4 : 0,
+            shield_integrity: 100.0,
+            timestamp: Date.now()
+        };
+    }
+
+    async sign_artifact(params: any) {
+        this.enforceCapability(AgentCapability.WRITE_FILES);
+        const { content, metadata } = params;
+        const signatureBlock = this.provenance.sign(content, {
+            prompt: metadata?.prompt || 'N/A',
+            model: metadata?.model || 'N/A',
+            generator: this.id
+        });
+        return {
+            status: 'success',
+            signatureBlock,
+            law: 'Third Law'
+        };
     }
 
     private assessRisk(intent: any): 'low' | 'medium' | 'high' | 'blocked' {

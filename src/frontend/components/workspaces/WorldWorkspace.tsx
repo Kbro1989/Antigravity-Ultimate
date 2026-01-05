@@ -8,22 +8,28 @@ export function WorldWorkspace() {
     const [seed, setSeed] = useState(823749823);
     const [isGenerating, setIsGenerating] = useState(false);
 
+    const [worldData, setWorldData] = useState<any>(null);
+
     const handleGenerate = async () => {
         setIsGenerating(true);
         try {
-            await callLimb('world', 'generate_terrain', {
+            const result: any = await callLimb('world', 'world_generate_terrain', {
                 seed: seed,
                 algorithm: 'perlin',
                 params: { octaves: 4, lacunarity: 2.0 }
             });
+            setWorldData(result);
             addNotification('success', `Reality Weaver: Terrain Matrix Generated [SEED: ${seed}]`);
-            setSeed(Math.floor(Math.random() * 1000000000));
+            // Don't change seed immediately so user can see what they generated
         } catch (e: any) {
             addNotification('error', `Genesis Fault: ${e.message}`);
         } finally {
             setIsGenerating(false);
         }
     };
+
+    const biomes = worldData?.biomes || ['Oceanic', 'Viridian', 'Arid', 'Glacial', 'Volcanic'];
+    const features = worldData?.features || ['Sea Level 62m', 'Fog 0.04', 'Erosion 1.2', 'Temp 24°C'];
 
     return (
         <div className="flex-1 flex gap-8 h-full p-8 bg-black/40 animate-fade-in relative overflow-hidden">
@@ -32,7 +38,7 @@ export function WorldWorkspace() {
                 <div className="absolute inset-0 bg-black">
                     {/* Real 3D Terrain Viewport */}
                     <div className="w-full h-full relative z-10">
-                        <Standard3DViewer modelUrl="map://50,50" />
+                        <Standard3DViewer modelUrl={worldData?.terrainMap || "map://50,50"} />
                     </div>
 
                     {isGenerating && (
@@ -55,16 +61,17 @@ export function WorldWorkspace() {
                 <div className="mt-auto p-10 z-20 glass-ultra border-t border-white/5 bg-black/60 backdrop-blur-3xl">
                     <div className="text-[10px] font-black uppercase tracking-[0.6em] text-white/40 mb-6">Biome Distribution Matrix</div>
                     <div className="h-4 w-full flex rounded-3xl overflow-hidden shadow-inner border border-white/10">
-                        <div className="w-[30%] bg-blue-600 transition-all duration-1000 hover:opacity-80 cursor-pointer" title="Oceanic" />
-                        <div className="w-[25%] bg-green-600 transition-all duration-1000 hover:opacity-80 cursor-pointer" title="Viridian" />
-                        <div className="w-[15%] bg-yellow-600 transition-all duration-1000 hover:opacity-80 cursor-pointer" title="Arid" />
-                        <div className="w-[10%] bg-white/80 transition-all duration-1000 hover:opacity-80 cursor-pointer" title="Glacial" />
-                        <div className="w-[20%] bg-gray-700 transition-all duration-1000 hover:opacity-80 cursor-pointer" title="Volcanic" />
+                        {biomes.map((biome: string, i: number) => (
+                            <div
+                                key={i}
+                                className={`h-full transition-all duration-1000 hover:opacity-80 cursor-pointer`}
+                                style={{ width: `${100 / biomes.length}%`, backgroundColor: `hsl(${(i * 360) / biomes.length}, 70%, 50%)` }}
+                                title={biome}
+                            />
+                        ))}
                     </div>
                     <div className="mt-4 flex justify-between text-[8px] font-black text-white/20 uppercase tracking-widest">
-                        <span>Hydrosphere: 30%</span>
-                        <span>Atmosphere: 1.0 ATM</span>
-                        <span>Lithosphere: Stable</span>
+                        {biomes.slice(0, 3).map((b: string) => <span key={b}>{b}</span>)}
                     </div>
                 </div>
             </div>
@@ -92,15 +99,10 @@ export function WorldWorkspace() {
                     <div className="space-y-6">
                         <div className="text-[9px] font-black uppercase tracking-[0.4em] text-white/30 border-b border-white/5 pb-2">Atmospheric Suite</div>
                         <div className="grid grid-cols-2 gap-4">
-                            {[
-                                { label: 'Sea Level', val: '62m' },
-                                { label: 'Fog Density', val: '0.04' },
-                                { label: 'Erosion', val: '1.2' },
-                                { label: 'Temp', val: '24°C' }
-                            ].map(m => (
-                                <div key={m.label} className="p-4 glass rounded-[24px] border border-white/5 flex flex-col gap-1 hover:border-white/20 transition-all cursor-pointer">
-                                    <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{m.label}</span>
-                                    <span className="text-sm font-bold text-white">{m.val}</span>
+                            {features.map((f: string, i: number) => (
+                                <div key={i} className="p-4 glass rounded-[24px] border border-white/5 flex flex-col gap-1 hover:border-white/20 transition-all cursor-pointer">
+                                    <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Feature {i + 1}</span>
+                                    <span className="text-xs font-bold text-white truncate" title={f}>{f}</span>
                                 </div>
                             ))}
                         </div>

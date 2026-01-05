@@ -115,7 +115,7 @@ function PipelineEditor() {
     const executeFlow = async () => {
         setIsExecuting(true);
         try {
-            await callLimb('orchestrator', 'execute_graph', { nodes, edges });
+            await callLimb('orchestrator', 'orchestrate_execute_graph', { nodes, edges });
             addNotification('info', 'Reasoning Engine: Compiling Graph Path...');
             setTimeout(() => {
                 addNotification('success', 'Pipeline Execution Success: 4/4 Nodes Processed');

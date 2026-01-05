@@ -22,13 +22,13 @@ function SceneContent({ modelId, color }: { modelId: number, color: string }) {
                 const loaded = await engine.loadModel(modelId);
                 if (!isCancelled && loaded.scene) {
                     // Apply Neural Tint via standard Three.js material traversal (non-destructive)
-                    loaded.scene.traverse((child) => {
-                        if ((child as THREE.Mesh).isMesh) {
-                            const mesh = child as THREE.Mesh;
+                    loaded.scene.traverse((child: any) => {
+                        const mesh = child as any;
+                        if (mesh.isMesh) {
                             if (mesh.material) {
-                                (mesh.material as any).color = new THREE.Color(color);
-                                (mesh.material as any).emissive = new THREE.Color(color);
-                                (mesh.material as any).emissiveIntensity = 0.2;
+                                mesh.material.color = new THREE.Color(color);
+                                mesh.material.emissive = new THREE.Color(color);
+                                mesh.material.emissiveIntensity = 0.2;
                             }
                         }
                     });

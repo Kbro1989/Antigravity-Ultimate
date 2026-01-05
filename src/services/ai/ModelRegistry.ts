@@ -151,6 +151,35 @@ export type ModelCapabilityKey = keyof typeof MODEL_CATALOG;
  */
 export class ModelRegistry {
     private overrides: Map<string, ModelDefinition> = new Map();
+    private readonly STORAGE_KEY = 'POG_model_overrides';
+
+    constructor() {
+        this.loadOverrides();
+    }
+
+    private loadOverrides(): void {
+        if (typeof localStorage === 'undefined') return;
+        const saved = localStorage.getItem(this.STORAGE_KEY);
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                Object.entries(data).forEach(([key, model]: [string, any]) => {
+                    this.overrides.set(key, model);
+                });
+            } catch (e) {
+                console.warn('[ModelRegistry] Failed to load overrides:', e);
+            }
+        }
+    }
+
+    private saveOverrides(): void {
+        if (typeof localStorage === 'undefined') return;
+        const data: Record<string, ModelDefinition> = {};
+        this.overrides.forEach((model, key) => {
+            data[key] = model;
+        });
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+    }
 
     /**
      * Get the model for a specific capability and tier
@@ -171,6 +200,7 @@ export class ModelRegistry {
      */
     setOverride(capability: ModelCapabilityKey, tier: ModelTier, model: ModelDefinition): void {
         this.overrides.set(`${capability}:${tier}`, model);
+        this.saveOverrides();
     }
 
     /**
@@ -178,6 +208,7 @@ export class ModelRegistry {
      */
     clearOverrides(): void {
         this.overrides.clear();
+        this.saveOverrides();
     }
 
     /**
