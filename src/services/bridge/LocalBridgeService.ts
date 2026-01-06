@@ -57,7 +57,7 @@ class LocalBridgeClient {
         this.checkSignalingChain();
 
         // Auto-detect Cloud/HTTPS environment to prevent Mixed Content errors
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && window.location) {
             const isSecure = window.location.protocol === 'https:';
             const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname === '127.0.0.1';
 
@@ -133,7 +133,7 @@ class LocalBridgeClient {
         }
 
         // --- PRODUCTION SILENCE MASK ---
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && window.location) {
             const isProd = window.location.hostname.includes('.workers.dev') ||
                 window.location.hostname.includes('.pages.dev') ||
                 window.location.hostname.includes('pog-ultimate');

@@ -111,9 +111,9 @@ export function POGDashboard() {
         creative: CreativeWorkspace,
         audio: AudioWorkspace,
         flow: FlowWorkspace,
-        pipeline: null,
+        pipeline: FlowWorkspace,
         '3d': Workspace3D,
-        spatial: null,
+        spatial: Workspace3D,
         mesh: MeshWorkspace,
         entity: EntityWorkspace,
         physics: PhysicsWorkspace,
@@ -135,11 +135,11 @@ export function POGDashboard() {
         divine: DivineWorkspace,
         relic: RelicWorkspace,
         classic: ClassicWorkspace,
-        game: null,
-        rig: null,
-        vfx: null,
-        environment: null,
-        file: null
+        game: LiveWorkspace,
+        rig: MeshWorkspace,
+        vfx: CreativeWorkspace,
+        environment: WorldWorkspace,
+        file: FileWorkspace
     };
 
     const WorkspaceComponent = activeWorkspace ? WorkspaceComponents[activeWorkspace as WorkspaceMode] : null;
@@ -213,8 +213,12 @@ export function POGDashboard() {
                         </svg>
                     </button>
 
-                    <div className="flex-1">
+                    <div className="flex-1 flex items-center gap-6">
                         <AIDashboardHead workspace={activeWorkspace as WorkspaceMode} />
+                        <div className="flex gap-4 glass-ultra px-6 py-3 rounded-2xl border border-white/5 shadow-xl">
+                            <button onClick={() => setShowOrchestrator(true)} className="text-[10px] font-black text-neon-cyan/40 hover:text-neon-cyan tracking-widest transition-colors uppercase">Orchestrator</button>
+                            <button onClick={() => setShowSettings(true)} className="text-[10px] font-black text-white/20 hover:text-white tracking-widest transition-colors uppercase">Settings</button>
+                        </div>
                     </div>
                 </div>
 

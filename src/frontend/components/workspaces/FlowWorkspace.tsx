@@ -115,14 +115,17 @@ function PipelineEditor() {
     const executeFlow = async () => {
         setIsExecuting(true);
         try {
-            await callLimb('orchestrator', 'orchestrate_execute_graph', { nodes, edges });
             addNotification('info', 'Reasoning Engine: Compiling Graph Path...');
-            setTimeout(() => {
-                addNotification('success', 'Pipeline Execution Success: 4/4 Nodes Processed');
-                setIsExecuting(false);
-            }, 2000);
+            const result: any = await callLimb('orchestrator', 'orchestrate_execute_graph', { nodes, edges });
+
+            if (result.status === 'success') {
+                addNotification('success', `Pipeline Execution Success: ${result.nodesProcessed || nodes.length} Nodes Processed`);
+            } else {
+                addNotification('error', `Execution Fault: ${result.message || 'Unknown error'}`);
+            }
         } catch (e: any) {
-            addNotification('error', `Execution Fault: ${e.message} `);
+            addNotification('error', `Execution Fault: ${e.message}`);
+        } finally {
             setIsExecuting(false);
         }
     };

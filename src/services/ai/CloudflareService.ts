@@ -5,7 +5,13 @@
  */
 
 // Default worker URL - can be overridden
-let WORKER_URL = import.meta.env.VITE_AI_WORKER_URL || 'https://ai-game-studio.workers.dev';
+// Default worker URL - can be overridden
+let WORKER_URL = 'https://ai-game-studio.workers.dev';
+try {
+    WORKER_URL = (import.meta as any).env?.VITE_AI_WORKER_URL || WORKER_URL;
+} catch (e) {
+    // Ignore environment errors in non-Vite environments
+}
 
 export const setWorkerUrl = (url: string) => {
     WORKER_URL = url;

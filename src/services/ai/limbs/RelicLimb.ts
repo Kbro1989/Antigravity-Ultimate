@@ -164,13 +164,23 @@ export class RelicLimb extends NeuralLimb {
     async scan_game_needs(params: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
         const { category } = params || {};
-        const refRoot = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/reference';
-        const rscDataPath = `${refRoot}/rsc-cloudflare/rsc-data`;
+        const root = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate';
 
-        let targetPath = rscDataPath;
-        if (category === 'locations') targetPath += '/locations';
-        else if (category === 'config') targetPath += '/config';
-        else if (category === 'ids') targetPath += '/ids';
+        // Priority: Served data204 (Authentic preservation)
+        const data204Path = `${root}/public/data204`;
+        const rscDataPath = `${root}/reference/rsc-cloudflare/rsc-cloudflare/rsc-data`;
+
+        let targetPath = data204Path;
+
+        // If categories are requested, fallback to reference structure if data204 is flat
+        if (category && category !== 'all') {
+            const catPath = `${rscDataPath}/${category}`;
+            // We check if category exists in ref, else we stay at data204
+            try {
+                const check = await localBridgeClient.statFile(catPath);
+                if (check.success) targetPath = catPath;
+            } catch (e) { }
+        }
 
         try {
             const list = await localBridgeClient.listDirectory(targetPath);
@@ -189,14 +199,25 @@ export class RelicLimb extends NeuralLimb {
     async fetch_relic_content(params: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
         const { path: relativePath, category } = params || {};
-        const refRoot = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/reference';
-        const rscDataPath = `${refRoot}/rsc-cloudflare/rsc-data`;
+        const root = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate';
+        const data204Path = `${root}/public/data204`;
+        const rscDataPath = `${root}/reference/rsc-cloudflare/rsc-cloudflare/rsc-data`;
 
-        let fullPath = `${rscDataPath}/${category ? category + '/' : ''}${relativePath}`;
+        // Check data204 first
+        let fullPath = `${data204Path}/${relativePath}`;
+        let exists = false;
+        try {
+            const check = await localBridgeClient.statFile(fullPath);
+            if (check.success) exists = true;
+        } catch (e) { }
+
+        if (!exists) {
+            fullPath = `${rscDataPath}/${category ? category + '/' : ''}${relativePath}`;
+        }
 
         // Sanity check to prevent directory traversal
-        if (!fullPath.startsWith(refRoot)) {
-            return { status: 'error', message: 'Access Denied: Path outside reference root.' };
+        if (!fullPath.startsWith(root)) {
+            return { status: 'error', message: 'Access Denied: Path outside project root.' };
         }
 
         // If it's a directory, we can't really "fork" it as a single file, so we check stats first

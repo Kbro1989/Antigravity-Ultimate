@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useServiceHub, useNotification } from '../../hooks';
+import { useStateManager } from '../../../services/core/StateManager';
 
 export function RelicWorkspace() {
     const hub = useServiceHub();
     const { addNotification } = useNotification();
+    const { sourceRelic, setSourceRelic } = useStateManager();
     const [isExcavating, setIsExcavating] = React.useState(false);
     const [relicCount, setRelicCount] = React.useState(0);
     const [activeSector, setActiveSector] = React.useState('Models_Legacy');
     const [restoredItems, setRestoredItems] = React.useState<any[]>([]);
-    const [needsCategory, setNeedsCategory] = useState<string>('locations');
+    const [needsCategory, setNeedsCategory] = useState<string>('archives');
     const [needsItems, setNeedsItems] = useState<any[]>([]);
 
     const refreshAssets = React.useCallback(async () => {
@@ -127,9 +129,17 @@ export function RelicWorkspace() {
                                     <span className="text-[8px] font-mono text-white/30">{item.size || 0} bytes</span>
                                 </div>
                             </div>
-                            <button onClick={() => handleForkRelic(item)} className="opacity-0 group-hover/item:opacity-100 px-3 py-1 bg-cyan-500/20 text-cyan-400 text-[8px] font-bold uppercase rounded hover:bg-cyan-500/40 transition-all">
-                                Fork to Staging
-                            </button>
+                            <div className="flex gap-2 opacity-0 group-hover/item:opacity-100 transition-all">
+                                <button
+                                    onClick={() => setSourceRelic({ ...item, category: needsCategory })}
+                                    className={`px-3 py-1 text-[8px] font-bold uppercase rounded border transition-all ${sourceRelic?.name === item.name ? 'bg-neon-magenta/20 border-neon-magenta text-neon-magenta' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
+                                >
+                                    {sourceRelic?.name === item.name ? 'Source Active' : 'Pin as Source'}
+                                </button>
+                                <button onClick={() => handleForkRelic(item)} className="px-3 py-1 bg-cyan-500/20 border border-cyan-500/20 text-cyan-400 text-[8px] font-bold uppercase rounded hover:bg-cyan-500/40 transition-all">
+                                    Fork to Staging
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -145,7 +155,7 @@ export function RelicWorkspace() {
                     <div className="text-[10px] font-black tracking-[0.4em] text-white/40 uppercase">Archive Sectors</div>
 
                     <div className="flex flex-col gap-3">
-                        {['locations', 'config', 'ids', 'sprites', 'models'].map(cat => (
+                        {['archives', 'locations', 'config', 'ids', 'sprites', 'models'].map(cat => (
                             <div key={cat} onClick={() => setNeedsCategory(cat)}
                                 className={`p-4 glass rounded-2xl border flex items-center justify-between cursor-pointer transition-all
                                 ${needsCategory === cat ? 'border-cyan-500/40 bg-cyan-500/5' : 'border-white/5 hover:bg-white/5'}

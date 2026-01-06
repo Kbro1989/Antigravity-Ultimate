@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
 import { useServiceHub, useNotification } from '../../hooks';
+import { useStateManager } from '../../../services/core/StateManager';
 
 
 
 export function DivineWorkspace() {
     const { callLimb } = useServiceHub();
     const { addNotification } = useNotification();
+    const { sourceRelic } = useStateManager();
     const [mode, setMode] = useState<'FORGE' | 'INSPIRE'>('FORGE');
     const [creationType, setCreationType] = useState('Quest');
     const [lastCreation, setLastCreation] = useState<any>(null);
+    const [isAscending, setIsAscending] = useState(false);
+    const [biome, setBiome] = useState('Tropical');
+    const [designScale, setDesignScale] = useState('1:1');
+    const [lighting, setLighting] = useState('Cinematic');
+    const [worldData, setWorldData] = useState<any>(null);
 
     const handleSynthesizeWorld = async () => {
         setIsAscending(true);
@@ -33,10 +40,9 @@ export function DivineWorkspace() {
     const handleInspireCreation = async () => {
         setIsAscending(true);
         try {
-            // Mocking a source relic for prompt demo since we can't drag-drop across tabs yet
-            const sourceRelic = { id: 'relic_loc_varrock', type: 'location_config', description: 'Varrock Fountain' };
+            const contextRelic = sourceRelic || { id: 'relic_loc_varrock', type: 'location_config', description: 'Varrock Fountain' };
             const result = await callLimb('divine', 'divine_inspire_creation', {
-                sourceRelic,
+                sourceRelic: contextRelic,
                 creationType
             });
 
@@ -161,7 +167,7 @@ export function DivineWorkspace() {
                                 <div className="text-[8px] font-black text-cyan-400 uppercase mb-2">Source of Truth</div>
                                 <div className="text-[9px] text-cyan-200/60 leading-relaxed">
                                     Linked to Relic Archive (Sector 7G).
-                                    Using latent context from "Varrock Fountain".
+                                    Using latent context from "{sourceRelic?.name || 'Varrock Fountain'}".
                                 </div>
                             </div>
                         </div>

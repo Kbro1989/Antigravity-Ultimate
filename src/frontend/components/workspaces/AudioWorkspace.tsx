@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useServiceHub, useNotification } from '../../hooks';
+import { useStateManager } from '../../../services/core/StateManager';
 
 interface AudioTrack {
     id: 'drums' | 'bass' | 'synth' | 'fx';
@@ -83,9 +84,11 @@ function FXKnob({ label, value, color = 'var(--neon-cyan)' }: { label: string; v
 export function AudioWorkspace() {
     const { callLimb } = useServiceHub();
     const { addNotification } = useNotification();
+    const { sourceRelic } = useStateManager();
     const [isPlaying, setIsPlaying] = useState(false);
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
     const [tracks, setTracks] = useState<AudioTrack[]>([
         { id: 'drums', name: 'Rhythm Core', active: true, volume: 0.8, color: 'magenta', waveform: Array(50).fill(0).map(() => Math.random() * 80 + 20) },
@@ -102,16 +105,18 @@ export function AudioWorkspace() {
             try {
                 addNotification('info', 'Sonic Refinery: Generating Neural Audio Stems...');
 
-                const result = await callLimb('audio', 'audio_generate', { // Fixed method name from audio_generate_music
+                const result = await callLimb('audio', 'audio_generate', {
                     prompt,
                     options: {
                         title: 'Neural Genesis',
                         duration: '3:00',
-                        bpm: 128
+                        bpm: 128,
+                        sourceRelic: sourceRelic || { id: 'default', type: 'oscillator' }
                     }
                 }) as any;
 
                 if (result.status === 'success') {
+                    setAudioUrl(result.audioUrl);
                     setIsPlaying(true);
                     addNotification('success', `Audio synthesized: ${result.title || 'Neural Genesis'}`);
                 }
@@ -128,18 +133,18 @@ export function AudioWorkspace() {
     const handleInspire = async () => {
         setIsGenerating(true);
         try {
-            // Mock source relic
-            const sourceRelic = { id: 'track_autumn_voyage', type: 'audio_config', tags: ['melancholy', 'flute', 'midi'] };
+            const contextRelic = sourceRelic || { id: 'track_autumn_voyage', type: 'audio_config', tags: ['melancholy', 'flute', 'midi'] };
 
-            addNotification('info', 'Constructing new composition from Ancient Relic...');
+            addNotification('info', `Constructing composition from ${sourceRelic ? 'pinned relic' : 'archetype'}...`);
             const result = await callLimb('audio', 'audio_inspire_audio', {
-                sourceRelic,
+                sourceRelic: contextRelic,
                 mood: 'Epic Orchestral'
             });
 
             if (result.status === 'success') {
+                setAudioUrl(result.audioUrl);
                 setIsPlaying(true);
-                addNotification('success', `Relic Theme Inspired: ${result.audioUrl}`);
+                addNotification('success', `Relic Theme Inspired`);
             }
         } catch (e: any) {
             addNotification('error', `Inspiration Fault: ${e.message}`);
@@ -180,6 +185,12 @@ export function AudioWorkspace() {
                     {isGenerating ? 'Synthesizing...' : isPlaying ? 'Stop Sequence' : (mode === 'SYNTH' ? 'Ignite Engine' : 'Inspire Theme')}
                 </button>
             </div>
+
+            {audioUrl && (
+                <div className="hidden">
+                    <audio src={audioUrl} autoPlay={isPlaying} loop onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} />
+                </div>
+            )}
 
             <div className="flex-1 flex overflow-hidden p-8 gap-8">
                 {/* Timeline Surface */}

@@ -6,6 +6,8 @@ export function OrchestratorWorkspace() {
     const { addNotification } = useNotification();
     const [pipeline, setPipeline] = useState<any>(null);
     const [currentStageIndex, setCurrentStageIndex] = useState(-1);
+    const [isThinking, setIsThinking] = useState(false);
+    const [strategy, setStrategy] = useState('Nexus-Auto');
 
     const executePipeline = async () => {
         setIsThinking(true);

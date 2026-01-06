@@ -17,6 +17,7 @@ interface AppState {
     activeWorkspace: WorkspaceMode | null;
     metrics: AppMetrics;
     lockdown: boolean;
+    sourceRelic: any | null;
 
     // Actions
     setMode: (mode: AppMode) => void;
@@ -24,6 +25,7 @@ interface AppState {
     updateMetrics: (update: Partial<AppMetrics>) => void;
     resetMetrics: () => void;
     setLockdown: (active: boolean) => void;
+    setSourceRelic: (relic: any | null) => void;
 }
 
 export const useStateManager = create<AppState>()(
@@ -54,7 +56,9 @@ export const useStateManager = create<AppState>()(
                     requests: 0
                 }
             }),
-            setLockdown: (lockdown) => set({ lockdown })
+            setLockdown: (lockdown) => set({ lockdown }),
+            sourceRelic: null,
+            setSourceRelic: (relic) => set({ sourceRelic: relic })
         }),
         { name: 'POGState' }
     )

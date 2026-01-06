@@ -50,8 +50,8 @@ const getAssetManifest = () => {
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Root Health Check (for Integration Tests)
-app.get('/', (c) => c.text('POG API Ready'));
+// Root Health Check (Handled by static index.html fallback or service worker)
+// app.get('/', (c) => c.text('POG API Ready'));
 
 // --------------------------------------------------------------------------------
 // [Relay] Bridge Routing - MUST BE TOP LEVEL TO BYPASS MIDDLEWARE

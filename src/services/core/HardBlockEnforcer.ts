@@ -32,22 +32,30 @@ class HardBlockEnforcer {
         paidUsd: 0.0
     };
     private lastReset = Date.now();
+    private initialized = false;
 
     constructor() {
+        // Safe constructor
+    }
+
+    private ensureInitialized() {
+        if (this.initialized) return;
         this.loadState();
         this.checkReset();
+        this.initialized = true;
     }
 
     private loadState() {
-        const saved = localStorage.getItem('POG_hardblock_state');
-        if (saved) {
-            try {
+        if (typeof globalThis === 'undefined' || !('localStorage' in globalThis)) return;
+        try {
+            const saved = globalThis.localStorage.getItem('POG_hardblock_state');
+            if (saved) {
                 const state = JSON.parse(saved);
                 this.dailyUsage = state.dailyUsage || { cloudflare: 0, gemini: 0, paidUsd: 0 };
                 this.lastReset = state.lastReset || Date.now();
-            } catch (e) {
-                console.warn('[HardBlock] Failed to load state, resetting.');
             }
+        } catch (e) {
+            console.warn('[HardBlock] Failed to load state:', e);
         }
 
         // Sync global kill switch if set externally
@@ -57,10 +65,12 @@ class HardBlockEnforcer {
     }
 
     private saveState() {
-        localStorage.setItem('POG_hardblock_state', JSON.stringify({
-            dailyUsage: this.dailyUsage,
-            lastReset: this.lastReset
-        }));
+        if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
+            globalThis.localStorage.setItem('POG_hardblock_state', JSON.stringify({
+                dailyUsage: this.dailyUsage,
+                lastReset: this.lastReset
+            }));
+        }
         // Broadcast update for UI
         nexusBus.dispatchEvent('hardblock_update', this.getStats());
     }
@@ -79,6 +89,7 @@ class HardBlockEnforcer {
     }
 
     public canUseProvider(provider: 'cloudflare' | 'gemini' | 'paid'): boolean {
+        this.ensureInitialized();
         this.checkReset();
 
         if (provider === 'cloudflare') {
@@ -99,6 +110,7 @@ class HardBlockEnforcer {
     }
 
     public trackUsage(provider: 'cloudflare' | 'gemini' | 'paid', costUsd: number = 0) {
+        this.ensureInitialized();
         if (provider === 'cloudflare') this.dailyUsage.cloudflare++;
         if (provider === 'gemini') this.dailyUsage.gemini++;
         if (provider === 'paid') this.dailyUsage.paidUsd += costUsd;
@@ -106,6 +118,7 @@ class HardBlockEnforcer {
     }
 
     public getStats() {
+        this.ensureInitialized();
         this.checkReset();
         return {
             usage: { ...this.dailyUsage },
@@ -116,6 +129,7 @@ class HardBlockEnforcer {
     }
 
     public setKillSwitch(allowPaid: boolean) {
+        this.ensureInitialized();
         this.isPaidServicesEnabled = allowPaid;
         (globalThis as any).ALLOW_PAID_SERVICES = allowPaid;
         this.saveState();

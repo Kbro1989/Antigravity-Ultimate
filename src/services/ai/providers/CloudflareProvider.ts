@@ -1,8 +1,6 @@
 
 import type { Env } from '../../../types/env';
 
-const WORKER_URL = import.meta.env.VITE_AI_WORKER_URL || '';
-
 export interface CloudflareTextRequest {
     prompt: string;
     history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
@@ -12,12 +10,35 @@ export interface CloudflareTextRequest {
 }
 
 class CloudflareProvider {
-    private workerUrl: string;
+    private workerUrl: string | null = null;
     private env?: Env;
 
     constructor(env?: Env) {
-        this.workerUrl = typeof window !== 'undefined' ? (window as any).POG_WORKER_URL || WORKER_URL : WORKER_URL;
+        // Safe constructor, no side-effects
         this.env = env;
+    }
+
+    private getWorkerUrl(): string {
+        if (this.workerUrl) return this.workerUrl;
+
+        let url = '';
+
+        // 1. Check window (Browser Only)
+        if (typeof globalThis !== 'undefined' && (globalThis as any).window) {
+            url = (globalThis as any).window.POG_WORKER_URL;
+        }
+
+        // 2. Check import.meta.env (Vite/Build-time)
+        if (!url) {
+            try {
+                url = (import.meta as any).env?.VITE_AI_WORKER_URL;
+            } catch (e) {
+                // Ignore environment errors
+            }
+        }
+
+        this.workerUrl = url || '';
+        return this.workerUrl;
     }
 
     public setEnv(env: Env) {
@@ -48,7 +69,8 @@ class CloudflareProvider {
         }
 
         // Frontend/Remote Fallback
-        const response = await fetch(`${this.workerUrl}/api/chat`, {
+        const workerUrl = this.getWorkerUrl();
+        const response = await fetch(`${workerUrl}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -73,7 +95,8 @@ class CloudflareProvider {
             return { imageUrl: 'data:image/png;base64,...', model: 'SDXL-Direct' };
         }
 
-        const response = await fetch(`${this.workerUrl}/api/generate-image`, {
+        const workerUrl = this.getWorkerUrl();
+        const response = await fetch(`${workerUrl}/api/generate-image`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request)
@@ -90,7 +113,8 @@ class CloudflareProvider {
             return { code: result.response || result, model: 'Qwen-Direct' };
         }
 
-        const response = await fetch(`${this.workerUrl}/api/code-complete`, {
+        const workerUrl = this.getWorkerUrl();
+        const response = await fetch(`${workerUrl}/api/code-complete`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request)

@@ -123,6 +123,8 @@ export class ObservabilityLimiterClient {
     }
 
     private offlineFallback(): boolean {
+        if (typeof localStorage === 'undefined') return true; // Default to allowing in backend
+
         const now = Date.now();
         const lastLogTime = parseInt(localStorage.getItem('pog_last_log_time') || '0');
         const logCount = parseInt(localStorage.getItem('pog_offline_log_count') || '0');
@@ -142,6 +144,7 @@ export class ObservabilityLimiterClient {
     }
 
     private showDegradationBanner(): void {
+        if (typeof document === 'undefined') return;
         if (document.getElementById('pog-observability-banner')) return;
 
         const banner = document.createElement('div');
@@ -162,7 +165,9 @@ export class ObservabilityLimiterClient {
         banner.textContent = '⚠️ Observability throttled. Critical logs only. [Check Status]';
 
         banner.addEventListener('click', () => {
-            window.open('/admin/metrics', '_blank');
+            if (typeof window !== 'undefined') {
+                window.open('/admin/metrics', '_blank');
+            }
         });
 
         document.body.appendChild(banner);

@@ -64,3 +64,8 @@ reference/rsc-cloudflare/**
 # OKComputer sub-repos
 **/node_modules
 **/dist
+
+# Ensure everything in public is tracked (RSC assets, build output, etc.)
+!public/
+!public/**
+

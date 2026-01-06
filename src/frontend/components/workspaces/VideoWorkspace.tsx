@@ -1,24 +1,37 @@
 import React, { useState } from 'react';
 import { useServiceHub, useNotification } from '../../hooks';
+import { useStateManager } from '../../../services/core/StateManager';
 
 export function VideoWorkspace() {
     const { callLimb } = useServiceHub();
     const { addNotification } = useNotification();
+    const { sourceRelic } = useStateManager();
     const [isProcessing, setIsProcessing] = useState(false);
     const [script, setScript] = useState('An epic battle scene on a volcanic ridge...');
     const [cameraMode, setCameraMode] = useState('Dynamic');
+    const [previewUrl, setPreviewUrl] = useState('https://assets.mixkit.co/videos/preview/mixkit-stars-in-the-night-sky-slow-motion-from-below-41225-large.mp4');
 
     const handleDirectorAction = async (action: string) => {
         setIsProcessing(true);
         try {
-            await callLimb('video', action, { script, cameraMode });
-            addNotification('success', `Cinema Engine: ${action.toUpperCase()} Initialized`);
-            setTimeout(() => {
-                addNotification('success', 'Scene Direction Finalized: Preview Ready');
-                setIsProcessing(false);
-            }, 3000);
+            const contextRelic = sourceRelic || { id: 'genesis', type: 'system' };
+            const result: any = await callLimb('video', action === 'video_render_cutscene' ? 'render' : action, {
+                prompt: script,
+                options: {
+                    cameraMode,
+                    sourceRelic: contextRelic
+                }
+            });
+
+            if (result.status === 'success') {
+                setPreviewUrl(result.videoUrl);
+                addNotification('success', `Cinema Engine: Asset Synchronized`);
+            } else {
+                addNotification('error', `Cinema Engine Error: ${result.message || 'Unknown fault'}`);
+            }
         } catch (e: any) {
             addNotification('error', `Cinema Engine Error: ${e.message}`);
+        } finally {
             setIsProcessing(false);
         }
     };
@@ -31,14 +44,16 @@ export function VideoWorkspace() {
                     <div className="absolute inset-0 bg-black">
                         {/* Real Video Player Layer */}
                         <video
+                            key={previewUrl}
                             id="cinema-player"
                             className={`w-full h-full object-cover transition-opacity duration-1000 ${isProcessing ? 'opacity-20' : 'opacity-80'}`}
                             poster="https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200"
                             loop
+                            autoPlay
                             muted
                             playsInline
                         >
-                            <source src="https://assets.mixkit.co/videos/preview/mixkit-stars-in-the-night-sky-slow-motion-from-below-41225-large.mp4" type="video/mp4" />
+                            <source src={previewUrl} type="video/mp4" />
                         </video>
 
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
