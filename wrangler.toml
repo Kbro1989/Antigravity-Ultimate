@@ -1,6 +1,6 @@
 name = "pog-ultimate"
 main = "src/index.ts"
-compatibility_date = "2024-11-12"
+compatibility_date = "2026-01-06"
 compatibility_flags = [ "nodejs_compat" ]
 account_id = "6872653edcee9c791787c1b783173793"
 
@@ -32,7 +32,7 @@ bindings = [
 
 [[migrations]]
 tag = "v1"
-new_classes = ["SessionAgent", "Collaboration"]
+new_sqlite_classes = ["SessionAgent", "Collaboration"]
 
 # AI Binding
 [ai]
