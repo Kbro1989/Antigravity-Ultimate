@@ -68,6 +68,18 @@ app.all('/bridge/:bridgeId/*', (c) => {
     }
 });
 
+// Specialized Route: Observability Token Bank
+app.all('/ws/observability', (c) => {
+    console.log(`[OBSERVABILITY_ROUTE] WebSocket request: ${c.req.url}`);
+    try {
+        const id = c.env.SESSION_AGENT.idFromName('system_observatory');
+        return c.env.SESSION_AGENT.get(id).fetch(c.req.raw);
+    } catch (e: any) {
+        console.error(`[OBSERVABILITY_ROUTE] Fault: ${e.message}`);
+        return c.text(`Observability Fault: ${e.message}`, 500);
+    }
+});
+
 // Enable CORS
 app.use('/*', cors({
     origin: '*', // For dev; restrict in prod
@@ -278,4 +290,4 @@ export default {
 };
 
 // Export DO classes so Cloudflare can find them
-export { SessionAgent, Collaboration };
+export { SessionAgent, Collaboration as CollaborationServer };

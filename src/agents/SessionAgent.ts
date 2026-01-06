@@ -6,6 +6,7 @@ import { AINegotiationProtocol } from '../services/ai/AINegotiationProtocol';
 import { SharedMemorySystem } from '../services/ai/SharedMemorySystem';
 import { chronoshell } from '../services/core/Chronoshell';
 import { AIAction } from '../services/ai/AITypes';
+import { limitObserver } from '../services/core/ObservabilityLimiter';
 
 export interface AssetMetadata {
     id: string;
@@ -270,22 +271,29 @@ export class SessionAgent extends DurableObject<Env> {
     async fetch(request: Request) {
         const url = new URL(request.url);
 
-        if (url.pathname.startsWith('/bridge/')) {
+        // Handle both Bridge and specialized WebSocket endpoints
+        if (url.pathname.startsWith('/bridge/') || url.pathname === '/ws/observability') {
             const upgradeHeader = request.headers.get('Upgrade');
-            console.log(`[SessionAgent] Bridge request: ${url.pathname} | Upgrade: ${upgradeHeader}`);
+            console.log(`[SessionAgent] WebSocket request: ${url.pathname} | Upgrade: ${upgradeHeader}`);
 
             if (upgradeHeader !== 'websocket') {
                 return new Response('Expected Upgrade: websocket', { status: 426 });
             }
 
-            const bridgeId = url.pathname.split('/')[2];
-            const role = url.searchParams.get('role') || 'client';
+            let tags: string[] = [];
+            if (url.pathname === '/ws/observability') {
+                tags = ['system', 'observatory'];
+            } else {
+                const bridgeId = url.pathname.split('/')[2];
+                const role = url.searchParams.get('role') || 'client';
+                tags = [bridgeId, role];
+            }
 
             const pair = new WebSocketPair();
             const [client, server] = Object.values(pair);
 
-            console.log(`[SessionAgent] Accepting WebSocket - Bridge: ${bridgeId}, Role: ${role}`);
-            this.state.acceptWebSocket(server, [bridgeId, role]);
+            console.log(`[SessionAgent] Accepting WebSocket - Path: ${url.pathname}, Tags: ${tags.join(',')}`);
+            this.state.acceptWebSocket(server, tags);
 
             return new Response(null, { status: 101, webSocket: client });
         }
@@ -300,6 +308,22 @@ export class SessionAgent extends DurableObject<Env> {
             const role = tags[1];
 
             const msgData = typeof message === 'string' ? JSON.parse(message) : JSON.parse(new TextDecoder().decode(message));
+
+            // Specialized Handler: Token Bank (Observability)
+            if (bridgeId === 'system' && role === 'observatory') {
+                if (msgData.type === 'REQUEST_TOKENS') {
+                    const count = msgData.count || 20;
+                    const granted = limitObserver.grantTokens(count);
+                    ws.send(JSON.stringify({
+                        type: 'TOKEN_GRANT',
+                        lease: {
+                            tokens: granted,
+                            leaseId: `lease_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
+                        }
+                    }));
+                }
+                return;
+            }
 
             if (role === 'client') {
                 const hosts = this.state.getWebSockets(bridgeId);

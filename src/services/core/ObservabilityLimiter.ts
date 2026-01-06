@@ -63,6 +63,18 @@ export class ObservabilityLimiter {
             rateMs: this.REFILL_RATE_MS
         };
     }
+
+    /**
+     * Grants a batch of tokens to a remote client (Token Bank behavior).
+     * @param count Number of tokens requested
+     * @returns Number of tokens actually granted
+     */
+    public grantTokens(count: number): number {
+        this.refill();
+        const granted = Math.min(count, Math.floor(this.tokens));
+        this.tokens -= granted;
+        return granted;
+    }
 }
 
 export const limitObserver = ObservabilityLimiter.getInstance();
