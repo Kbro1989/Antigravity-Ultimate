@@ -225,7 +225,22 @@ export function POGDashboard() {
                 {/* Workspace Area */}
                 <div className="flex-1 flex gap-6 overflow-hidden">
                     <div className="w-24 shrink-0 flex flex-col items-center">
-                        {activeWorkspace && <WorkspaceSpine workspace={activeWorkspace as WorkspaceMode} />}
+                        {activeWorkspace && (
+                            <WorkspaceSpine
+                                workspace={activeWorkspace as WorkspaceMode}
+                                onToolSelect={async (toolId) => {
+                                    try {
+                                        setAlerts(prev => [`EXECUTING ${toolId.toUpperCase()}...`, ...prev.slice(0, 4)]);
+                                        const result = await callLimb(activeWorkspace as any, toolId, {});
+                                        if (result) {
+                                            setAlerts(prev => [`${toolId.toUpperCase()} COMPLETED`, ...prev.slice(0, 4)]);
+                                        }
+                                    } catch (e: any) {
+                                        setAlerts(prev => [`ERROR: ${e.message.toUpperCase()}`, ...prev.slice(0, 4)]);
+                                    }
+                                }}
+                            />
+                        )}
                     </div>
 
                     <div className="flex-1 glass-ultra rounded-[40px] border border-white/5 overflow-hidden relative shadow-[0_0_100px_rgba(0,0,0,0.5)]">
