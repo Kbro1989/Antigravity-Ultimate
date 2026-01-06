@@ -1,0 +1,52 @@
+POG_LIMB_V6.5
+ID:data
+SOURCE_MAP:INTERNAL
+---
+import { NeuralLimb } from './NeuralLimb';
+import { AppDataManager } from '../../storage/AppDataManager';
+import { AgentCapability } from '../AgentConstitution';
+import { useStateManager } from '../../core/StateManager';
+import { BaseIntent } from '../AITypes';
+
+export class DataLimb extends NeuralLimb {
+    private appData: AppDataManager;
+
+    constructor(config: any) {
+        super(config);
+        this.appData = AppDataManager.getInstance();
+    }
+
+    async save(params: any) {
+        this.enforceCapability(AgentCapability.WRITE_FILES);
+        const { key, data } = params;
+        await this.appData.save(key, data);
+        return { success: true };
+    }
+
+    async load(params: any) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        const { key } = params;
+        return await this.appData.load(key);
+    }
+
+    async prune_cache(params: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        await this.appData.clearCategory('cache');
+        return {
+            status: 'Cache Purged',
+            reclaimed: 'Variable',
+            timestamp: Date.now()
+        };
+    }
+
+    async get_metrics(params: any) {
+        this.enforceCapability(AgentCapability.METRIC_ACCESS);
+        const state = useStateManager.getState();
+        return {
+            app: state.metrics,
+            mode: state.mode,
+            activeWorkspace: state.activeWorkspace,
+            memory_footprint: (process as any).memoryUsage?.() || 'N/A'
+        };
+    }
+}
