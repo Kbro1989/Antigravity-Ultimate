@@ -21,7 +21,7 @@ invocation_logs = true
 
 # Serve the built frontend
 [site]
-bucket = "./dist"
+bucket = "./public"
 
 # Durable Objects for Agents
 [durable_objects]

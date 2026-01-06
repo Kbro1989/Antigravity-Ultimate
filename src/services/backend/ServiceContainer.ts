@@ -154,9 +154,12 @@ export class ServiceContainer {
         // Background ingestion of canonical data (Reference Triggered)
         // Note: Use a relative path or environment variable instead of hardcoded absolute Windows paths.
         const projectRoot = (this.env as any).PROJECT_ROOT || './';
-        this.ingestor.ingestCanonicalData(projectRoot).catch(e => {
-            console.log('[ServiceContainer] Knowledge ingestion skipped or failed (expected in cloud/non-bridge env)');
-        });
+        const ingestionPromise = this.ingestor.ingestCanonicalData(projectRoot);
+        if (ingestionPromise && typeof ingestionPromise.catch === 'function') {
+            ingestionPromise.catch(e => {
+                console.log('[ServiceContainer] Knowledge ingestion skipped or failed (expected in cloud/non-bridge env)');
+            });
+        }
     }
 
     async processAIIntent(intent: any) {

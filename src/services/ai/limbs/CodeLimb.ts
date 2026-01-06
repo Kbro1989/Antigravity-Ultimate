@@ -12,6 +12,16 @@ export class CodeLimb extends NeuralLimb {
         this.bridge = CLIBridge.getInstance();
     }
 
+    async analyze_complexity(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        return await this.callAI({
+            type: 'text',
+            prompt: `Analyze the complexity of this code and return a JSON with {score: number, tier: "LOW"|"MEDIUM"|"HIGH", analysis: string}: ${params.code || params.payload?.code}`,
+            ...params,
+            ...intent
+        });
+    }
+
     async read(params: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
         return await this.bridge.readFile(params.path);
@@ -55,6 +65,17 @@ export class CodeLimb extends NeuralLimb {
     async test(params: any) {
         this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
         return await this.bridge.runCommand(`npm run test ${params.path || ''}`);
+    }
+
+    async generate_code(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        return await this.callAI({
+            type: 'code',
+            prompt: `Generate code for: ${params.prompt}`,
+            context: params.context,
+            ...params,
+            ...intent
+        });
     }
 
     async cascade(params: any, intent: BaseIntent) {

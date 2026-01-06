@@ -27,8 +27,8 @@ export default defineConfig({
     ],
     build: {
         target: 'esnext',
-        outDir: 'dist',
-        emptyOutDir: true,
+        outDir: 'public',
+        emptyOutDir: false,
         chunkSizeWarningLimit: 2000,
         rollupOptions: {
             input: {
@@ -44,6 +44,22 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': path.resolve(__dirname, 'src'),
+        },
+    },
+    server: {
+        proxy: {
+            '/api': {
+                target: 'http://localhost:8787',
+                changeOrigin: true,
+            },
+            '/parties': {
+                target: 'http://localhost:8787',
+                ws: true,
+            },
+            '/ws': {
+                target: 'http://localhost:8787',
+                ws: true,
+            },
         },
     },
 });

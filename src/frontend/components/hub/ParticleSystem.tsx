@@ -246,7 +246,7 @@ export function ParticleSystem({ layer = 'background', className = '' }: Particl
         <canvas
             ref={canvasRef}
             className={`fixed inset-0 pointer-events-none ${className}`}
-            style={{ zIndex: layer === 'background' || layer === 'deepspace' ? 2 : 20 }}
+            style={{ zIndex: layer === 'background' || layer === 'deepspace' ? -1 : 20 }}
         />
     );
 }

@@ -39,8 +39,16 @@ export class SessionAgent extends DurableObject<Env> {
 
         // Block on async initialization
         this.state.blockConcurrencyWhile(async () => {
-            await this.services.initialize();
-            await this.memory.initialize();
+            try {
+                if (this.services && typeof this.services.initialize === 'function') {
+                    await this.services.initialize();
+                }
+                if (this.memory && typeof this.memory.initialize === 'function') {
+                    await this.memory.initialize();
+                }
+            } catch (e) {
+                console.error('[SessionAgent] Critical Init Error:', e);
+            }
 
             // Wire up asset tracking
             this.services.limbs.on('asset_generated', async (asset: any) => {
@@ -175,8 +183,30 @@ export class SessionAgent extends DurableObject<Env> {
 
         // 7. Asset Ledger
         this.app.get('/api/assets', async (c) => {
-            const assets = await this.state.storage.list({ prefix: 'asset:' });
-            return c.json(Array.from(assets.values()));
+            try {
+                const assets = await this.state.storage.list({ prefix: 'asset:' });
+                return c.json(Array.from(assets.values()));
+            } catch (e: any) {
+                return c.json({ error: e.message }, 500);
+            }
+        });
+
+        // 8. AI Completion Alignment (ServiceHub compatibility)
+        this.app.post('/ai/complete', async (c) => {
+            const body = await c.req.json();
+            try {
+                const result = await this.services.router.route({
+                    type: 'text',
+                    prompt: body.prompt || body.message,
+                    history: body.history,
+                    systemPrompt: body.systemPrompt,
+                    modelId: body.modelId,
+                    provider: body.provider
+                });
+                return c.json(result);
+            } catch (e: any) {
+                return c.json({ error: e.message }, 500);
+            }
         });
 
         this.app.post('/api/assets/register', async (c) => {

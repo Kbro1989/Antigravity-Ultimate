@@ -12,7 +12,15 @@
     rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
   <script>
-    window.Buffer = buffer.Buffer;
+    // Resiliently handle buffer global from CDN
+    try {
+      window.Buffer = window.Buffer || (typeof buffer !== 'undefined' ? buffer.Buffer : undefined);
+      if (!window.Buffer && typeof require !== 'undefined') {
+        try { window.Buffer = require('buffer').Buffer; } catch (e) { }
+      }
+    } catch (e) {
+      console.warn("Buffer initialization failed", e);
+    }
     window.global = window;
     window.process = {
       env: { NODE_DEBUG: false },
