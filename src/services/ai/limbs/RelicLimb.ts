@@ -2,6 +2,8 @@ import { NeuralLimb } from './NeuralLimb';
 import { AgentCapability } from '../AgentConstitution';
 import { localBridgeClient } from '../../bridge/LocalBridgeService';
 import { BaseIntent } from '../AITypes';
+// @ts-ignore
+import manifestJSON from '__STATIC_CONTENT_MANIFEST';
 
 export class RelicLimb extends NeuralLimb {
     async excavate_cache(params: any) {
@@ -41,6 +43,54 @@ export class RelicLimb extends NeuralLimb {
             message: foundPath ? `Found cache at ${foundPath}` : "No local cache detected. Please ensure RSMV compatibility mode is active.",
             timestamp: Date.now()
         };
+    }
+
+    async scan_game_needs(params: any) {
+        this.enforceCapability(AgentCapability.READ_FILES);
+        const { platform = 'rsc' } = params;
+
+        // Try Local Bridge first
+        try {
+            const data204Path = 'C:\\Users\\Destiny\\Desktop\\New folder\\POG-Ultimate\\public\\data204';
+            const files = await localBridgeClient.listDirectory(data204Path);
+
+            return {
+                status: 'success',
+                source: 'local_bridge',
+                needs: files.map((f: any) => ({
+                    id: f.name.replace('.jag', ''),
+                    type: platform,
+                    status: 'missing', // Simplification
+                    priority: 'high'
+                }))
+            };
+        } catch (e) {
+            console.warn('[RelicLimb] Local Bridge unavailable, falling back to Cloud Manifest');
+
+            // Cloud Fallback: Use __STATIC_CONTENT_MANIFEST
+            let manifest: Record<string, string> = {};
+            try {
+                manifest = typeof manifestJSON === 'string' ? JSON.parse(manifestJSON) : manifestJSON;
+            } catch (err) {
+                return { status: 'error', message: 'Asset Manifest unavailable' };
+            }
+
+            // Filter for data204 entries
+            const rscFiles = Object.keys(manifest || {})
+                .filter(key => key.includes('data204/') && key.endsWith('.jag'))
+                .map(key => ({
+                    id: key.split('/').pop()?.replace('.jag', '') || 'unknown',
+                    type: platform,
+                    status: 'available',
+                    priority: 'stored_in_kv'
+                }));
+
+            return {
+                status: 'success',
+                source: 'cloud_manifest',
+                needs: rscFiles
+            };
+        }
     }
 
     async link_cache(params: any) {
