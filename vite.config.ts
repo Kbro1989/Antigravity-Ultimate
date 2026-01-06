@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import path from 'path';
 
 // Custom plugin for raw text loading
@@ -21,6 +22,7 @@ const rawText = (options: { extensions: string[] }) => {
 export default defineConfig({
     plugins: [
         react(),
+        nodePolyfills(),
         rawText({
             extensions: ['.glsl', '.c', '.jsonc'],
         }),

@@ -57,11 +57,13 @@ app.get('/', (c) => c.text('POG API Ready'));
 // [Relay] Bridge Routing - MUST BE TOP LEVEL TO BYPASS MIDDLEWARE
 // --------------------------------------------------------------------------------
 app.all('/bridge/:bridgeId/*', (c) => {
+    console.log(`[BRIDGE_ROUTE] Request: ${c.req.method} ${c.req.url} | Upgrade: ${c.req.header('Upgrade')}`);
     try {
-        // Route to the SessionAgent which now handles WebSocket Hibernation
-        const id = c.env.SESSION_AGENT.idFromName(c.req.param('bridgeId'));
+        const bridgeId = c.req.param('bridgeId');
+        const id = c.env.SESSION_AGENT.idFromName(bridgeId);
         return c.env.SESSION_AGENT.get(id).fetch(c.req.raw);
     } catch (e: any) {
+        console.error(`[BRIDGE_ROUTE] Fault: ${e.message}`);
         return c.text(`Bridge Fault: ${e.message}`, 500);
     }
 });

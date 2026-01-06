@@ -12,14 +12,13 @@
     rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
   <script>
-    // Resiliently handle buffer global from CDN
     try {
-      window.Buffer = window.Buffer || (typeof buffer !== 'undefined' ? buffer.Buffer : undefined);
-      if (!window.Buffer && typeof require !== 'undefined') {
-        try { window.Buffer = require('buffer').Buffer; } catch (e) { }
+      // Buffer will be provided by Vite polyfills or CDN
+      if (typeof window !== 'undefined') {
+        window.global = window;
       }
     } catch (e) {
-      console.warn("Buffer initialization failed", e);
+      console.warn("Global initialization failed", e);
     }
     window.global = window;
     window.process = {
