@@ -261,11 +261,14 @@ app.get('/*', async (c) => {
                 status: 200, // Override 404 for SPA
             });
         } catch (e2: any) {
+            const manifestKeys = Object.keys(manifest);
             console.error(`[ASSET] Fatal error serving ${c.req.path}: ${e2.message}`, {
                 hasKV: !!c.env.__STATIC_CONTENT,
-                manifestSize: Object.keys(manifest).length
+                manifestSize: manifestKeys.length,
+                sampleKeys: manifestKeys.slice(0, 10),
+                hasIndex: manifestKeys.includes('index.html') || manifestKeys.some(k => k.startsWith('index.'))
             });
-            return c.text(`POG Dashboard - Asset Loading Error: ${e2.message} (Manifest Size: ${Object.keys(manifest).length})`, 500);
+            return c.text(`POG Dashboard - Asset Loading Error: ${e2.message} (Manifest Size: ${manifestKeys.length}). Sample keys: ${manifestKeys.slice(0, 5).join(', ')}`, 500);
         }
     }
 });
