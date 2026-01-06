@@ -220,8 +220,8 @@ export class RelicLimb extends NeuralLimb {
         }
 
         // Sanity check to prevent directory traversal
-        if (!fullPath.startsWith(refRoot)) {
-            return { status: 'error', message: 'Access Denied: Path outside reference root.' };
+        if (!fullPath.startsWith(root)) {
+            return { status: 'error', message: 'Access Denied: Path outside project root.' };
         }
 
         // If it's a directory, we can't really "fork" it as a single file, so we check stats first
