@@ -101,11 +101,15 @@ export class RelicLimb extends NeuralLimb {
                 }
                 default: {
                     const archiveId = relicId || 'config.jag';
-                    await this.persistAsset('legacy_archive', `rsc://${archiveId}`, {
+                    // Persist as reference only, do not copy content unless requested
+                    const assetUrl = `rsc://${archiveId}?readOnly=true`;
+
+                    await this.persistAsset('legacy_archive', assetUrl, {
                         source: 'rsc',
-                        id: archiveId
+                        id: archiveId,
+                        mode: 'read-only'
                     });
-                    return { status: 'success', type: 'rsc_salvage' };
+                    return { status: 'success', type: 'rsc_salvage', url: assetUrl };
                 }
             }
         }
@@ -138,7 +142,20 @@ export class RelicLimb extends NeuralLimb {
 
     async commit_cache(params: any) {
         this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
-        const { id: commitId, rawData: FinalData } = params || {};
+        const { id: commitId, rawData: FinalData, provenance } = params || {};
+
+        // SAFETY: Block overwrites of Legacy/RSC content
+        if (provenance === 'RSC_LEGACY_EXCAVATION' || (typeof commitId === 'number' && commitId < 100000)) {
+            // Instead of erroring, we auto-fork
+            const newId = Date.now();
+            return this.fork_relic({
+                id: `fork_${commitId}_${newId}`,
+                type: 'model',
+                content: FinalData,
+                isAutoFork: true
+            });
+        }
+
         const { rsmv } = await import('../../rsmv');
         const saveSuccess = await rsmv.saveModel(parseInt(commitId), FinalData);
 
@@ -150,14 +167,30 @@ export class RelicLimb extends NeuralLimb {
 
     async fork_relic(params: any) {
         this.enforceCapability(AgentCapability.WRITE_FILES);
-        const { id: assetId, type, content } = params || {};
-        const stagedPath = `C:\\Users\\Destiny\\Desktop\\New folder\\POG-Ultimate\\staged_assets\\${type}s\\${assetId}`;
+        const { id: assetId, type, content, isAutoFork } = params || {};
 
-        await localBridgeClient.writeLocalFile(stagedPath, content, true);
+        // Output Separation: Always write to public/assets/generated
+        const safeParams = {
+            root: 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/public/assets/generated',
+            folder: `${type}s`, // e.g. 'models', 'audios'
+            filename: `${assetId}.json` // standardize on JSON/GLB wrappers
+        };
+
+        const stagedPath = `${safeParams.root}/${safeParams.folder}/${safeParams.filename}`;
+
+        // Ensure content is serialized if object
+        const writeContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+
+        await localBridgeClient.writeLocalFile(stagedPath, writeContent, false); // false = do not overwrite logic handled by ID generation
+
+        const message = isAutoFork
+            ? `Original source is Read-Only. Auto-forked to: ${stagedPath}`
+            : `Relic forked to playground: ${stagedPath}`;
+
         return {
             status: 'success',
-            forkUrl: `staged://${type}/${assetId}`,
-            message: `Relic forked to playground: ${stagedPath}`
+            forkUrl: `/assets/generated/${safeParams.folder}/${safeParams.filename}`,
+            message
         };
     }
 

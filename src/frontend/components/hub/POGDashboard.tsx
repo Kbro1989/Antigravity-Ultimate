@@ -46,6 +46,17 @@ import { WorkspaceMode } from '../../../types/workspace';
 import { useServiceHub } from '../../hooks';
 import '../../styles/hub.css';
 
+// Map Workspace Modes to registered Limb IDs
+const LimbMap: Record<string, string> = {
+    'creative': 'image',
+    '3d': 'mesh',
+    'flow': 'orchestrator',
+    'filesystem': 'file',
+    'live': 'game',
+    'classic': 'relic',
+    'environment': 'world'
+};
+
 export function POGDashboard() {
     const [view, setView] = React.useState<'hub' | 'workspace'>('hub');
     const { activeWorkspace, setActiveWorkspace } = useStateManager();
@@ -225,15 +236,26 @@ export function POGDashboard() {
                 {/* Workspace Area */}
                 <div className="flex-1 flex gap-6 overflow-hidden">
                     <div className="w-24 shrink-0 flex flex-col items-center">
+
                         {activeWorkspace && (
                             <WorkspaceSpine
                                 workspace={activeWorkspace as WorkspaceMode}
-                                onToolSelect={async (toolId) => {
+                                onToolSelect={async (toolId, capability, params) => {
                                     try {
-                                        setAlerts(prev => [`EXECUTING ${toolId.toUpperCase()}...`, ...prev.slice(0, 4)]);
-                                        const result = await callLimb(activeWorkspace as any, toolId, {});
+                                        // Resolve Limb ID (fallback to workspace name)
+                                        const limbId = LimbMap[activeWorkspace] || activeWorkspace;
+
+                                        // Determine Method & Payload
+                                        const method = capability || toolId;
+                                        const payload = params || {};
+
+                                        setAlerts(prev => [`EXECUTING ${method.toUpperCase()} ON ${limbId.toUpperCase()}...`, ...prev.slice(0, 4)]);
+
+                                        // Call Real Limb Capability
+                                        const result = await callLimb(limbId, method, payload);
+
                                         if (result) {
-                                            setAlerts(prev => [`${toolId.toUpperCase()} COMPLETED`, ...prev.slice(0, 4)]);
+                                            setAlerts(prev => [`${method.toUpperCase()} SUCCESS`, ...prev.slice(0, 4)]);
                                         }
                                     } catch (e: any) {
                                         setAlerts(prev => [`ERROR: ${e.message.toUpperCase()}`, ...prev.slice(0, 4)]);

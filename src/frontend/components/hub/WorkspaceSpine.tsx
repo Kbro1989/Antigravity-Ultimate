@@ -7,58 +7,60 @@ interface Tool {
     label: string;
     hotkey: string;
     color: string;
+    capability?: string;
+    defaultParams?: any;
 }
 
 interface WorkspaceSpineProps {
     workspace: WorkspaceMode;
-    onToolSelect?: (toolId: string) => void;
+    onToolSelect?: (toolId: string, capability?: string, params?: any) => void;
 }
 
 export function WorkspaceSpine({ workspace, onToolSelect }: WorkspaceSpineProps) {
     const [selectedTool, setSelectedTool] = useState<string | null>(null);
 
-    const handleToolClick = (toolId: string) => {
-        setSelectedTool(toolId);
-        if (onToolSelect) onToolSelect(toolId);
+    const handleToolClick = (tool: Tool) => {
+        setSelectedTool(tool.id);
+        if (onToolSelect) onToolSelect(tool.id, tool.capability, tool.defaultParams);
     };
 
     const tools: Record<WorkspaceMode, Tool[]> = useMemo(() => ({
         code: [
-            { id: 'cascade', icon: '🌊', label: 'Cascade', hotkey: '⌘K', color: '#00ffff' },
-            { id: 'complete', icon: '✨', label: 'AI Complete', hotkey: '⌘I', color: '#00ffff' },
-            { id: 'refactor', icon: '🔧', label: 'Refactor', hotkey: '⌘R', color: '#9d00ff' },
-            { id: 'explain', icon: '💡', label: 'Explain', hotkey: '⌘E', color: '#ff00ff' },
-            { id: 'test', icon: '🧪', label: 'Tests', hotkey: '⌘T', color: '#0080ff' },
+            { id: 'cascade', icon: '🌊', label: 'Cascade', hotkey: '⌘K', color: '#00ffff', capability: 'cascade', defaultParams: { prompt: 'Cascade edit...' } },
+            { id: 'complete', icon: '✨', label: 'AI Complete', hotkey: '⌘I', color: '#00ffff', capability: 'complete', defaultParams: { prompt: 'Complete code...' } },
+            { id: 'refactor', icon: '🔧', label: 'Refactor', hotkey: '⌘R', color: '#9d00ff', capability: 'refactor', defaultParams: { code: '...' } },
+            { id: 'explain', icon: '💡', label: 'Explain', hotkey: '⌘E', color: '#ff00ff', capability: 'explain', defaultParams: { code: '...' } },
+            { id: 'test', icon: '🧪', label: 'Tests', hotkey: '⌘T', color: '#0080ff', capability: 'test', defaultParams: { path: 'src/' } },
         ],
         creative: [
-            { id: 'generate', icon: '🎨', label: 'Generate', hotkey: 'G', color: '#ff00ff' },
-            { id: 'variation', icon: '🔄', label: 'Variations', hotkey: 'V', color: '#9d00ff' },
-            { id: 'upscale', icon: '⬆️', label: 'Upscale', hotkey: 'U', color: '#00ffff' },
-            { id: 'inpaint', icon: '✏️', label: 'Inpaint', hotkey: 'I', color: '#ff0080' },
+            { id: 'generate', icon: '🎨', label: 'Generate', hotkey: 'G', color: '#ff00ff', capability: 'generate', defaultParams: { prompt: 'Creative visual...' } },
+            { id: 'variation', icon: '🔄', label: 'Variations', hotkey: 'V', color: '#9d00ff', capability: 'variation', defaultParams: { prompt: 'Variation...' } },
+            { id: 'upscale', icon: '⬆️', label: 'Upscale', hotkey: 'U', color: '#00ffff', capability: 'upscale', defaultParams: { upscale: true } },
+            { id: 'inpaint', icon: '✏️', label: 'Inpaint', hotkey: 'I', color: '#ff0080', capability: 'restore', defaultParams: { mode: 'inpaint' } },
         ],
         audio: [
-            { id: 'generate', icon: '🎵', label: 'Generate', hotkey: 'G', color: '#9d00ff' },
-            { id: 'stems', icon: '✂️', label: 'Stems', hotkey: 'S', color: '#00ffff' },
-            { id: 'clone', icon: '🎤', label: 'Clone', hotkey: 'C', color: '#ff00ff' },
-            { id: 'effects', icon: '✨', label: 'FX Rack', hotkey: 'F', color: '#0080ff' },
+            { id: 'generate', icon: '🎵', label: 'Generate', hotkey: 'G', color: '#9d00ff', capability: 'generate', defaultParams: { type: 'music', prompt: 'New track...' } },
+            { id: 'stems', icon: '✂️', label: 'Stems', hotkey: 'S', color: '#00ffff', capability: 'stems', defaultParams: { type: 'stem' } },
+            { id: 'clone', icon: '🎤', label: 'Clone', hotkey: 'C', color: '#ff00ff', capability: 'clone', defaultParams: { type: 'speech', prompt: 'Voice clone...' } },
+            { id: 'effects', icon: '✨', label: 'FX Rack', hotkey: 'F', color: '#0080ff', capability: 'effects', defaultParams: { type: 'fx', prompt: 'Apply FX...' } },
         ],
         flow: [
-            { id: 'add', icon: '➕', label: 'Add Node', hotkey: 'A', color: '#00ffff' },
-            { id: 'execute', icon: '▶️', label: 'Execute', hotkey: 'E', color: '#00ff80' },
-            { id: 'debug', icon: '🐛', label: 'Debug', hotkey: 'D', color: '#ff00ff' },
-            { id: 'template', icon: '📋', label: 'Library', hotkey: 'L', color: '#ff0080' },
+            { id: 'add', icon: '➕', label: 'Add Node', hotkey: 'A', color: '#00ffff', capability: 'dispatch', defaultParams: { task: 'add_node' } },
+            { id: 'execute', icon: '▶️', label: 'Execute', hotkey: 'E', color: '#00ff80', capability: 'dispatch', defaultParams: { task: 'execute_flow' } },
+            { id: 'debug', icon: '🐛', label: 'Debug', hotkey: 'D', color: '#ff00ff', capability: 'dispatch', defaultParams: { task: 'debug_flow' } },
+            { id: 'template', icon: '📋', label: 'Library', hotkey: 'L', color: '#ff0080', capability: 'dispatch', defaultParams: { task: 'load_template' } },
         ],
         '3d': [
-            { id: 'sculpt', icon: '🔨', label: 'Sculpt', hotkey: 'S', color: '#0080ff' },
-            { id: 'paint', icon: '🖌️', label: 'PBR Paint', hotkey: 'P', color: '#ff00ff' },
-            { id: 'render', icon: '🎬', label: 'Raytrace', hotkey: 'F', color: '#ff0080' },
-            { id: 'rigger', icon: '🦴', label: 'Rigging', hotkey: 'R', color: '#00ff80' },
+            { id: 'sculpt', icon: '🔨', label: 'Sculpt', hotkey: 'S', color: '#0080ff', capability: 'edit_geometry', defaultParams: { operation: 'sculpt' } },
+            { id: 'paint', icon: '🖌️', label: 'PBR Paint', hotkey: 'P', color: '#ff00ff', capability: 'process_mesh', defaultParams: { operation: 'vertex_paint' } },
+            { id: 'render', icon: '🎬', label: 'Raytrace', hotkey: 'F', color: '#ff0080', capability: 'process_mesh', defaultParams: { operation: 'render' } },
+            { id: 'rigger', icon: '🦴', label: 'Rigging', hotkey: 'R', color: '#00ff80', capability: 'auto_rig', defaultParams: {} },
         ],
         world: [
-            { id: 'regen', icon: '🌍', label: 'Genesis', hotkey: 'G', color: '#00ff80' },
-            { id: 'biome', icon: '🌿', label: 'Ecology', hotkey: 'B', color: '#00ffff' },
-            { id: 'hydro', icon: '💧', label: 'Hydrology', hotkey: 'H', color: '#0080ff' },
-            { id: 'atmo', icon: '☁️', label: 'Skybox', hotkey: 'A', color: '#ffffff' },
+            { id: 'regen', icon: '🌍', label: 'Genesis', hotkey: 'G', color: '#00ff80', capability: 'regen', defaultParams: { seed: Date.now() } },
+            { id: 'biome', icon: '🌿', label: 'Ecology', hotkey: 'B', color: '#00ffff', capability: 'biome', defaultParams: { biome: 'tropical' } },
+            { id: 'hydro', icon: '💧', label: 'Hydrology', hotkey: 'H', color: '#0080ff', capability: 'terraform_sector', defaultParams: { operation: 'hydro' } },
+            { id: 'atmo', icon: '☁️', label: 'Skybox', hotkey: 'A', color: '#ffffff', capability: 'terraform_sector', defaultParams: { operation: 'atmo' } },
         ],
         entity: [
             { id: 'spawn', icon: '👶', label: 'Instantiate', hotkey: 'N', color: '#ff00ff' },
@@ -153,9 +155,9 @@ export function WorkspaceSpine({ workspace, onToolSelect }: WorkspaceSpineProps)
             { id: 'grace', icon: '🕊️', label: 'Grace', hotkey: 'G', color: '#ffffff' },
         ],
         relic: [
-            { id: 'scan', icon: '⛏️', label: 'Excavate', hotkey: 'E', color: '#00ffff' },
-            { id: 'item', icon: '🛡️', label: 'Restoration', hotkey: 'R', color: '#0080ff' },
-            { id: 'map', icon: '🗺️', label: 'Archive', hotkey: 'A', color: '#ffffff' },
+            { id: 'scan', icon: '⛏️', label: 'Excavate', hotkey: 'E', color: '#00ffff', capability: 'excavate_cache', defaultParams: { id: 0 } },
+            { id: 'item', icon: '🛡️', label: 'Restoration', hotkey: 'R', color: '#0080ff', capability: 'salvage_relic', defaultParams: { relicType: 'modern' } },
+            { id: 'map', icon: '🗺️', label: 'Archive', hotkey: 'A', color: '#ffffff', capability: 'salvage_relic', defaultParams: { relicType: 'map' } },
         ],
         environment: [
             { id: 'weather', icon: '🌦️', label: 'Weather', hotkey: 'W', color: '#ffff00' },
@@ -211,7 +213,7 @@ export function WorkspaceSpine({ workspace, onToolSelect }: WorkspaceSpineProps)
                                 ${selectedTool === tool.id
                                     ? 'bg-white/10 border-white/40 shadow-[0_0_25px_rgba(255,255,255,0.2)]'
                                     : 'bg-black/20 border-white/5 hover:border-white/20 hover:bg-white/5'}`}
-                            onClick={() => handleToolClick(tool.id)}
+                            onClick={() => handleToolClick(tool)}
                             style={{ animationDelay: `${index * 0.1}s` }}
                         >
                             <div className="text-2xl filter drop-shadow-[0_0_8px_var(--tool-color)]" style={{ '--tool-color': tool.color } as any}>

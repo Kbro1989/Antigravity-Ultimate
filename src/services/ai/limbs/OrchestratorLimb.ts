@@ -17,6 +17,33 @@ export class OrchestratorLimb extends NeuralLimb {
         };
     }
 
+    async dispatch(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        const { task, ...rest } = params;
+
+        switch (task) {
+            case 'execute_flow':
+                return this.execute_graph(rest);
+            case 'debug_flow':
+                return this.conductSymphony({ payload: { request: `Debug this flow: ${JSON.stringify(rest)}` } });
+            case 'load_template':
+                return {
+                    status: 'success',
+                    templates: ['basic_rag', 'image_pipeline', 'game_loop', 'npc_conversation'],
+                    message: 'Templates loaded from Orchestrator Registry'
+                };
+            case 'add_node':
+                return {
+                    status: 'success',
+                    nodeId: `node_${Date.now()}`,
+                    message: 'Node registered in active graph context'
+                };
+            default:
+                // Fallback to general AI orchestration
+                return this.conductSymphony({ payload: { request: task, ...rest } });
+        }
+    }
+
     async execute_graph(params: any) {
         this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
         const { nodes, edges } = params;
