@@ -106,7 +106,10 @@ app.use('/api/*', async (c, next) => {
         c.req.path.includes('/api/chat') ||
         c.req.path.includes('/api/generate-image') ||
         c.req.path.includes('/api/code-complete') ||
-        c.req.path.includes('/api/limb/execute')
+        c.req.path.includes('/api/limb/execute') ||
+        c.req.path.includes('/api/session/stats') ||
+        c.req.path.includes('/api/assets') ||
+        c.req.path.includes('/health/')
     ) return next();
 
     // Verify
@@ -290,4 +293,4 @@ export default {
 };
 
 // Export DO classes so Cloudflare can find them
-export { SessionAgent, Collaboration as CollaborationServer };
+export { SessionAgent, Collaboration };

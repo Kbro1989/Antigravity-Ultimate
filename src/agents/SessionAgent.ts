@@ -273,7 +273,7 @@ export class SessionAgent extends DurableObject<Env> {
 
         // Handle both Bridge and specialized WebSocket endpoints
         if (url.pathname.startsWith('/bridge/') || url.pathname === '/ws/observability') {
-            const upgradeHeader = request.headers.get('Upgrade');
+            const upgradeHeader = (request.headers.get('Upgrade') || '').toLowerCase();
             console.log(`[SessionAgent] WebSocket request: ${url.pathname} | Upgrade: ${upgradeHeader}`);
 
             if (upgradeHeader !== 'websocket') {
