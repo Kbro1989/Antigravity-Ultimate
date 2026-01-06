@@ -32,7 +32,12 @@ bindings = [
 
 [[migrations]]
 tag = "v1"
-new_sqlite_classes = ["SessionAgent", "Collaboration"]
+new_classes = ["SessionAgent", "Collaboration"]
+
+[[migrations]]
+tag = "v2"
+# Synced with remote status
+
 
 # AI Binding
 [ai]
