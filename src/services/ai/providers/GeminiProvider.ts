@@ -33,22 +33,47 @@ class GeminiProvider {
     private apiKey: string | null = null;
 
     constructor() {
-        this.refreshApiKey();
+        // No side-effects in constructor to avoid ReferenceError during module load
     }
 
-    refreshApiKey() {
-        this.apiKey = localStorage.getItem('TEMP_GEMINI_KEY') ||
-            import.meta.env.VITE_GEMINI_API_KEY;
-        if (this.apiKey) {
-            this.client = new GoogleGenerativeAI(this.apiKey);
+    private ensureClient() {
+        if (this.client) return;
+
+        let apiKey = this.apiKey;
+
+        // 1. Check localStorage (Browser Only)
+        if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
+            try {
+                apiKey = globalThis.localStorage.getItem('TEMP_GEMINI_KEY');
+            } catch (e) {
+                // Ignore LS errors in restricted environments
+            }
+        }
+
+        // 2. Fallback to Environment (Standard/Vite)
+        if (!apiKey) {
+            apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+        }
+
+        if (apiKey) {
+            this.apiKey = apiKey;
+            this.client = new GoogleGenerativeAI(apiKey);
         }
     }
 
+    refreshApiKey() {
+        this.client = null;
+        this.apiKey = null;
+        this.ensureClient();
+    }
+
     isAvailable(): boolean {
-        return this.client !== null && !!this.apiKey;
+        this.ensureClient();
+        return this.client !== null;
     }
 
     async textChat(request: GeminiTextRequest): Promise<GeminiTextResponse> {
+        this.ensureClient();
         if (!this.client) throw new Error('Gemini API key not configured');
 
         const modelId = request.model || 'gemini-1.5-flash';
@@ -82,6 +107,7 @@ class GeminiProvider {
     }
 
     async codeCompletion(request: GeminiCodeRequest): Promise<{ code: string; model: string }> {
+        this.ensureClient();
         if (!this.client) throw new Error('Gemini API key not configured');
 
         const model = this.client.getGenerativeModel({ model: 'gemini-1.5-pro' });

@@ -1,25 +1,32 @@
 import React, { useState } from 'react';
 import { useServiceHub, useNotification } from '../../hooks';
+import { useStateManager } from '../../../services/core/StateManager';
 
 export function ImageWorkspace() {
     const { callLimb } = useServiceHub();
     const { addNotification } = useNotification();
+    const { sourceRelic } = useStateManager();
     const [isProcessing, setIsProcessing] = useState(false);
     const [workspaceMode, setWorkspaceMode] = useState<'TEXTURE' | 'SPRITE' | 'RETRO'>('TEXTURE');
     const [generationMode, setGenerationMode] = useState<'DIRECT' | 'INSPIRE'>('DIRECT');
     const [prompt, setPrompt] = useState('Seamless cobblestone texture, mossy, dark gray');
+    const [previewUrl, setPreviewUrl] = useState("https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=800");
 
     const handleGenerate = async (action: string) => {
         setIsProcessing(true);
         try {
-            const result = (await callLimb('image', action, { prompt, mode: workspaceMode })) as any;
-            addNotification('success', `${action.toUpperCase()} Initialized: Generating Game Asset...`);
-            setTimeout(() => {
+            const method = action === 'image_synthesize_texture' ? 'generate' : action;
+            const result = (await callLimb('image', method, { prompt, mode: workspaceMode })) as any;
+
+            if (result.status === 'success') {
+                setPreviewUrl(result.imageUrl);
                 addNotification('success', 'Asset Synthesis Complete: Pushed to Staging');
-                setIsProcessing(false);
-            }, 3000);
+            } else {
+                addNotification('error', `Synthesis Fault: ${result.message || 'Unknown'}`);
+            }
         } catch (e: any) {
-            addNotification('error', `Synthesis Fault: ${e.message}`);
+            addNotification('error', `Synthesis Error: ${e.message}`);
+        } finally {
             setIsProcessing(false);
         }
     };
@@ -27,17 +34,17 @@ export function ImageWorkspace() {
     const handleInspire = async () => {
         setIsProcessing(true);
         try {
-            // Mock source relic
-            const sourceRelic = { id: 'loc_lumbridge_castle', type: 'location_config', visual_tags: ['stone', 'castle', 'bright'] };
+            const contextRelic = sourceRelic || { id: 'loc_lumbridge_castle', type: 'location_config', visual_tags: ['stone', 'castle', 'bright'] };
 
-            addNotification('info', 'Visualizing asset from Ancient Relic...');
-            const result = await callLimb('image', 'image_inspire_visual', {
-                sourceRelic,
+            addNotification('info', `Visualizing asset from ${sourceRelic ? 'pinned relic' : 'archetype'}...`);
+            const result: any = await callLimb('image', 'inspire_visual', {
+                sourceRelic: contextRelic,
                 style: workspaceMode === 'RETRO' ? 'RuneScape Classic Pixel' : 'Modern PBR'
             });
 
             if (result.status === 'success') {
-                addNotification('success', `Relic Visual Inspired: ${result.imageUrl}`);
+                setPreviewUrl(result.imageUrl);
+                addNotification('success', `Relic Visual Inspired`);
             }
         } catch (e: any) {
             addNotification('error', `Inspiration Fault: ${e.message}`);
@@ -65,7 +72,7 @@ export function ImageWorkspace() {
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,242,255,0.05)_0%,transparent_70%)]" />
                             <div className="w-full h-full rounded-2xl border-2 border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden relative group-hover:scale-[1.02] transition-transform duration-700">
                                 <img
-                                    src={isProcessing ? "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800" : "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=800"}
+                                    src={previewUrl}
                                     className={`w-full h-full object-cover transition-all duration-1000 ${isProcessing ? 'blur-xl opacity-40 scale-125' : 'opacity-90'}`}
                                 />
                                 {/* Overlay Canvas Mock */}
@@ -89,7 +96,7 @@ export function ImageWorkspace() {
                         <div className="flex flex-col gap-1">
                             <span className="text-[9px] font-black uppercase text-white/20 tracking-widest">Asset Category</span>
                             <span className="text-xl font-black text-neon-cyan flex items-center gap-3">
-                                {mode} STUDIO
+                                {workspaceMode} STUDIO
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></span>
                             </span>
                         </div>
@@ -100,7 +107,7 @@ export function ImageWorkspace() {
                     </div>
                     <div className="text-right flex flex-col items-end gap-1">
                         <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">
-                            STAGED_PATH: <span className="text-neon-magenta">/staged_assets/textures/{mode.toLowerCase()}_01.png</span>
+                            STAGED_PATH: <span className="text-neon-magenta">/staged_assets/textures/{workspaceMode.toLowerCase()}_01.png</span>
                         </div>
                         <div className="text-[8px] font-mono text-white/10 uppercase tracking-widest">SEAMLESS_GEN: ACTIVE | MIPMAPS: OPTIMIZED</div>
                     </div>

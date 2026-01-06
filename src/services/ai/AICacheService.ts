@@ -39,23 +39,21 @@ export class AICacheService {
         if (!this.cacheEnabled) return null;
 
         try {
-            const api = (window as any).agentAPI;
             // Bridge/Cloudflare based KV access override
             // Prioritize standard fetch if agentAPI not available or fallback to localStorage for dev
-
-            // In a real worker env, we would use env.CACHE.get(key)
-            // Here we simulate or use localStorage for browser-side caching
-
             const key = this.getCacheKey(request);
-            const cached = localStorage.getItem(key);
 
-            if (cached) {
-                const entry = JSON.parse(cached);
-                if (Date.now() < entry.expires) {
-                    console.log(`[AICache] HIT: ${key} (${entry.data.model})`);
-                    return entry.data as ModelResponse;
-                } else {
-                    localStorage.removeItem(key);
+            if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
+                const cached = globalThis.localStorage.getItem(key);
+
+                if (cached) {
+                    const entry = JSON.parse(cached);
+                    if (Date.now() < entry.expires) {
+                        console.log(`[AICache] HIT: ${key} (${entry.data.model})`);
+                        return entry.data as ModelResponse;
+                    } else {
+                        localStorage.removeItem(key);
+                    }
                 }
             }
         } catch (e) {
@@ -74,8 +72,10 @@ export class AICacheService {
                 data: response,
                 expires: Date.now() + (24 * 60 * 60 * 1000) // 24h TTL
             };
-            localStorage.setItem(key, JSON.stringify(entry));
-            console.log(`[AICache] SET: ${key}`);
+            if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
+                globalThis.localStorage.setItem(key, JSON.stringify(entry));
+                console.log(`[AICache] SET: ${key}`);
+            }
         } catch (e) {
             console.warn('[AICache] Write failed', e);
         }

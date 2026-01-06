@@ -6,6 +6,8 @@ export function FileWorkspace() {
     const { addNotification } = useNotification();
     const [currentPath, setCurrentPath] = useState<string>('C:/Users/Destiny/Desktop/New folder/POG-Ultimate');
     const [files, setFiles] = useState<any[]>([]);
+    const [selectedFile, setSelectedFile] = useState<string | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     const fetchFiles = React.useCallback(async () => {
         try {

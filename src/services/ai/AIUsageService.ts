@@ -33,11 +33,17 @@ export async function logAIUsage(params: AIUsageParams): Promise<string> {
     const record = { ...params, id: usageId, timestamp: Date.now() };
 
     // 1. Local Persistence (for immediate UI feedback)
-    const history = JSON.parse(localStorage.getItem('ai_usage_history') || '[]');
-    history.push(record);
-    // Keep last 1000
-    if (history.length > 1000) history.shift();
-    localStorage.setItem('ai_usage_history', JSON.stringify(history));
+    if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
+        try {
+            const history = JSON.parse(globalThis.localStorage.getItem('ai_usage_history') || '[]');
+            history.push(record);
+            // Keep last 1000
+            if (history.length > 1000) history.shift();
+            globalThis.localStorage.setItem('ai_usage_history', JSON.stringify(history));
+        } catch (e) {
+            // Ignore LS errors
+        }
+    }
 
     console.log('[AI Usage]', record);
 

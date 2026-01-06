@@ -270,7 +270,11 @@ async function routeToCloudflare(request: ModelRequest, signal?: AbortSignal): P
             return { imageUrl: response.imageUrl, model: response.model };
         }
         case 'image-to-3d': {
-            const apiKey = mcpConfigManager.getApiKey('fireworks') || localStorage.getItem('TEMP_AIMLAPI_KEY');
+            const apiMLKey = (typeof globalThis !== 'undefined' && 'localStorage' in globalThis)
+                ? globalThis.localStorage.getItem('TEMP_AIMLAPI_KEY')
+                : null;
+            const apiKey = mcpConfigManager.getApiKey('fireworks') || apiMLKey;
+
             if (!apiKey) throw new Error('AI Model Key required (Fireworks or AIML)');
             const result = await aimlapiService.imageToModel(request.prompt, apiKey);
             return { modelUrl: result.url, model: 'triposr', content: `Generated ${result.fileName}` };
