@@ -1,0 +1,495 @@
+POG_LIMB_V6.5
+ID:idauditor
+SOURCE_MAP:INTERNAL
+---
+import { NeuralLimb, LimbConfig } from './NeuralLimb';
+import { AgentCapability } from '../AgentConstitution';
+import { nexusBus } from '../../core/NexusCommandBus'; // Telemetry Spine
+import * as fs from 'fs';
+import * as path from 'path';
+
+// ... existing interfaces ...
+
+
+
+
+
+/**
+ * InnovationManifest: Proper labeling for generated/forked assets.
+ * Ensures additions are game-ready, not junk.
+ */
+export interface InnovationManifest {
+    id: string;                          // Unique innovation identifier
+    name: string;                        // Human-readable name
+    assetType: 'npc' | 'item' | 'model' | 'audio' | 'texture' | 'world_patch' | 'script';
+    parentId?: string | number;          // Link to museum original (if forked)
+    innovationType: 'fork' | 'generated' | 'hybrid';
+    gameCompatible: boolean;             // Can it slot into live RSC?
+    promotionStatus: 'pending' | 'approved' | 'rejected' | 'archived';
+    assignedGameId?: number;             // Reserved game ID (offset from museum)
+    sizeBytes: number;                   // Track bloat
+    createdAt: string;                   // ISO timestamp
+    createdBy?: string;                  // Session or user ID
+    tags?: string[];                     // Searchable metadata
+}
+
+// Reserved ranges for innovation IDs
+export const INNOVATION_RANGES = {
+    npc: { start: 10000, current: 10000 },
+    item: { start: 20000, current: 20000 },
+    model: { start: 30000, current: 30000 },
+    audio: { start: 40000, current: 40000 },
+    texture: { start: 50000, current: 50000 },
+    world_patch: { start: 60000, current: 60000 },
+    script: { start: 70000, current: 70000 }
+};
+
+export class IDAuditorLimb extends NeuralLimb {
+    name = 'IDAuditorLimb';
+
+    private itemRanges: any = null;
+    private npcRanges: any = null;
+    private preservationRules: string[] = [];
+
+    // Forensic baseline (fallback if files missing)
+    private readonly FALLBACK_ITEM_MAX = 1289;
+    private readonly FALLBACK_NPC_MAX = 793;
+
+    constructor(config: LimbConfig) {
+        super(config);
+        this.loadForensicSources();
+
+        // Listen to the Telemetry Spine for failures
+        nexusBus.subscribe((event) => {
+            if (event.type === 'ai:request:error') {
+                this.logFailure({
+                    limbId: event.payload.worker || 'unknown',
+                    error: event.payload.error,
+                    model: event.payload.model
+                });
+            }
+        });
+    }
+
+    /**
+     * Log a system failure for audit.
+     * Called automatically via NexusBus 'ai:request:error' events.
+     */
+    async logFailure(params: { limbId: string; error: string; model?: string }) {
+        await this.logActivity('system_failure_audit', 'failure', params);
+        console.warn(`[IDAuditor] Logged failure for ${params.limbId}: ${params.error}`);
+    }
+
+    private loadForensicSources() {
+        const root = process.cwd();
+        const itemPath = path.join(root, 'reference', 'rsc-cloudflare', 'ITEM_ID_RANGES.json');
+        const npcPath = path.join(root, 'reference', 'rsc-cloudflare', 'NPC_ID_RANGES.json');
+        const preservationPath = path.join(root, 'reference', 'rsc-cloudflare', 'RSC_PRESERVATION.md');
+
+        try {
+            if (fs.existsSync(itemPath)) {
+                this.itemRanges = JSON.parse(fs.readFileSync(itemPath, 'utf8'));
+            }
+            if (fs.existsSync(npcPath)) {
+                this.npcRanges = JSON.parse(fs.readFileSync(npcPath, 'utf8'));
+            }
+            if (fs.existsSync(preservationPath)) {
+                const content = fs.readFileSync(preservationPath, 'utf8');
+                // Extract typos from the markdown (simple regex for "word")
+                const matches = content.match(/"([^"]+)"/g);
+                if (matches) {
+                    this.preservationRules = matches.map(m => m.replace(/"/g, '').toLowerCase());
+                }
+            }
+        } catch (e) {
+            console.error('[IDAuditorLimb] Failed to load forensic sources:', e);
+        }
+    }
+
+    async landscape_id(params: any) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        const name = params.name || `land${params.suggestedId || 64}`;
+        await this.logActivity('audit_landscape_id', 'pending', { name });
+
+        const nextId = await this.findNextLandscapeID();
+
+        return {
+            approved: true,
+            conflicts: [],
+            metadata: { assignedId: nextId }
+        };
+    }
+
+    async item_id(params: any) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        const { itemId, name } = params;
+        const museumMax = this.itemRanges?.totalItems ? this.itemRanges.totalItems - 1 : this.FALLBACK_ITEM_MAX;
+        const conflicts: any[] = [];
+
+        await this.logActivity('audit_item_id', 'pending', { itemId, name, museumMax });
+
+        // Historical ID Verification
+        if (itemId !== undefined && itemId <= museumMax && this.itemRanges?.categories) {
+            let historicalName = "";
+            for (const category of Object.values(this.itemRanges.categories) as any) {
+                const match = category.items?.find((i: any) => i.id === itemId);
+                if (match) {
+                    historicalName = match.name;
+                    break;
+                }
+            }
+
+            if (historicalName && name && name.toLowerCase() !== historicalName.toLowerCase()) {
+                conflicts.push({
+                    type: 'item_name_mismatch',
+                    message: `ID ${itemId} is historically "${historicalName}", but was provided as "${name}". Forensic failure.`,
+                    suggestedName: historicalName
+                });
+            }
+        }
+
+        // Range Check (New Assets)
+        if (itemId !== undefined && itemId <= museumMax && !conflicts.some(c => c.type === 'item_name_mismatch')) {
+            conflicts.push({
+                type: 'item_id_reserved',
+                message: `Item ID ${itemId} is in the reserved Museum (Archaeological) range (0-${museumMax})`,
+                suggestedId: museumMax + 1
+            });
+        }
+
+        // Name Check (Shadowing Prevention for Custom Assets)
+        if (name && itemId > museumMax && this.itemRanges?.categories) {
+            const normalizedName = name.toLowerCase();
+            for (const category of Object.values(this.itemRanges.categories) as any) {
+                const match = category.items?.find((i: any) => i.name.toLowerCase() === normalizedName);
+                if (match) {
+                    conflicts.push({
+                        type: 'item_name_shadowed',
+                        message: `Name "${name}" is already used by Museum Item ID ${match.id}. Shadowing historical assets is forbidden.`,
+                        suggestedName: `Custom ${name}`
+                    });
+                }
+            }
+        }
+
+        return {
+            approved: conflicts.length === 0,
+            conflicts
+        };
+    }
+
+    async npc_id(params: any) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        const { npcId, name } = params;
+        const museumMax = this.npcRanges?.totalNPCs ? this.npcRanges.totalNPCs - 1 : this.FALLBACK_NPC_MAX;
+        const conflicts: any[] = [];
+
+        await this.logActivity('audit_npc_id', 'pending', { npcId, name, museumMax });
+
+        // Historical ID Verification
+        if (npcId !== undefined && npcId <= museumMax && this.npcRanges?.categories) {
+            let historicalName = "";
+            for (const category of Object.values(this.npcRanges.categories) as any) {
+                const match = category.npcs?.find((n: any) => n.id === npcId);
+                if (match) {
+                    historicalName = match.name;
+                    break;
+                }
+            }
+
+            if (historicalName && name && name.toLowerCase() !== historicalName.toLowerCase()) {
+                conflicts.push({
+                    type: 'npc_name_mismatch',
+                    message: `ID ${npcId} is historically "${historicalName}", but was provided as "${name}". Forensic failure.`,
+                    suggestedName: historicalName
+                });
+            }
+        }
+
+        // Range Check (New Assets)
+        if (npcId !== undefined && npcId <= museumMax && !conflicts.some(c => c.type === 'npc_name_mismatch')) {
+            conflicts.push({
+                type: 'npc_id_reserved',
+                message: `NPC ID ${npcId} is in the reserved Museum (Archaeological) range (0-${museumMax})`,
+                suggestedId: museumMax + 1
+            });
+        }
+
+        // Name Check (Shadowing Prevention for Custom Assets)
+        if (name && npcId > museumMax && this.npcRanges?.categories) {
+            const normalizedName = name.toLowerCase();
+            for (const category of Object.values(this.npcRanges.categories) as any) {
+                const match = category.npcs?.find((n: any) => n.name.toLowerCase() === normalizedName);
+                if (match) {
+                    conflicts.push({
+                        type: 'npc_name_shadowed',
+                        message: `Name "${name}" is already used by Museum NPC ID ${match.id}. Shadowing historical assets is forbidden.`,
+                        suggestedName: `New ${name}`
+                    });
+                }
+            }
+        }
+
+        return {
+            approved: conflicts.length === 0,
+            conflicts
+        };
+    }
+
+    /**
+     * Perform a full forensic audit of the entire NPC database.
+     */
+    async audit_npc_database() {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        await this.logActivity('audit_npc_database', 'pending');
+
+        const npcPath = path.join(process.cwd(), 'rsc-data', 'config', 'npcs.json');
+        if (!fs.existsSync(npcPath) || !this.npcRanges) {
+            return { error: 'Missing source or reference data' };
+        }
+
+        const npcs = JSON.parse(fs.readFileSync(npcPath, 'utf8'));
+        const mismatches: any[] = [];
+        const museumMax = this.npcRanges.totalNPCs - 1;
+
+        // Create a flat map for fast lookup
+        const flatRef = new Map<number, string>();
+        for (const category of Object.values(this.npcRanges.categories) as any) {
+            category.npcs?.forEach((n: any) => flatRef.set(n.id, n.name));
+        }
+
+        for (let i = 0; i <= museumMax; i++) {
+            const activeName = npcs[i]?.name;
+            const refName = flatRef.get(i);
+            if (refName && activeName && activeName.toLowerCase() !== refName.toLowerCase()) {
+                mismatches.push({ id: i, active: activeName, expected: refName });
+            }
+        }
+
+        await this.logActivity('audit_npc_database', mismatches.length === 0 ? 'success' : 'failure', { mismatches: mismatches.length });
+
+        return {
+            aligned: mismatches.length === 0,
+            museumCount: museumMax + 1,
+            mismatches
+        };
+    }
+
+    /**
+     * Perform a full forensic audit of the entire Item database.
+     */
+    async audit_item_database() {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        await this.logActivity('audit_item_database', 'pending');
+
+        const itemPath = path.join(process.cwd(), 'rsc-data', 'config', 'items.json');
+        if (!fs.existsSync(itemPath) || !this.itemRanges) {
+            return { error: 'Missing source or reference data' };
+        }
+
+        const items = JSON.parse(fs.readFileSync(itemPath, 'utf8'));
+        const mismatches: any[] = [];
+        const museumMax = this.itemRanges.totalItems - 1;
+
+        // Create a flat map for fast lookup
+        const flatRef = new Map<number, string>();
+        for (const category of Object.values(this.itemRanges.categories) as any) {
+            category.items?.forEach((i: any) => flatRef.set(i.id, i.name));
+        }
+
+        for (let i = 0; i <= museumMax; i++) {
+            const activeName = items[i]?.name;
+            const refName = flatRef.get(i);
+            if (refName && activeName && activeName.toLowerCase() !== refName.toLowerCase()) {
+                mismatches.push({ id: i, active: activeName, expected: refName });
+            }
+        }
+
+        await this.logActivity('audit_item_database', mismatches.length === 0 ? 'success' : 'failure', { mismatches: mismatches.length });
+
+        return {
+            aligned: mismatches.length === 0,
+            museumCount: museumMax + 1,
+            mismatches
+        };
+    }
+
+    /**
+     * Audit text for authentic RSC typos that must be preserved.
+     */
+    async audit_text(params: { text: string }) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        const text = params.text.toLowerCase();
+        const flagged: string[] = [];
+
+        for (const rule of this.preservationRules) {
+            if (text.includes(rule)) {
+                flagged.push(rule);
+            }
+        }
+
+        if (flagged.length > 0) {
+            await this.logActivity('audit_text_preservation', 'success', { flagged });
+            return {
+                approved: true,
+                message: "Preservation confirmed: Text contains authentic RSC quirks that must remain UNCORRECTED.",
+                quirks: flagged
+            };
+        }
+
+        return { approved: true, message: "Standard text audit complete." };
+    }
+
+    private async findNextLandscapeID(): Promise<number> {
+        try {
+            const dataDir = path.join(process.cwd(), 'public', 'data204');
+            const refDir = path.join(process.cwd(), 'reference', 'rsc-cloudflare', 'landscapes');
+
+            let maxId = 63;
+
+            // Check public data
+            if (fs.existsSync(dataDir)) {
+                const files = fs.readdirSync(dataDir);
+                const ids = files.filter(f => f.startsWith('land') && f.endsWith('.jag'))
+                    .map(f => parseInt(f.replace('land', '').replace('.jag', '')))
+                    .filter(id => !isNaN(id));
+                if (ids.length > 0) maxId = Math.max(maxId, ...ids);
+            }
+
+            // Check reference data
+            if (fs.existsSync(refDir)) {
+                const files = fs.readdirSync(refDir);
+                const ids = files.filter(f => f.startsWith('land') && f.endsWith('.jag'))
+                    .map(f => parseInt(f.replace('land', '').replace('.jag', '')))
+                    .filter(id => !isNaN(id));
+                if (ids.length > 0) maxId = Math.max(maxId, ...ids);
+            }
+
+            return maxId + 1;
+        } catch (e) {
+            console.warn('[IDAuditorLimb] Failed to scan directories, falling back', e);
+        }
+
+        return 64;
+    }
+
+    /**
+     * Reserve a unique game ID for an innovation asset.
+     * Returns an ID from the appropriate reserved range.
+     */
+    async reserve_innovation_id(params: { assetType: keyof typeof INNOVATION_RANGES }) {
+        this.enforceCapability(AgentCapability.WRITE_FILES);
+        const { assetType } = params;
+
+        const range = INNOVATION_RANGES[assetType];
+        if (!range) {
+            return { error: `Unknown asset type: ${assetType}` };
+        }
+
+        const assignedId = range.current;
+        range.current++; // Increment for next allocation
+
+        await this.logActivity('reserve_innovation_id', 'success', { assetType, assignedId });
+
+        return {
+            status: 'success',
+            assetType,
+            assignedId,
+            range: { start: range.start, current: range.current }
+        };
+    }
+
+    /**
+     * Validate an InnovationManifest for game compatibility.
+     * Checks labeling, ID conflicts, and size limits.
+     */
+    async validate_innovation(params: { manifest: InnovationManifest }) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        const { manifest } = params;
+        const issues: string[] = [];
+
+        // Required fields
+        if (!manifest.id) issues.push('Missing innovation ID');
+        if (!manifest.name) issues.push('Missing name');
+        if (!manifest.assetType) issues.push('Missing assetType');
+        if (!manifest.innovationType) issues.push('Missing innovationType');
+        if (manifest.sizeBytes === undefined) issues.push('Missing sizeBytes');
+
+        // Game compatibility check
+        if (manifest.gameCompatible) {
+            if (!manifest.assignedGameId) {
+                issues.push('gameCompatible=true but no assignedGameId');
+            } else {
+                // Verify ID is in reserved range
+                const range = INNOVATION_RANGES[manifest.assetType];
+                if (range && manifest.assignedGameId < range.start) {
+                    issues.push(`assignedGameId ${manifest.assignedGameId} is below reserved range (${range.start}+)`);
+                }
+            }
+        }
+
+        // Size limit check (prevent 30GB junk)
+        const SIZE_LIMIT_MB = 50; // 50MB per asset max
+        if (manifest.sizeBytes > SIZE_LIMIT_MB * 1024 * 1024) {
+            issues.push(`Asset exceeds ${SIZE_LIMIT_MB}MB limit (${(manifest.sizeBytes / 1024 / 1024).toFixed(2)}MB)`);
+        }
+
+        // Fork lineage check
+        if (manifest.innovationType === 'fork' && !manifest.parentId) {
+            issues.push('innovationType=fork but no parentId specified');
+        }
+
+        await this.logActivity('validate_innovation', issues.length === 0 ? 'success' : 'failure', { issueCount: issues.length });
+
+        return {
+            valid: issues.length === 0,
+            issues,
+            manifest
+        };
+    }
+
+    /**
+     * Get statistics on innovation layer usage.
+     * Tracks total count and size to prevent bloat.
+     */
+    async get_innovation_stats(params?: any) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        const { localBridgeClient } = await import('../../bridge/LocalBridgeService');
+        const root = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/public/assets/generated';
+
+        let totalFiles = 0;
+        let totalBytes = 0;
+        const byType: Record<string, { count: number; bytes: number }> = {};
+
+        try {
+            const topLevel = await localBridgeClient.listDirectory(root);
+            for (const item of (topLevel.files || []) as any[]) {
+                if (item.isDirectory) {
+                    const subList = await localBridgeClient.listDirectory(`${root}/${item.name}`);
+                    for (const file of (subList.files || []) as any[]) {
+                        if (!file.isDirectory) {
+                            totalFiles++;
+                            const size = file.size || 0;
+                            totalBytes += size;
+
+                            if (!byType[item.name]) {
+                                byType[item.name] = { count: 0, bytes: 0 };
+                            }
+                            byType[item.name].count++;
+                            byType[item.name].bytes += size;
+                        }
+                    }
+                }
+            }
+        } catch (e: any) {
+            return { error: 'Failed to scan innovation layer', message: e.message };
+        }
+
+        return {
+            totalFiles,
+            totalSizeMB: (totalBytes / 1024 / 1024).toFixed(2),
+            byType,
+            idRanges: INNOVATION_RANGES
+        };
+    }
+}

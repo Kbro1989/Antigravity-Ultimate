@@ -1,0 +1,8 @@
+{
+  "id": "reality",
+  "version": "6.5.0-CORE",
+  "status": "READY",
+  "endpoint": "/limbs/reality",
+  "payload": "/dist/reality.bin",
+  "capabilities": []
+}

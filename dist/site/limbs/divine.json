@@ -1,0 +1,8 @@
+{
+  "id": "divine",
+  "version": "6.5.0-CORE",
+  "status": "READY",
+  "endpoint": "/limbs/divine",
+  "payload": "/dist/divine.bin",
+  "capabilities": []
+}

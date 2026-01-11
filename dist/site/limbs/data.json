@@ -1,0 +1,8 @@
+{
+  "id": "data",
+  "version": "6.5.0-CORE",
+  "status": "READY",
+  "endpoint": "/limbs/data",
+  "payload": "/dist/data.bin",
+  "capabilities": []
+}

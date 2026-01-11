@@ -44,9 +44,11 @@ type-check-*.txt
 !public/
 !public/**
 
-# Ignore build artifacts and references
-dist/
-dist/**
+# Track build artifacts for Cloudflare deployment
+!dist/
+!dist/**
+
+# Ignore references
 reference/
 reference/**
 

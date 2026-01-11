@@ -1,0 +1,8 @@
+{
+  "id": "code",
+  "version": "6.5.0-CORE",
+  "status": "READY",
+  "endpoint": "/limbs/code",
+  "payload": "/dist/code.bin",
+  "capabilities": []
+}

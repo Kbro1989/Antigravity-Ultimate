@@ -1,0 +1,7 @@
+import{V as o}from"./VectorMemory-K7lUyAEt.js";class i{env;memory;constructor(t){this.env=t,this.memory=new o(t)}async buildSnapshots(t){if(!this.env.BRAIN)return console.log("[GoldContextService] Proxying buildSnapshots to agent..."),(await fetch("/api/session/default/context/build",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({files:t})})).json();const e={core:[],agents:[],editor:[]};for(const s of t){const n=s.path.toLowerCase();(n.includes("src/core")||n.includes("src/types"))&&e.core.push(s.content),(n.includes("src/agents")||n.includes("src/services")||n.includes("src/adapters"))&&!n.includes("src/frontend")&&!n.includes("src/editor")&&e.agents.push(s.content),(n.includes("src/frontend")||n.includes("src/editor"))&&e.editor.push(s.content)}return await this.env.BRAIN.put("context_core",e.core.join(`
+
+`)),await this.env.BRAIN.put("context_agents",e.agents.join(`
+
+`)),await this.env.BRAIN.put("context_editor",e.editor.join(`
+
+`)),{status:"success",counts:{core:e.core.length,agents:e.agents.length,editor:e.editor.length}}}async getSnapshot(t){return this.env.BRAIN?await this.env.BRAIN.get(`context_${t}`):(console.log(`[GoldContextService] Proxying getSnapshot(${t}) to agent...`),(await fetch(`/api/session/default/context/snapshot/${t}`)).text())}async reconstruct(t){return console.log(`[GoldContext] Reconstructing domain-pure state from checksum: ${t}`),{restored:!0,timestamp:Date.now()}}}export{i as GoldContextService};
