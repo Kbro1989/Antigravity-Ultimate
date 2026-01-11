@@ -4,7 +4,7 @@ import type { Env } from '../../types/env';
 export class BackendModelRouter {
     constructor(private env: Env) { }
 
-    async route(request: any): Promise<any> {
+    async route(request: any, _env?: Env): Promise<any> {
         // "Cloudflare First" Backend Router
         // Uses env.AI direct binding
 

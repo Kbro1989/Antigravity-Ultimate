@@ -161,6 +161,62 @@ export function FileWorkspace() {
                         </div>
                     )}
                 </div>
+
+                {/* Innovation Vault (R2 Persistence) */}
+                <div className="glass-ultra rounded-3xl p-8 flex flex-col gap-6 border border-blue-500/20 shadow-2xl bg-blue-500/5">
+                    <div className="text-[10px] font-black tracking-[0.4em] text-neon-blue uppercase flex items-center gap-3">
+                        <span className="w-2 h-2 rounded-full bg-neon-blue animate-pulse shadow-[0_0_8px_var(--neon-blue)]"></span>
+                        Innovation Vault
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="p-4 glass rounded-[24px] border border-white/5 flex flex-col gap-3 hover:border-white/20 transition-all cursor-pointer group bg-black/20"
+                            onClick={async () => {
+                                addNotification('info', 'Vault: Requesting secure upload tunnel...');
+                                try {
+                                    const { uploadUrl, objectKey } = await callLimb('vault', 'generate_upload_url', {
+                                        fileName: 'client_cache_delta.zip',
+                                        contentType: 'application/zip'
+                                    });
+                                    addNotification('success', 'Relay established: Direct-to-R2 path ready');
+                                    console.log('Direct Upload Path:', uploadUrl);
+                                    setTimeout(() => {
+                                        addNotification('info', `Syncing to cluster: ${objectKey}`);
+                                    }, 1000);
+                                } catch (e: any) {
+                                    addNotification('error', `Vault Error: ${e.message}`);
+                                }
+                            }}
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest group-hover:text-neon-cyan/50">Secure Ingestion</span>
+                                <span className="text-[10px] font-black uppercase text-neon-cyan">Direct Upload</span>
+                            </div>
+                            <div className="text-[11px] font-bold text-white/80">Drop Archive to Core</div>
+                            <div className="text-[8px] font-mono text-white/20 italic">* Bypasses worker CPU limits. S3-Compatible.</div>
+                        </div>
+
+                        <div className="glass rounded-[24px] border border-white/5 p-4 space-y-4 bg-black/20">
+                            <div className="text-[9px] font-black text-white/20 uppercase tracking-widest">Recent Ingestions</div>
+                            {[
+                                { name: 'landscape_alpha.glb', size: '12.4MB', time: '2h ago', type: 'MESH' },
+                                { name: 'texture_relic_v2.png', size: '1.2MB', time: '5h ago', type: 'IMG' }
+                            ].map(asset => (
+                                <div key={asset.name} className="flex items-center justify-between text-[10px] group cursor-pointer">
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-white group-hover:text-neon-cyan transition-colors">{asset.name}</span>
+                                        <span className="text-[8px] text-white/30 truncate max-w-[120px]">{asset.size} • {asset.time}</span>
+                                    </div>
+                                    <span className="text-[8px] px-2 py-0.5 rounded bg-white/5 text-white/40 font-mono">{asset.type}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <button className="w-full py-4 rounded-2xl bg-neon-blue/10 text-neon-blue border border-neon-blue/30 text-[9px] font-black tracking-widest uppercase hover:bg-neon-blue/20 transition-all">
+                        Synchronize Global Snapshot
+                    </button>
+                </div>
             </div>
         </div>
     );

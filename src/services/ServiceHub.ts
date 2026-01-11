@@ -1,4 +1,4 @@
-// AI Services
+// Isomorphic AI Services (Fetch-based)
 import {
     runOrchestration,
     generateImage,
@@ -8,43 +8,76 @@ import {
     auditCode,
     refactorCode,
     searchSimilarAssets,
-    costOptimizer,
-    cloudflareLimiter,
-    limbRegistry,
-    FlowEngine,
-    IntelRegistry,
-    GoldContextService,
-    RealityAnchorService,
-    modelRegistry
-} from './ai';
+    cloudflareLimiter
+} from './ai/CloudflareService';
+
+import { costOptimizer } from './ai/CostOptimizer';
+import { modelRegistry } from './ai/ModelRegistry';
+
+// Types only - directly from source to avoid barrel side-effects
+import type { FlowEngine } from './ai/FlowEngine';
+import type { IntelRegistry } from './ai/IntelRegistry';
+import type { GoldContextService } from './ai/GoldContextService';
+import type { RealityAnchorService } from './ai/RealityAnchorService';
 
 // Core Services
 import { circuitBreaker, securityService } from './core';
 import { tokenLedger } from './core/TokenLedger';
 
-// RSMV Services
-// Handled lazily via initClassicPipeline / initModernPipeline
-
 // Bridge Services
 import { localBridgeClient } from './bridge';
 import { cliBridge } from './cli/CLIBridge';
 
-const flowEngine = FlowEngine.getInstance();
+// FlowEngine handled via getter
 
 /**
  * ServiceHub provides unified access to all POG services
  * Use this in React components via useServiceHub hook
  */
 export class ServiceHubClass {
-    public flow = {
-        trigger: (name: string, steps: any[]) => flowEngine.triggerWorkflow(name, steps),
-        runStep: (stepId: string, action: () => Promise<any>) => flowEngine.runStep(stepId, action)
-    };
+    private _intel?: IntelRegistry;
+    private _snapshots?: GoldContextService;
+    private _anchors?: RealityAnchorService;
 
-    public intel = new IntelRegistry({} as any);
-    public snapshots = new GoldContextService({} as any);
-    public anchors = new RealityAnchorService();
+    public async getIntel() {
+        const { IntelRegistry } = await import('./ai/IntelRegistry');
+        if (!this._intel) this._intel = new IntelRegistry({} as any);
+        return this._intel;
+    }
 
+    public async getSnapshots() {
+        const { GoldContextService } = await import('./ai/GoldContextService');
+        if (!this._snapshots) this._snapshots = new GoldContextService({} as any);
+        return this._snapshots;
+    }
+
+    public async getAnchors() {
+        const { RealityAnchorService } = await import('./ai/RealityAnchorService');
+        if (!this._anchors) this._anchors = new RealityAnchorService();
+        return this._anchors;
+    }
+
+    public get flow() {
+        return {
+            trigger: async (name: string, steps: any[]) => {
+                const { FlowEngine } = await import('./ai/FlowEngine');
+                return FlowEngine.getInstance().triggerWorkflow(name, steps);
+            },
+            runStep: async (stepId: string, action: () => Promise<any>) => {
+                const { FlowEngine } = await import('./ai/FlowEngine');
+                return FlowEngine.getInstance().runStep(stepId, action);
+            }
+        };
+    }
+
+    public get pipeline() {
+        return {
+            execute: async (workflow: any) => {
+                const { workflowEngine } = await import('./ai/n8n/workflowEngine');
+                return workflowEngine.execute(workflow);
+            }
+        };
+    }
     public ai = {
         chat: runOrchestration,
         image: (prompt: string, size?: string) => {
@@ -91,7 +124,7 @@ export class ServiceHubClass {
             });
             return response.json();
         },
-        route: async (request: any) => costOptimizer.route(request)
+        route: async (request: any, env?: any) => (costOptimizer as any).route(request, env)
     };
 
     private mapActionToCapability(action: string): any {

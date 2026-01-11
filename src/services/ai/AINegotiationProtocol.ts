@@ -1,12 +1,13 @@
 
 import { AgentCapability, NEGOTIATION_LAW } from './AgentConstitution';
+import { TernaryState, TERNARY } from './AITypes';
 
 export interface NegotiationOption {
     provider: string;
     cost: number;
     latency: number;
     quality: number;
-    consensus: boolean;
+    consensus: TernaryState; // Hardened Logic
     confidence: number;
     finalPlan: {
         steps: Array<{
@@ -41,6 +42,7 @@ export class AINegotiationProtocol {
 
         let planSteps = [];
         let modelUsed = 'simulated';
+        let voteSum = 0; // Ternary accumulator
 
         try {
             // DYNAMIC PLAN GENERATION
@@ -49,11 +51,11 @@ export class AINegotiationProtocol {
             You are the Orchestrator AI. The user wants to: "${intent.verb} ${JSON.stringify(intent.payload || {})}".
             
             Available Limbs (Tools):
-            - code: write/edit code, audit
-            - image: generate concepts, textures
-            - mesh: generate 3d models, process geometry
-            - network: fetch, ping
-            - security: audit, lock
+            - code: write/edit code, audit (Priority: +1)
+            - image: generate concepts, textures (Priority: 0)
+            - mesh: generate 3d models, process geometry (Priority: 0)
+            - network: fetch, ping (Priority: -1)
+            - security: audit, lock (Priority: +1)
             
             Return a JSON object with a "steps" array. Each step has: "id", "limbId", "action", "params".
             Example: { "steps": [{ "id": "1", "limbId": "image", "action": "generate", "params": {"prompt": "hero"} }] }
@@ -78,13 +80,16 @@ export class AINegotiationProtocol {
                         const parsed = JSON.parse(jsonMatch[0]);
                         planSteps = parsed.steps || [];
                         modelUsed = '@cf/meta/llama-3-8b-instruct';
+                        voteSum = planSteps.length > 0 ? TERNARY.TRUE : TERNARY.UNKNOWN;
                     }
                 } catch (e) {
                     console.warn('Failed to parse AI plan', e);
+                    voteSum = TERNARY.FALSE;
                 }
             }
         } catch (e) {
             console.error('AI Planning failed', e);
+            voteSum = TERNARY.FALSE;
         }
 
         // Fallback to single step if AI fails or is unavailable
@@ -92,6 +97,7 @@ export class AINegotiationProtocol {
             planSteps = [
                 { id: '1', action: intent.verb, limbId: 'orchestrator', params: intent.payload || {} }
             ];
+            voteSum = TERNARY.UNKNOWN; // Weak execution
         }
 
         return {
@@ -99,7 +105,7 @@ export class AINegotiationProtocol {
             cost: 0,
             latency: 200,
             quality: 0.9,
-            consensus: true, // We assume the Orchestrator works alone for now
+            consensus: voteSum > 0 ? TERNARY.TRUE : (voteSum < 0 ? TERNARY.FALSE : TERNARY.UNKNOWN), // Hardened Logic
             confidence: 0.95,
             finalPlan: {
                 steps: planSteps

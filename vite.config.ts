@@ -29,8 +29,8 @@ export default defineConfig({
     ],
     build: {
         target: 'esnext',
-        outDir: 'public',
-        emptyOutDir: false,
+        outDir: 'dist/site',
+        emptyOutDir: true,
         chunkSizeWarningLimit: 2000,
         rollupOptions: {
             input: {
@@ -51,15 +51,15 @@ export default defineConfig({
     server: {
         proxy: {
             '/api': {
-                target: 'http://localhost:8787',
+                target: 'http://localhost:8788',
                 changeOrigin: true,
             },
             '/parties': {
-                target: 'http://localhost:8787',
+                target: 'http://localhost:8788',
                 ws: true,
             },
             '/ws': {
-                target: 'http://localhost:8787',
+                target: 'http://localhost:8788',
                 ws: true,
             },
         },

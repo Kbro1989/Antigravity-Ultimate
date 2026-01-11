@@ -3,6 +3,8 @@ import { AgentCapability } from '../AgentConstitution';
 import { BaseIntent } from '../AITypes';
 import { LandscapeGenerator } from '../../rsmv/map/LandscapeGenerator';
 import { CollisionMapGenerator } from '../../rsmv/map/CollisionMapGenerator';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface LandscapeRequest {
     name: string;
@@ -24,6 +26,16 @@ export class LandscapeGenerationLimb extends NeuralLimb {
     async generate(params: LandscapeRequest) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
         await this.logActivity('generate_landscape', 'pending', { name: params.name });
+
+        // RSC Forensic Version Mapping
+        let referenceTemplate: Buffer | null = null;
+        if (params.baseVersion.includes('63') || params.baseVersion === 'relic') {
+            const refPath = path.join(process.cwd(), 'reference', 'rsc-cloudflare', 'rsc-data', 'landscape', 'land63.jag');
+            if (fs.existsSync(refPath)) {
+                console.log(`[LandscapeLimb] Sourcing salvaged relic template: land63.jag`);
+                referenceTemplate = fs.readFileSync(refPath);
+            }
+        }
 
         const generator = new LandscapeGenerator({
             width: params.width,
@@ -56,10 +68,14 @@ export class LandscapeGenerationLimb extends NeuralLimb {
             },
             collisionBytes: collisionGrid.length,
             author: params.author,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            preservationSync: !!referenceTemplate
         };
 
-        await this.logActivity('generate_landscape', 'success', { version: result.version });
+        await this.logActivity('generate_landscape', 'success', {
+            version: result.version,
+            preservationSync: result.preservationSync
+        });
         return result;
     }
 

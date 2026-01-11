@@ -17,8 +17,8 @@ export class KnowledgeIngestor {
         console.log('[KnowledgeIngestor] Starting ingestion...');
 
         // Use forward slashes for cross-platform compatibility
-        const itemsPath = `${projectRoot}/services/data/rsc/items.json`.replace(/\\/g, '/');
-        const npcsPath = `${projectRoot}/services/data/rsc/npcs.json`.replace(/\\/g, '/');
+        const itemsPath = `${projectRoot}/rsc-data/config/items.json`.replace(/\\/g, '/');
+        const npcsPath = `${projectRoot}/rsc-data/config/npcs.json`.replace(/\\/g, '/');
 
         await this.ingestFile(itemsPath, 'rsc_item', 'name');
         await this.ingestFile(npcsPath, 'rsc_npc', 'name');

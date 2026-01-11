@@ -22,7 +22,7 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
-  box-shadow: 
+  box-shadow:
     0 8px 32px 0 rgba(0, 255, 255, 0.1),
     inset 0 0 20px rgba(0, 255, 255, 0.05);
 }
@@ -34,14 +34,27 @@ body {
 /* Visual Polish: Scanner Line & Cosmic Shift */
 
 @keyframes scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100vh);
+  }
 }
 
 @keyframes cosmic-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .scanner-line {
@@ -57,10 +70,47 @@ body {
   animation: scanline 4s linear infinite;
 }
 
+/* Galaxy Blue Background */
 .cosmic-bg {
-  background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e);
+  /* Deep Galaxy Blue: Dark Void -> Nebula Blue -> Cosmic Purple */
+  background: linear-gradient(-45deg, #050b14, #0a192f, #1b1035, #000000);
   background-size: 400% 400%;
-  animation: cosmic-shift 15s ease infinite;
+  animation: cosmic-shift 20s ease infinite;
+}
+
+/* Frosted Divine Glass */
+.glass-divine {
+  background: rgba(10, 20, 40, 0.3);
+  /* More translucent for stars */
+  backdrop-filter: blur(8px);
+  /* Frosted */
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(100, 200, 255, 0.1);
+  box-shadow:
+    0 0 20px rgba(0, 100, 255, 0.1),
+    inset 0 0 15px rgba(255, 255, 255, 0.03);
+}
+
+/* Shimmer Animation */
+@keyframes shimmer-flow {
+  0% {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0);
+  }
+
+  50% {
+    border-color: rgba(0, 255, 255, 0.5);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  }
+
+  100% {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer-flow 3s infinite;
 }
 
 /* Custom Scrollbar */
@@ -68,13 +118,16 @@ body {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.3);
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(0, 255, 255, 0.2);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 255, 255, 0.4);
 }

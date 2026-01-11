@@ -20,8 +20,29 @@ export class SecurityLimb extends NeuralLimb {
         return { status: 'success', threats: 0, integrity: 1.0 };
     }
 
+    private dbInitialized = false;
+
+    async ensureSchema() {
+        if (!this.env?.DB || this.dbInitialized) return;
+        try {
+            await this.env.DB.prepare(`
+                CREATE TABLE IF NOT EXISTS security_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    action TEXT,
+                    risk TEXT,
+                    intent TEXT,
+                    timestamp INTEGER
+                )
+            `).run();
+            this.dbInitialized = true;
+        } catch (e) {
+            console.error('Failed to init security_logs table', e);
+        }
+    }
+
     async audit(params: any, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.METRIC_ACCESS);
+        await this.ensureSchema();
         const { content, targetIntent } = params;
 
         let risk: 'low' | 'medium' | 'high' | 'blocked' = 'low';
@@ -31,7 +52,23 @@ export class SecurityLimb extends NeuralLimb {
             risk = this.assessRisk(targetIntent);
         }
 
-        this.auditLog.push({ ...targetIntent, risk, timestamp: Date.now() });
+        const logEntry = { ...targetIntent, risk, timestamp: Date.now() };
+        this.auditLog.push(logEntry);
+
+        if (this.env?.DB) {
+            try {
+                await this.env.DB.prepare(
+                    'INSERT INTO security_logs (action, risk, intent, timestamp) VALUES (?, ?, ?, ?)'
+                ).bind(
+                    targetIntent?.action || 'unknown',
+                    risk,
+                    JSON.stringify(targetIntent || {}),
+                    Date.now()
+                ).run();
+            } catch (e) {
+                console.error('Failed to write audit log to D1', e);
+            }
+        }
 
         if (risk === 'blocked') {
             throw new Error(`Governance Violation: High-risk action blocked. [Law: First Law]`);
@@ -42,6 +79,15 @@ export class SecurityLimb extends NeuralLimb {
 
     async get_logs(params: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
+
+        if (this.env?.DB) {
+            try {
+                const { results } = await this.env.DB.prepare('SELECT * FROM security_logs ORDER BY timestamp DESC LIMIT 50').all();
+                return { status: 'success', data: results };
+            } catch (e) {
+                // Fallback to memory
+            }
+        }
         return { status: 'success', data: this.auditLog };
     }
 
@@ -99,7 +145,7 @@ export class SecurityLimb extends NeuralLimb {
                 type: 'text',
                 prompt: `Audit the following content for security risks:\n\n${content}`,
                 systemPrompt: 'Return ONLY one word specifying the risk level: "low", "medium", "high", or "blocked".'
-            });
+            }, this.env);
             const level = (typeof response === 'string' ? response : response.content)?.toLowerCase().trim();
             if (['low', 'medium', 'high', 'blocked'].includes(level)) {
                 return level as any;

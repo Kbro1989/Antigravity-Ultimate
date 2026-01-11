@@ -5,8 +5,8 @@
  */
 
 // Default worker URL - can be overridden
-// Default worker URL - can be overridden
-let WORKER_URL = 'https://ai-game-studio.workers.dev';
+// Use relative path by default to support Vite proxy and same-origin production
+let WORKER_URL = '';
 try {
     WORKER_URL = (import.meta as any).env?.VITE_AI_WORKER_URL || WORKER_URL;
 } catch (e) {

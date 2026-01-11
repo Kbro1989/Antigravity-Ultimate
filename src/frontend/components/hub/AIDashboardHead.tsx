@@ -3,6 +3,7 @@ import { useStateManager } from '../../../services/core/StateManager';
 import { WorkspaceMode } from '../../../services/core/ModeManager';
 import { usePresence } from '../../hooks/usePresence';
 import { ModelSelector } from './ModelSelector';
+import { googleAuthService } from '../../../services/auth/GoogleAuthService';
 
 interface AIDashboardHeadProps {
     workspace: WorkspaceMode | null;
@@ -13,6 +14,7 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
     const { users } = usePresence('global');
     const collaboratorsCount = Object.keys(users).length;
     const [showModels, setShowModels] = useState(false);
+    const [user, setUser] = useState<any>(googleAuthService.getUser());
     const [localStats, setLocalStats] = useState({
         tokensUsed: 0,
         tokensLimit: 10000,
@@ -21,12 +23,19 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
         latency: 45
     });
 
+    // Real Service Health (Mocked for now, but wired for future logic)
+    const [serviceHealth, setServiceHealth] = useState<Record<string, boolean>>({
+        'KV': true, 'R2': true, 'D1': true, 'DO': true, 'AI': true
+    });
+
     useEffect(() => {
+        // Auth Listener
+        const handleAuth = (e: CustomEvent) => setUser(e.detail);
+        window.addEventListener('google-auth-success' as any, handleAuth);
+
         const fetchStats = async () => {
             try {
                 // Fetch real stats from SessionAgent via ServiceHub
-                // We use import() or global ServiceHub depending on availability, 
-                // but since this is a component, we can import ServiceHub directly.
                 const { default: ServiceHub } = await import('../../../services/ServiceHub');
 
                 const stats = await ServiceHub.stats.get() as any;
@@ -36,11 +45,15 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
                     tokensLimit: stats.tokensLimit || 100000,
                     cost: stats.cost || 0.00,
                     requests: stats.requests || 0,
-                    // Latency: we can measure the fetch time accurately
                     latency: Date.now() - startFetchTime
                 }));
+
+                // Here we would confirm service health via ping if endpoints existed
+                // const health = await ServiceHub.checkHealth();
+                // setServiceHealth(health);
             } catch (e) {
                 console.warn('[Dashboard] Stats fetch failed', e);
+                // setServiceHealth(prev => ({ ...prev, 'AI': false })); // Example
             }
         };
 
@@ -48,20 +61,23 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
         const interval = setInterval(() => {
             startFetchTime = Date.now();
             fetchStats();
-        }, 5000); // Refresh every 5s
+        }, 5000); // refresh every 5s
 
         // Initial fetch
         startFetchTime = Date.now();
         fetchStats();
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('google-auth-success' as any, handleAuth);
+        };
     }, []);
 
     const progress = (localStats.tokensUsed / localStats.tokensLimit) * 100;
 
     return (
-        <>
-            <div className="glass-ultra px-10 py-6 rounded-[32px] flex items-center justify-between border-white/5 shadow-2xl fade-in relative mb-6">
+        <div className="fixed top-8 left-8 right-8 z-[200] pointer-events-none">
+            <div className="glass-ultra px-10 py-6 rounded-[32px] flex items-center justify-between border-white/5 shadow-2xl fade-in relative mb-6 pointer-events-auto">
                 <div className="flex items-center gap-6">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_20px_rgba(0,255,255,0.3)] shrink-0">
                         <span className="text-white text-xl font-black">AI</span>
@@ -92,14 +108,32 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
                 </div>
 
                 <div className="flex items-center gap-8">
+                    {/* User Profile / Login */}
+                    {user ? (
+                        <div className="flex items-center gap-3 glass-dark px-4 py-2 rounded-2xl border border-white/10">
+                            <img src={user.picture} alt="User" className="w-8 h-8 rounded-full border border-white/20" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-white">{user.name}</span>
+                                <span className="text-[8px] text-neon-cyan uppercase tracking-wider">OPERATOR</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => googleAuthService.signIn()}
+                            className="px-6 py-3 glass-ultra hover:bg-white/10 rounded-2xl border border-white/10 text-[10px] font-black text-white uppercase tracking-[0.2em] transition-all hover:border-cyan-400/50 hover:shadow-[0_0_20px_rgba( cyan ,0.2)]"
+                        >
+                            Connect Identity
+                        </button>
+                    )}
+
                     {/* Cloudflare Service Matrix */}
                     <div className="flex items-center gap-2 px-6 py-3 glass-dark rounded-2xl border border-cyan-500/20">
                         {['KV', 'R2', 'D1', 'DO', 'AI'].map(service => (
                             <div key={service} className="group relative">
-                                <div className="text-[10px] font-black px-2 py-1 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
+                                <div className={`text-[10px] font-black px-2 py-1 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400/80 group-hover:text-cyan-400 transition-colors ${!serviceHealth[service] ? 'opacity-50 grayscale' : ''}`}>
                                     {service}
                                 </div>
-                                <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]" />
+                                <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${serviceHealth[service] ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-500 shadow-[0_0_10px_red]'}`} />
                             </div>
                         ))}
                     </div>
@@ -120,6 +154,6 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
             </div>
 
             {showModels && <ModelSelector onClose={() => setShowModels(false)} />}
-        </>
+        </div>
     );
 }

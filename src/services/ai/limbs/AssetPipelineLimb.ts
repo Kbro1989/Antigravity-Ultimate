@@ -33,7 +33,7 @@ export class AssetPipelineLimb extends NeuralLimb {
             systemPrompt: "You are a Pipeline Orchestrator. Output ONLY a JSON array of steps with limbId and action.",
             modelId: intent.modelId,
             provider: intent.provider
-        }) as any;
+        }, this.env) as any;
 
         let steps;
         try {
@@ -56,6 +56,13 @@ export class AssetPipelineLimb extends NeuralLimb {
     async stage_assets(params: any) {
         this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
         const { sourceDir, targetDir, assets } = params;
+
+        // SAFETY: data204 Source of Truth Protection
+        const protectedSource = 'public/data204';
+        if (targetDir && (targetDir.includes('data204') || targetDir.includes('public\\data204'))) {
+            throw new Error("VIOLATION: Attempted write to Immutable Source of Truth (data204). Operation Aborted.");
+        }
+
         const source = sourceDir || 'temp/staging';
         const target = targetDir || 'public/assets/production';
 

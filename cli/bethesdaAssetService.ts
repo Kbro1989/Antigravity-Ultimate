@@ -1,8 +1,8 @@
 
-import { RSMVModelEntry, GameSource, ModelCategory } from '../frontend/components/RSMVBrowser';
+import { RSMVModelEntry, GameSource, ModelCategory } from '../src/types/rsmv';
 import * as THREE from 'three';
 // using global Buffer
-import { NifParser } from './rsmv/3d/nifParser';
+import { NifParser } from '../src/services/rsmv/3d/nifParser';
 
 export interface BethesdaGamePaths {
     id: GameSource;
@@ -38,6 +38,7 @@ export class BethesdaAssetService {
     private static instance: BethesdaAssetService;
     private indexedModels: Record<GameSource, RSMVModelEntry[]> = {
         runescape: [],
+        classic: [],
         morrowind: [],
         fallout: []
     };

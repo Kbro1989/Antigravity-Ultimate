@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import AppErrorBoundary from './AppErrorBoundary';
+import { useServiceHub } from '../hooks/useServiceHub';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, PerspectiveCamera, Html, Float } from '@react-three/drei';
 import * as THREE from 'three';
@@ -18,10 +19,13 @@ import {
   Home,
   Package,
   Activity,
+  Hammer,
+  Edit,
   Zap,
-  Brain,
-  Hammer
+  Brain
 } from 'lucide-react';
+
+import { AssetAnnotator } from './RSMV/AssetAnnotator';
 
 // =============================================================================
 // TYPES
@@ -39,7 +43,8 @@ export interface RSMVBrowserProps {
 }
 
 const GAME_SOURCES: { key: GameSource; label: string; icon: string; count: string; color: string }[] = [
-  { key: 'runescape', label: 'RuneScape', icon: '⚔️', count: '~50,000', color: 'cyan' },
+  { key: 'runescape', label: 'RS Modern', icon: '⚔️', count: '~50,000', color: 'cyan' },
+  { key: 'classic', label: 'RS Classic', icon: '📜', count: '~3,000', color: 'rose' },
   { key: 'morrowind', label: 'Morrowind', icon: '🌋', count: '~5,000', color: 'amber' },
   { key: 'fallout', label: 'Fallout NV', icon: '☢️', count: '~10,000', color: 'emerald' },
 ];
@@ -53,11 +58,11 @@ const ModelPreview: React.FC<{ model: RSMVModelEntry | null, wireframe: boolean 
   if (!model) return <Html center><div className="text-cyan-500 text-xs font-bold uppercase tracking-widest animate-pulse">Select a model</div></Html>;
 
   // If it's a real model and we have it locally, use the real viewer
-  if ((model.gameSource === 'runescape' && model.id > 0) || model.filePath) {
+  if ((['runescape', 'classic'].includes(model.gameSource) && model.id > 0) || model.filePath) {
     return (
       <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
         <AppErrorBoundary fallback={<mesh><icosahedronGeometry args={[1, 0]} /><meshStandardMaterial color="#333" wireframe /></mesh>}>
-          <RealModelView modelId={model.id} filePath={model.filePath} wireframe={wireframe} />
+          <RealModelView modelId={model.id} filePath={model.filePath} gameSource={model.gameSource} wireframe={wireframe} />
         </AppErrorBoundary>
       </Float>
     );
@@ -99,7 +104,6 @@ const ModelPreview: React.FC<{ model: RSMVModelEntry | null, wireframe: boolean 
 const RealModelView = React.lazy(() => import('./RSMV/RealModelView').then(m => ({ default: m.RealModelView })));
 import { getRsmvModels, verifyJagexLauncher, FEATURED_MODELS } from '../../services/rsmvService';
 import { loadRSMV } from '../../services/rsmv/rsmvLoader';
-import { BethesdaAssetService } from '../../services/bethesdaAssetService';
 const AudioClipManager = React.lazy(() => import('../../services/rsmv/viewer/AudioClipManager').then(m => ({ default: m.AudioClipManager })));
 
 const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
@@ -109,10 +113,12 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
   initialGameSource = 'runescape',
   addLog = () => { }
 }) => {
+  const { chat, callLimb } = useServiceHub();
   const [gameSource, setGameSource] = useState<GameSource>(initialGameSource);
   const [category, setCategory] = useState<ModelCategory>(initialCategory);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedModel, setSelectedModel] = useState<RSMVModelEntry | null>(null);
+  const [isAnnotating, setIsAnnotating] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -251,13 +257,26 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
   const handleLinkBethesdaAssets = async (source: GameSource) => {
     setIsLoading(true);
     try {
-      const success = await BethesdaAssetService.getInstance().linkLocalAssets(source);
-      if (success) {
-        setIsBethesdaLinked(prev => ({ ...prev, [source]: true }));
-        const models = await BethesdaAssetService.getInstance().getModels(source);
-        if (models.length > 0) {
-          setModels(models);
+      const api = (window as any).agentAPI;
+      if (!api || !api.bethesda) {
+        setError("Bridge Error: Local Bethesda Extension not detected.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const success = await api.bethesda.linkLocalAssets(source);
+        if (success) {
+          setIsBethesdaLinked(prev => ({ ...prev, [source]: true }));
+          const models = await api.bethesda.getModels(source);
+          if (models && models.length > 0) {
+            setModels(models);
+          }
         }
+      } catch (err: any) {
+        setError(`Asset Link Failed: ${err.message}`);
+      } finally {
+        setIsLoading(false);
       }
     } catch (err: any) {
       setError(`Asset Link Failed: ${err.message}`);
@@ -338,13 +357,8 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
     setIsLoading(true);
     setAnalysisText(`Analyzing "${REFERENCE_MODELS[selectedReferenceIdx].name}"...`);
     try {
-      const { modelRouter } = await import('../../services/ai/ModelRouter');
-      const response = await modelRouter.route({
-        type: 'text',
-        prompt: `Compare RSMV Asset "${selectedModel.name}" with reference model. Focus on topography and optimization.`,
-        tier: 'premium'
-      });
-      setAnalysisText(('content' in response ? response.content : 'Analysis failed.') || 'No content returned.');
+      const response = await chat(`Compare RSMV Asset "${selectedModel.name}" with reference model. Focus on topography and optimization.`);
+      setAnalysisText(response.text || 'Analysis failed.');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -357,15 +371,14 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
     setIsLoading(true);
     setAnalysisText(`Orchestrating ${type} synthesis for "${selectedModel.name}"...`);
     try {
-      const { modelRouter } = await import('../../services/ai/ModelRouter');
-      const response = await modelRouter.orchestrateMedia(
-        type as any,
-        `Generate a high-fidelity ${type} asset based on the RuneScape model: ${selectedModel.name}. ${selectedModel.examine || ''}`,
-        `Game Source: ${selectedModel.gameSource}, Category: ${selectedModel.category}`
-      ) as any;
+      const response = await callLimb('pipeline', 'orchestrate_media', {
+        type,
+        prompt: `Generate a high-fidelity ${type} asset based on the RuneScape model: ${selectedModel.name}. ${selectedModel.examine || ''}`,
+        context: `Game Source: ${selectedModel.gameSource}, Category: ${selectedModel.category}`
+      });
       setAnalysisText(response.content || 'Synthesis complete.');
-      if (response.imageUrl || response.videoUrl || response.modelUrl) {
-        console.log(`[ORCHESTRATION] Asset Generated:`, response.imageUrl || response.videoUrl || response.modelUrl);
+      if (response.assetUrl) {
+        console.log(`[ORCHESTRATION] Asset Generated:`, response.assetUrl);
       }
     } catch (err: any) {
       setError(err.message);
@@ -379,19 +392,17 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
     setIsLoading(true);
     setAnalysisText(`Synthesizing narrative lineage for "${selectedModel.name}"...`);
     try {
-      const { modelRouter } = await import('../../services/ai/ModelRouter');
-      const { directorMemory } = await import('../../services/ai/DirectorMemoryService');
-
       const prompt = `Act as an Ancient Historian of Gielinor. Generate a deep, atmospheric lore snippet for the asset: "${selectedModel.name}". 
       Examine text: "${selectedModel.examine || ''}".
       Include origin myths, legendary owners, and current status in the world.
       Output ONLY the lore text (max 150 words).`;
 
-      const response = await modelRouter.route({ type: 'text', prompt, tier: 'premium' });
-      const lore = 'content' in response ? response.content : 'Lore synthesis failed.';
+      const response = await chat(prompt);
+      const lore = response.text;
 
       if (lore) {
-        await directorMemory.addLore(selectedModel.name, lore, selectedModel.gameSource);
+        // Correctly route to Director Limb or similar
+        await callLimb('ghost', 'add_lore', { name: selectedModel.name, lore, source: selectedModel.gameSource });
         setAnalysisText(lore);
       }
     } catch (err: any) {
@@ -612,6 +623,9 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
                       </div>
                     </div>
                     <div className="flex flex-col justify-end gap-2">
+                      <button onClick={() => setIsAnnotating(true)} className="w-full py-4 bg-white/5 border border-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/10 transition-all mb-2">
+                        <Edit className="w-4 h-4 text-neon-cyan" /> Modify Asset Data
+                      </button>
                       <button onClick={handleImportModel} className="w-full py-4 bg-gradient-to-r from-cyan-600 to-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/20 active:scale-[0.98] transition-all">
                         <Download className="w-4 h-4" /> Finalize & Import to Scene
                       </button>
@@ -744,6 +758,23 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Asset Annotator Slide-over */}
+
+      {isAnnotating && selectedModel && (
+        <div className="fixed inset-y-0 right-0 z-[120] flex shadow-[0_0_100px_rgba(0,0,0,0.8)]">
+          <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={() => setIsAnnotating(false)}></div>
+          <AssetAnnotator
+            asset={selectedModel}
+            onSave={(updated) => {
+              setSelectedModel(updated);
+              setIsAnnotating(false);
+              // Persistence hint
+              console.log('[POG] Asset Data Committed:', updated);
+            }}
+            onCancel={() => setIsAnnotating(false)}
+          />
         </div>
       )}
     </div>

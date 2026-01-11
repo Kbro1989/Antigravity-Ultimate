@@ -1,0 +1,109 @@
+{
+    "name": "pog-ultimate",
+    "main": "src/index.ts",
+    "compatibility_date": "2026-01-06",
+    "compatibility_flags": [
+        "nodejs_compat"
+    ],
+    "site": {
+        "bucket": "./dist/site"
+    },
+    "durable_objects": {
+        "bindings": [
+            {
+                "name": "SESSION_AGENT",
+                "class_name": "SessionAgent"
+            },
+            {
+                "name": "COLLABORATION_SERVER",
+                "class_name": "Collaboration"
+            },
+            {
+                "name": "SESSION_DO",
+                "class_name": "SessionDO"
+            },
+            {
+                "name": "METABOLISM_DO",
+                "class_name": "MetabolismDO"
+            }
+        ]
+    },
+    "rules": [
+        {
+            "type": "Text",
+            "globs": [
+                "**/*.glsl",
+                "**/*.glsl.c",
+                "**/*.c",
+                "**/*.jsonc"
+            ],
+            "fallthrough": true
+        },
+        {
+            "type": "Data",
+            "globs": [
+                "**/*.bin",
+                "**/*.wasm"
+            ],
+            "fallthrough": true
+        }
+    ],
+    "migrations": [
+        {
+            "tag": "v1",
+            "new_sqlite_classes": [
+                "SessionAgent",
+                "Collaboration"
+            ]
+        },
+        {
+            "tag": "v2"
+        },
+        {
+            "tag": "v3",
+            "new_sqlite_classes": [
+                "SessionDO"
+            ]
+        },
+        {
+            "tag": "v4",
+            "new_sqlite_classes": [
+                "MetabolismDO"
+            ]
+        }
+    ],
+    "ai": {
+        "binding": "AI"
+    },
+    "r2_buckets": [
+        {
+            "binding": "ASSETS_BUCKET",
+            "bucket_name": "antigravity-assets"
+        }
+    ],
+    "kv_namespaces": [
+        {
+            "binding": "CACHE",
+            "id": "4a452d73838945b5a3065ef63c68d951",
+            "preview_id": "4a452d73838945b5a3065ef63c68d951"
+        },
+        {
+            "binding": "KV",
+            "id": "4a452d73838945b5a3065ef63c68d951",
+            "preview_id": "4a452d73838945b5a3065ef63c68d951"
+        },
+        {
+            "binding": "BRAIN",
+            "id": "4c5b0b6debf347828647fdcc76824a60",
+            "preview_id": "4c5b0b6debf347828647fdcc76824a60"
+        }
+    ],
+    "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "logs": {
+            "enabled": true,
+            "invocation_logs": true
+        }
+    }
+}

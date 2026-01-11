@@ -14,7 +14,9 @@ export class ObservabilityLimiterClient {
     private localBridge = localBridgeClient;
 
     private constructor() {
-        this.connect();
+        if (typeof WebSocket !== 'undefined') {
+            this.connect();
+        }
     }
 
     public static getInstance(): ObservabilityLimiterClient {
@@ -25,6 +27,7 @@ export class ObservabilityLimiterClient {
     }
 
     private connect(): void {
+        if (typeof WebSocket === 'undefined') return;
         if (this.ws?.readyState === WebSocket.OPEN) return;
 
         try {
@@ -76,7 +79,9 @@ export class ObservabilityLimiterClient {
 
             this.ws.addEventListener('close', () => {
                 // Reconnect after 5 seconds
-                setTimeout(() => this.connect(), 5000);
+                if (typeof setTimeout !== 'undefined') {
+                    setTimeout(() => this.connect(), 5000);
+                }
             });
         } catch (e) {
             console.error("Observability connection failed", e);

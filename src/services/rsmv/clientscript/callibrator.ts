@@ -7,7 +7,19 @@ import { DecodeState, EncodeState } from "../opcode_reader";
 import type { clientscriptdata } from "../generated/clientscriptdata";
 import type { clientscript } from "../generated/clientscript";
 import { Openrs2CacheSource } from "../cache/openrs2loader";
-import * as fs from "fs/promises";
+// Node-only fs/promises loader
+let fs: any = null;
+const getFs = async () => {
+    if (fs) return fs;
+    if (typeof process !== 'undefined' && process.versions?.node) {
+        try {
+            fs = await import("fs/promises");
+        } catch {
+            fs = null;
+        }
+    }
+    return fs;
+};
 import { crc32, crc32addInt } from "../libs/crc32util";
 import type { params } from "../generated/params";
 import { ClientScriptOp, ImmediateType, StackConstants, StackDiff, StackInOut, StackList, namedClientScriptOps, variableSources, typeToPrimitive, getOpName, knownClientScriptOpNames } from "./definitions";
@@ -342,10 +354,11 @@ export class ClientscriptObfuscation {
         let { opcodename, scriptname } = await ClientscriptObfuscation.getSaveName(this.source);
         let filedata = JSON.stringify(this.toJson());
         let scriptfiledata = JSON.stringify(this.getScriptJson());
-        if (fs.constants) {
-            await fs.mkdir("cache", { recursive: true });
-            await fs.writeFile(`cache/${opcodename}`, filedata);
-            await fs.writeFile(`cache/${scriptname}`, scriptfiledata);
+        const fsNode = await getFs();
+        if (fsNode) {
+            await fsNode.mkdir("cache", { recursive: true });
+            await fsNode.writeFile(`cache/${opcodename}`, filedata);
+            await fsNode.writeFile(`cache/${scriptname}`, scriptfiledata);
         } else if (datastore.set) {
             await datastore.set(opcodename, filedata);
             await datastore.set(scriptname, scriptfiledata);
@@ -365,9 +378,10 @@ export class ClientscriptObfuscation {
                 let { opcodename, scriptname } = await this.getSaveName(source);
                 let file: string | undefined = undefined;
                 let scriptfile: string | undefined = undefined;
-                if (fs.constants) {
-                    file = await fs.readFile(`cache/${opcodename}`, "utf8");
-                    scriptfile = await fs.readFile(`cache/${scriptname}`, "utf8").catch(() => undefined);
+                const fsNode = await getFs();
+                if (fsNode) {
+                    file = await fsNode.readFile(`cache/${opcodename}`, "utf8");
+                    scriptfile = await fsNode.readFile(`cache/${scriptname}`, "utf8").catch(() => undefined);
                 } else if (datastore.get) {
                     file = await datastore.get(opcodename);
                     scriptfile = await datastore.get(scriptname).catch(() => undefined);

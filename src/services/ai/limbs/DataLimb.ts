@@ -35,6 +35,33 @@ export class DataLimb extends NeuralLimb {
         };
     }
 
+    async prune_vector(params: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+
+        if (!this.env?.VECTOR_INDEX) {
+            return { status: 'skipped', reason: 'No VECTOR_INDEX binding found' };
+        }
+
+        try {
+            // Cloudflare Vectorize deletion requires IDs.
+            // As this is a high-risk operation, we require HITL confirmation or explicitly tracked IDs.
+            if (!params.confirm || !params.ids) {
+                throw new Error('[HITL Required] Vector pruning requires explicit confirmation and ID list. Use { confirm: true, ids: [...] }.');
+            }
+
+            // Real implementation using the binding (assuming deleteByIds is available on the binding type)
+            // If the binding interface is unknown, we fall back to a safe error until binding types are updated.
+            if (typeof this.env.VECTOR_INDEX.deleteByIds === 'function') {
+                await this.env.VECTOR_INDEX.deleteByIds(params.ids);
+                return { status: 'success', deleted: params.ids.length };
+            } else {
+                throw new Error('[System Limit] Vector binding does not support deletion operation.');
+            }
+        } catch (e: any) {
+            return { status: 'error', error: e.message };
+        }
+    }
+
     async get_metrics(params: any) {
         this.enforceCapability(AgentCapability.METRIC_ACCESS);
         const state = useStateManager.getState();

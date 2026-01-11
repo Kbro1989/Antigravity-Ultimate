@@ -5,11 +5,13 @@ import { Standard3DViewer } from '../Standard3DViewer';
 export function AnimationWorkspace() {
     const { callLimb } = useServiceHub();
     const { addNotification } = useNotification();
-    const [activeLayer, setActiveLayer] = useState('Body');
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [modelUrl, setModelUrl] = useState('rsmv://7'); // Default humanoid model
-    const [animationUrl, setAnimationUrl] = useState<string | undefined>(undefined);
+    const [activeTab, setActiveTab] = useState<'kinetics' | 'synth'>('kinetics');
+    const [synthPrompt, setSynthPrompt] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [activeLayer, setActiveLayer] = useState('Base_Walk');
+    const [animationUrl, setAnimationUrl] = useState<string | null>(null);
+    const [modelUrl, setModelUrl] = useState<string | null>("models://humanoid_generic");
 
     const handleRetarget = async () => {
         setIsProcessing(true);
@@ -19,7 +21,7 @@ export function AnimationWorkspace() {
                 target_rig: 'custom_mesh_v1',
                 use_ik: true,
                 preserve_volume: true,
-                prompt: `Retarget motion for layer ${activeLayer}`
+                prompt: activeTab === 'synth' ? synthPrompt : `Retarget motion for layer ${activeLayer}`
             })) as any;
 
             if (result.status === 'success') {
@@ -40,7 +42,7 @@ export function AnimationWorkspace() {
         <div className="flex-1 flex flex-col h-full bg-black/40 animate-fade-in relative overflow-hidden">
             <div className="flex-1 flex gap-6 p-6 overflow-hidden">
                 {/* Rig Viewport */}
-                <div className="flex-1 glass-ultra rounded-3xl relative overflow-hidden border border-white/5 shadow-2xl flex flex-col">
+                <div className="flex-1 glass-ultra rounded-[40px] relative overflow-hidden border border-white/5 shadow-2xl flex flex-col">
                     <div className="flex-1 relative">
                         <Standard3DViewer
                             modelUrl={modelUrl}
@@ -73,62 +75,123 @@ export function AnimationWorkspace() {
                 </div>
 
                 {/* Animation Config */}
-                <div className="w-96 flex flex-col gap-4">
-                    <div className="glass-ultra rounded-3xl p-6 flex-1 flex flex-col gap-8 border border-white/5 shadow-2xl">
-                        <div className="text-[10px] font-black tracking-[0.4em] text-neon-magenta uppercase flex items-center gap-3">
-                            <span className="w-2 h-2 rounded-full bg-neon-magenta animate-pulse shadow-[0_0_8px_var(--neon-magenta)]"></span>
-                            Animation Parameters
+                <div className="w-[400px] flex flex-col gap-6">
+                    <div className="glass-ultra rounded-[40px] p-8 flex-1 flex flex-col border border-white/5 shadow-2xl overflow-hidden relative bg-white/5 backdrop-blur-3xl">
+                        {/* Tab Switcher */}
+                        <div className="flex gap-2 mb-8 p-1 glass rounded-2xl border border-white/5 bg-black/20">
+                            <button
+                                onClick={() => setActiveTab('kinetics')}
+                                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'kinetics' ? 'bg-neon-cyan/20 text-neon-cyan shadow-[0_0_15px_rgba(0,242,255,0.2)]' : 'text-white/20 hover:text-white/40'}`}
+                            >
+                                Kinetics
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('synth')}
+                                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'synth' ? 'bg-neon-magenta/20 text-neon-magenta shadow-[0_0_15px_rgba(255,0,225,0.2)]' : 'text-white/20 hover:text-white/40'}`}
+                            >
+                                Synth
+                            </button>
                         </div>
 
-                        <div className="space-y-6">
-                            {/* Layer Stack */}
-                            <div className="space-y-3">
-                                <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mb-2">Motion Layers</div>
-                                {['Base_Walk', 'UpperBody_Action', 'Hand_Secondary', 'Face_Expressions'].map(l => (
-                                    <div
-                                        key={l}
-                                        onClick={() => setActiveLayer(l)}
-                                        className={`p-3 rounded-xl border transition-all flex items-center justify-between group cursor-pointer ${activeLayer === l ? 'bg-neon-cyan/10 border-neon-cyan/30' : 'bg-white/5 border-transparent'}`}
-                                    >
-                                        <span className={`text-[10px] font-bold ${activeLayer === l ? 'text-white' : 'text-white/30'}`}>{l}</span>
-                                        <div className={`w-2 h-2 rounded-full ${activeLayer === l ? 'bg-neon-cyan shadow-[0_0_8px_var(--neon-cyan)]' : 'bg-white/10'}`} />
+                        {activeTab === 'kinetics' ? (
+                            <div className="flex-1 flex flex-col gap-8 animate-in fade-in slide-in-from-left-4 duration-500">
+                                <div className="text-[10px] font-black tracking-[0.4em] text-neon-cyan uppercase flex items-center gap-3">
+                                    <span className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse shadow-[0_0_8px_var(--neon-cyan)]"></span>
+                                    Manual Control
+                                </div>
+
+                                <div className="space-y-6">
+                                    {/* Layer Stack */}
+                                    <div className="space-y-3">
+                                        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mb-2">Motion Layers</div>
+                                        {['Base_Walk', 'UpperBody_Action', 'Hand_Secondary', 'Face_Expressions'].map(l => (
+                                            <div
+                                                key={l}
+                                                onClick={() => setActiveLayer(l)}
+                                                className={`p-3 rounded-xl border transition-all flex items-center justify-between group cursor-pointer ${activeLayer === l ? 'bg-neon-cyan/10 border-neon-cyan/30' : 'bg-white/5 border-transparent'}`}
+                                            >
+                                                <span className={`text-[10px] font-bold ${activeLayer === l ? 'text-white' : 'text-white/30'}`}>{l}</span>
+                                                <div className={`w-2 h-2 rounded-full ${activeLayer === l ? 'bg-neon-cyan shadow-[0_0_8px_var(--neon-cyan)]' : 'bg-white/10'}`} />
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
 
-                            {/* Interpolation */}
-                            <div>
-                                <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mb-3">Curve Preset</div>
-                                <div className="flex gap-2">
-                                    {['Linear', 'Ease-In', 'Ease-Out', 'Bouncy'].map(c => (
-                                        <button key={c} className="flex-1 py-2 glass rounded-lg text-[8px] font-bold border border-white/5 hover:border-neon-cyan/40 text-white/40 hover:text-white transition-all">{c}</button>
-                                    ))}
-                                </div>
-                            </div>
+                                    {/* Interpolation */}
+                                    <div>
+                                        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mb-3">Curve Preset</div>
+                                        <div className="flex gap-2">
+                                            {['Linear', 'Ease-In', 'Ease-Out', 'Bouncy'].map(c => (
+                                                <button key={c} className="flex-1 py-2 glass rounded-lg text-[8px] font-bold border border-white/5 hover:border-neon-cyan/40 text-white/40 hover:text-white transition-all">{c}</button>
+                                            ))}
+                                        </div>
+                                    </div>
 
-                            {/* Options */}
-                            <div className="space-y-3 pt-4">
-                                <div className="flex items-center justify-between p-3 glass rounded-xl border border-white/5 cursor-pointer hover:bg-white/5 transition-all">
-                                    <span className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Root Motion</span>
-                                    <div className="w-10 h-5 bg-neon-magenta/20 rounded-full relative p-1"><div className="absolute right-1 w-3 h-3 bg-neon-magenta rounded-full shadow-[0_0_8px_var(--neon-magenta)]" /></div>
+                                    {/* Options */}
+                                    <div className="space-y-3 pt-4">
+                                        <div className="flex items-center justify-between p-3 glass rounded-xl border border-white/5 cursor-pointer hover:bg-white/5 transition-all">
+                                            <span className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Root Motion</span>
+                                            <div className="w-10 h-5 bg-neon-magenta/20 rounded-full relative p-1"><div className="absolute right-1 w-3 h-3 bg-neon-magenta rounded-full shadow-[0_0_8px_var(--neon-magenta)]" /></div>
+                                        </div>
+                                        <div className="flex items-center justify-between p-3 glass rounded-xl border border-white/5 cursor-pointer hover:bg-white/5 transition-all">
+                                            <span className="text-[10px] text-white/70 font-bold uppercase tracking-widest">IK Correction</span>
+                                            <div className="w-10 h-5 bg-neon-cyan/20 rounded-full relative p-1"><div className="absolute right-1 w-3 h-3 bg-neon-cyan rounded-full shadow-[0_0_8px_var(--neon-cyan)]" /></div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex items-center justify-between p-3 glass rounded-xl border border-white/5 cursor-pointer hover:bg-white/5 transition-all">
-                                    <span className="text-[10px] text-white/70 font-bold uppercase tracking-widest">IK Correction</span>
-                                    <div className="w-10 h-5 bg-neon-cyan/20 rounded-full relative p-1"><div className="absolute right-1 w-3 h-3 bg-neon-cyan rounded-full shadow-[0_0_8px_var(--neon-cyan)]" /></div>
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Execute Button */}
-                        <button
-                            onClick={handleRetarget}
-                            disabled={isProcessing}
-                            className={`w-full py-5 rounded-2xl mt-auto font-black text-xs tracking-[0.2em] transition-all uppercase shadow-2xl flex items-center justify-center gap-3 ${isProcessing ? 'bg-white/10 text-white/20' : 'bg-white text-black hover:bg-neon-magenta hover:text-white hover:shadow-[0_0_30px_rgba(255,0,225,0.4)]'}`}
-                        >
-                            {isProcessing ? 'Processing Kinetics...' : 'Solve & Retarget Motion'}
-                        </button>
+                                <button
+                                    onClick={handleRetarget}
+                                    disabled={isProcessing}
+                                    className={`w-full py-5 rounded-2xl mt-auto font-black text-xs tracking-[0.2em] transition-all uppercase shadow-2xl flex items-center justify-center gap-3 ${isProcessing ? 'bg-white/10 text-white/20' : 'bg-white text-black hover:bg-neon-cyan hover:text-white hover:shadow-[0_0_30px_rgba(0,242,255,0.4)]'}`}
+                                >
+                                    {isProcessing ? 'Processing Kinetics...' : 'Solve & Retarget Motion'}
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                                <div className="text-[10px] font-black tracking-[0.4em] text-neon-magenta uppercase flex items-center gap-3">
+                                    <span className="w-2 h-2 rounded-full bg-neon-magenta animate-pulse shadow-[0_0_8px_var(--neon-magenta)]"></span>
+                                    Kinetic DNA Directive
+                                </div>
+
+                                <div className="space-y-4">
+                                    <textarea
+                                        value={synthPrompt}
+                                        onChange={(e) => setSynthPrompt(e.target.value)}
+                                        placeholder="Describe motion evolution (e.g., 'Natural locomotion with slight limp', 'Aggressive combat stance ready for strike')..."
+                                        className="w-full h-40 bg-black/40 border border-white/10 rounded-2xl p-4 text-[11px] font-mono text-white/70 outline-none focus:border-neon-magenta/40 transition-all resize-none shadow-inner"
+                                    />
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {[
+                                            { label: 'Ethereal Float', prompt: 'Low gravity ethereal floating motion with slow rotations' },
+                                            { label: 'RSC Classic', prompt: 'Legacy frame-stepped 600ms tick-aligned rhythmic motion' },
+                                            { label: 'Feral Strike', prompt: 'Explosive animalistic lunging animation' },
+                                            { label: 'Staggered', prompt: 'Heavy burdened movement with significant physical weight' }
+                                        ].map(preset => (
+                                            <button
+                                                key={preset.label}
+                                                onClick={() => setSynthPrompt(preset.prompt)}
+                                                className="p-3 glass rounded-xl border border-white/5 hover:border-neon-magenta/30 text-[9px] font-bold text-white/40 hover:text-white transition-all text-left"
+                                            >
+                                                {preset.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleRetarget}
+                                    disabled={!synthPrompt || isProcessing}
+                                    className={`w-full py-5 rounded-2xl mt-auto font-black text-xs tracking-[0.2em] transition-all uppercase shadow-2xl flex items-center justify-center gap-3 ${isProcessing ? 'bg-white/10 text-white/20' : 'bg-neon-magenta text-white hover:shadow-[0_0_30px_rgba(255,0,225,0.4)]'}`}
+                                >
+                                    {isProcessing ? 'Synthesizing Kinetics...' : 'Synthesize Motion'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
+
             </div>
 
             {/* Keyframe Timeline Footer */}

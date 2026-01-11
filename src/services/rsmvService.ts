@@ -17,6 +17,10 @@ export const FEATURED_MODELS: Record<GameSource, RSMVModelEntry[]> = {
   ],
   fallout: [
     { id: 1, name: 'Securitron', category: 'npcs', gameSource: 'fallout', vertexCount: 4500, materialCount: 6, boneCount: 28, tags: ['robot', 'vegas'], description: "Mr. House's robotic army." }
+  ],
+  classic: [
+    { id: 133, name: 'Dragon Longsword', category: 'items', gameSource: 'classic', vertexCount: 72, tags: ['weapon', 'rare', 'dragon'], examine: 'A legendary classic blade.' },
+    { id: 0, name: 'Classic Male', category: 'models', gameSource: 'classic', vertexCount: 156, tags: ['base', 'player'], examine: 'The original 2D-inspired 3D model.' }
   ]
 };
 
@@ -41,7 +45,7 @@ export const verifyJagexLauncher = async (): Promise<boolean> => {
 export const verifyLocalCache = async (): Promise<boolean> => {
   try {
     const { localBridgeClient } = await import('./bridge/LocalBridgeService');
-    const cachePath = 'C:\\Program Files (x86)\\Jagex Launcher';
+    const cachePath = 'C:/ProgramData/Jagex/RuneScape'; // Primary authentic path
     const stat = await localBridgeClient.statFile(cachePath);
     return !!stat.success;
   } catch (err) {
@@ -64,7 +68,8 @@ export class RSMVEngine {
   get modern() { return rsmv; }
   get classic() { return rscViewer; }
 
-  async loadModel(id: number) {
+  async loadModel(id: number, source: GameSource = 'runescape') {
+    if (source === 'classic') return rscViewer.loadModel(id);
     return rsmv.loadModel(id);
   }
 
@@ -78,7 +83,36 @@ export class RSMVEngine {
 }
 
 export const getRsmvModels = async (gameSource: GameSource, category: ModelCategory): Promise<RSMVModelEntry[]> => {
-  if (gameSource !== 'runescape') return FEATURED_MODELS[gameSource] || [];
-  return FEATURED_MODELS.runescape;
+  const curatedModels = FEATURED_MODELS[gameSource] || [];
+  if (gameSource !== 'runescape') return curatedModels;
+
+  // Archaeological Expansion via Relic Limb
+  try {
+    const { ServiceHub } = await import('./ServiceHub');
+    const res = await ServiceHub.limbs.call('relic', 'explore_museum', { category });
+
+    if (res.status === 'success' && res.artifacts) {
+      const archaeologicalModels = res.artifacts.map((a: any) => ({
+        id: a.id,
+        name: a.name,
+        category: category,
+        gameSource: 'runescape',
+        vertexCount: a.size / 100 // Estimate
+      }));
+
+      // Merge & De-duplicate (Curated Research takes precedence)
+      const merged = [...curatedModels];
+      archaeologicalModels.forEach((am: any) => {
+        if (!merged.find(m => m.id === am.id)) {
+          merged.push(am);
+        }
+      });
+      return merged;
+    }
+  } catch (e) {
+    console.warn('[RSMV] Relic Limb unavailable, using curated baseline only');
+  }
+
+  return curatedModels;
 };
 

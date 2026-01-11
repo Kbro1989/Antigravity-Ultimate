@@ -19,7 +19,7 @@ class NexusCommandBus {
     constructor() {
         this.restoreMemory();
         // Auto-save every 5 seconds
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && typeof setInterval !== 'undefined') {
             setInterval(() => this.saveMemory(), 5000);
         }
 

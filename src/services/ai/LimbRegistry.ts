@@ -17,7 +17,9 @@ export class LimbRegistry {
         this.env = env;
         // Limbs must be registered externally (e.g. by ServiceContainer on backend)
         // to avoid circular dependencies and heavy bundling on frontend.
-        this.loadExtensions();
+        this.loadExtensions().catch(e => {
+            console.warn('[LimbRegistry] Extension loading deferred or failed:', e);
+        });
     }
 
     private async loadExtensions() {
@@ -59,12 +61,48 @@ export class LimbRegistry {
                 id,
                 userId: this.userId,
                 capabilities: caps,
-                onAssetGenerated: (asset: any) => this.emit('asset_generated', { ...asset, limbId: id })
+                onAssetGenerated: (asset: any) => this.emit('asset_generated', { ...asset, limbId: id }),
+                env: this.env,
+                limbs: this
             };
             this.registerLimb(id, new limbClass(config));
             return true;
         } catch (e) {
             console.error(`[LimbRegistry] Critical failure in limb ${id}:`, e);
+            return false;
+        }
+    }
+
+    /**
+     * Registers a limb via a factory function (e.g. for dynamic imports)
+     */
+    public async safeRegisterAsync(id: string, factory: () => Promise<any>, caps: AgentCapability[]) {
+        try {
+            const module = await factory();
+
+            // Find the exported class (e.g. EntityLimb)
+            let actualClass = Object.values(module).find(v =>
+                typeof v === 'function' &&
+                v.prototype &&
+                (v.name?.toLowerCase().includes('limb') || v.prototype.process)
+            );
+
+            if (!actualClass) {
+                actualClass = (module as any).default || module[Object.keys(module)[0]];
+            }
+
+            const config = {
+                id,
+                userId: this.userId,
+                capabilities: caps,
+                onAssetGenerated: (asset: any) => this.emit('asset_generated', { ...asset, limbId: id }),
+                env: this.env,
+                limbs: this
+            };
+            this.registerLimb(id, new (actualClass as any)(config));
+            return true;
+        } catch (e) {
+            console.error(`[LimbRegistry] Critical failure in async limb ${id}:`, e);
             return false;
         }
     }
@@ -79,6 +117,18 @@ export class LimbRegistry {
 
     public getLimbIds() {
         return Array.from(this.limbs.keys());
+    }
+
+    public async call(limbId: string, action: string, params: any) {
+        const limb = this.getLimb(limbId);
+        if (!limb) throw new Error(`Limb ${limbId} not found in registry.`);
+
+        // Internal call bypasses some intent parsing but respects capabilities
+        return await limb.process({
+            action,
+            payload: params,
+            limbId
+        });
     }
 
     public async processIntent(intent: BaseIntent & { modelId?: string; provider?: string }) {

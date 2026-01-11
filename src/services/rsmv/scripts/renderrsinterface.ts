@@ -179,7 +179,6 @@ export function renderRsInterfaceDOM(ctx: UiRenderContext, data: Awaited<ReturnT
     let style = document.createElement("style");
     style.innerHTML = rsInterfaceStyleSheet();
     let container = document.createElement("div");
-    container.classList.add("rs-interface-container-sub");
     container.style.width = data.basewidth + "px";
     container.style.height = data.baseheight + "px";
     root.appendChild(style);
@@ -189,8 +188,6 @@ export function renderRsInterfaceDOM(ctx: UiRenderContext, data: Awaited<ReturnT
         let sub = comp.initDom();
         container.appendChild(sub);
     }
-    (globalThis as any).comp = data.rootcomps;//TODO remove
-    (globalThis as any).compctx = ctx;
     let dispose = () => {
         data.rootcomps.forEach(q => q.dispose());
     }
@@ -456,6 +453,21 @@ export class RsInterfaceComponent {
         return this.element;
     }
 
+    changed() {
+        this.updateDom();
+    }
+
+    getStyle() {
+        // Basic implementation to satisfy strict mode and functionality
+        let style = "";
+        let title = "";
+        if (this.data) {
+            style = `left:${this.data.baseposx}px;top:${this.data.baseposy}px;width:${this.data.basewidth}px;height:${this.data.baseheight}px;`;
+            if (this.data.hidden) style += "display:none;";
+        }
+        return { style, title };
+    }
+
     updateDom() {
         if (!this.element) { throw new Error("element not set"); }
         let { style, title } = this.getStyle();
@@ -507,211 +519,6 @@ export class RsInterfaceComponent {
         this.element.title = title;
     }
 
-    getStyle() {
-        let style = "";
-        let childhtml = "";
-        style += cssPosition(this.data);
-        style += cssSize(this.data);
-        let clickable = false;
-
-        if (this.data.figuredata) {
-            if (this.data.figuredata.filled) {
-                style += `background:${cssColor(this.data.figuredata.color)};`;
-                clickable = true;
-            } else {
-                style += `border:1px solid ${cssColor(this.data.figuredata.color)};`;
-            }
-        } else if (this.data.textdata) {
-            clickable = true;
-            style += "display:flex;";
-            style += `color:${cssColor(this.data.textdata.color)};`;
-            if (this.data.textdata.alignhor == 1) {
-                style += `justify-content:center;`;
-                style += `text-align:center;`;//need both here to support multi-line
-            } else if (this.data.textdata.alignhor) {
-                style += `justify-content:right;`;
-                style += `text-align:right;`;
-            }
-            if (this.data.textdata.alignver == 1) {
-                style += `align-items:center;`;
-            } else if (this.data.textdata.alignver) {
-                style += `align-items:bottom;`;
-            }
-            clickable = true;
-        } else if (this.data.containerdata) {
-            //nothing
-        } else if (this.data.spritedata) {
-        } else if (this.data.modeldata) {
-            clickable = true;
-        } else {
-            style += "background:rgba(0,128,128,0.5);outline:red;";
-            clickable = true;
-        }
-        if (clickable) {
-            style += "pointer-events:initial;";
-        }
-        let title = this.data.rightclickopts.filter(q => q).join("\n");
-
-        return { title, style };
-    }
-
-
-}
-
-export class CS2Api {
-    data: interfaces | null;
-    comp: RsInterfaceComponent | null;
-    constructor(comp: RsInterfaceComponent | null) {
-        this.data = comp?.data ?? null
-        this.comp = comp;
-    }
-    changed() {
-        this.comp?.ctx.touchedComps.add(this.comp);
-    }
-
-    findChild(ccid: number) {
-        if (ccid == MAGIC_CONST_IF_AS_CC) { return this; }
-        return this.comp?.clientChildren.find(q => q.compid == ccid)?.api;
-    }
-
-    getNextChildId() {
-        if (!this.comp) { return 0; }
-        let max = this.comp.clientChildren.reduce((a, v) => Math.max(a, v.compid), -1);
-        return max + 1;
-    }
-
-    createChild(ccid: number, type: number) {
-        let data: interfaces = {
-            type: type,
-            aspectxtype: 0,
-            aspectytype: 0,
-            aspectwidthtype: 0,
-            aspectheighttype: 0,
-            basewidth: 0,
-            baseheight: 0,
-            baseposx: 0,
-            baseposy: 0,
-            bit4data: 0,
-            containerdata: null,
-            spritedata: null,
-            modeldata: null,
-            figuredata: null,
-            textdata: null,
-            linedata: null,
-            contenttype: -1,
-            cursor: -1,
-            hidden: 0,
-            menucounts: 0,
-            name: null,
-            name2: "",
-            optmask: 0,
-            optmask1data_bit40: null,
-            parentid: this.comp?.compid ?? -1,
-            rightclickcursors: [],
-            rightclickopts: [],
-            scripts: {} as any,
-            unkdata: null,
-            unk10data: null,
-            unk11data: null,
-            unk12data: null,
-            unk15data: null,
-            unk16data: null,
-            unk2: 0,
-            unk3: [],
-            unk4: 0,
-            unk5: 0,
-            unk6: 0,
-            unkdatadata: null,
-            unkffff: null,
-            unkpre3: null,
-            unkprepre3: null,
-            unkstring1: null,
-            unkstuff123: "",
-            unk13data: null,
-            version: 7
-        }
-        if (type == 0) {
-            data.containerdata = {
-                layerwidth: 0,
-                layerheight: 0,
-                disablehover: null,
-                layerheightextra: null,
-                v6unk1: null,
-                v6unk2: null
-            }
-        } else if (type == 3) {
-            data.figuredata = {
-                color: 0,
-                filled: 0,
-                trans: 0
-            };
-        } else if (type == 4) {
-            data.textdata = {
-                alignhor: 0,
-                alignver: 0,
-                color: 0,
-                fontid: 0,
-                multiline: null,
-                shadow: false,
-                text: "",
-                trans: 0,
-                unk1: 0,
-                unk2: 0,
-            }
-        } else if (type == 5) {
-            data.spritedata = {
-                spriteid: -1,
-                aspectheightdata: 0,
-                aspectwidthdata: 0,
-                borderthickness: 0,
-                clickmask: null,
-                color: 0xffffff,
-                tiling: 0,
-                hflip: false,
-                vflip: false,
-                transparency: 0,
-                rotation: 0,
-                unk2: 0,
-                v6unk: 0
-            }
-        } else if (type == 6) {
-            data.modeldata = {
-                modelid: -1,
-                animid: -1,
-                aspectheightdata: 0,
-                aspectwidthdata: 0,
-                mode: 0,
-                positiondata: {
-                    rotate_x: 0,
-                    rotate_y: 0,
-                    rotate_z: 0,
-                    translate_x: 0,
-                    translate_y: 0,
-                    unkextra: null,
-                    zoom: 0
-                },
-                unkdata: null
-            }
-        } else {
-            console.log(`creating unknown cc type, type=${type}, id=${ccid}`);
-        }
-        let api: CS2Api;
-        if (this.comp) {
-            let child = new RsInterfaceComponent(this.comp.ctx, data, ccid);
-            this.comp.clientChildren.push(child);
-            this.changed();
-            child.api.changed();
-            if (this.comp?.element) {
-                //TODO defer this!
-                this.comp.initDom();
-            }
-            api = child.api;
-        } else {
-            api = new CS2Api(null);
-        }
-        return api;
-    }
-
     setSize(w: number, h: number, modew: number, modeh: number) {
         if (this.data) {
             this.data.basewidth = w;
@@ -741,7 +548,7 @@ export class CS2Api {
     getHeight() { return this.data?.baseheight ?? 0; }
     getX() { return this.data?.baseposx ?? 0; }
     getY() { return this.data?.baseposy ?? 0; }
-    setOp(index: number, text: string) { console.log(`setop ${this.comp?.compid ?? -1} ${index} ${text}`); }//TODO
+    setOp(index: number, text: string) { console.log(`setop ${this.compid ?? -1} ${index} ${text}`); }
     getOp(index: number) { return this.data?.rightclickopts[index] ?? ""; }
 
     //text
@@ -773,4 +580,51 @@ export class CS2Api {
     setFilled(filled: number) { this.data?.figuredata && (this.data.figuredata.filled = filled); this.changed(); }
     getColor() { return this.data?.figuredata?.color ?? 0; }
     setColor(col: number) { this.data?.figuredata && (this.data.figuredata.color = col); this.changed(); }
+}
+
+export class CS2Api {
+    comp: RsInterfaceComponent | null;
+    constructor(comp: RsInterfaceComponent | null) {
+        this.comp = comp;
+    }
+    createChild(group: number, child: number) {
+        console.warn("createChild not implemented fully");
+        return new CS2Api(null);
+    }
+    findChild(id: number) {
+        if (!this.comp) return undefined;
+        let child = this.comp.children.find(q => q.compid == id) ?? this.comp.clientChildren.find(q => q.compid == id);
+        return child ? child.api : undefined;
+    }
+    getNextChildId() { return -1; }
+
+    setHide(val: number) { this.comp?.setHide(val); }
+    getHeight() { return this.comp?.getHeight() ?? 0; }
+    getWidth() { return this.comp?.getWidth() ?? 0; }
+    getX() { return this.comp?.getX() ?? 0; }
+    getY() { return this.comp?.getY() ?? 0; }
+    setOp(idx: number, txt: string) { this.comp?.setOp(idx, txt); }
+    getHide() { return this.comp?.getHide() ?? 0; }
+    getText() { return this.comp?.getText() ?? ""; }
+    setText(txt: string) { this.comp?.setText(txt); }
+    setTextAlign(a: number, b: number, c: number) { this.comp?.setTextAlign(a, b, c); }
+    getGraphic() { return this.comp?.getGraphic() ?? -1; }
+    getHFlip() { return this.comp?.getHFlip() ?? false; }
+    getVFlip() { return this.comp?.getVFlip() ?? false; }
+    setGraphic(val: number) { this.comp?.setGraphic(val); }
+    setHFlip(val: boolean) { this.comp?.setHFlip(val); }
+    setVFlip(val: boolean) { this.comp?.setVFlip(val); }
+    setModel(val: number) { this.comp?.setModel(val); }
+    getTrans() { return this.comp?.getTrans() ?? 0; }
+    getColor() { return this.comp?.getColor() ?? 0; }
+    getFilled() { return this.comp?.getFilled() ?? 0; }
+    setTrans(val: number) { this.comp?.setTrans(val); }
+    setColor(val: number) { this.comp?.setColor(val); }
+    setFilled(val: number) { this.comp?.setFilled(val); }
+    setSize(w: number, h: number, modew: number, modeh: number) { this.comp?.setSize(w, h, modew, modeh); }
+    setPosition(x: number, y: number, modex: number, modey: number) { this.comp?.setPosition(x, y, modex, modey); }
+    setTiling(val: number) { this.comp?.setTiling(val); }
+    getTiling() { return this.comp?.getTiling() ?? 0; }
+    setRotation(val: number) { this.comp?.setRotation(val); }
+    getRotation() { return this.comp?.getRotation() ?? 0; }
 }

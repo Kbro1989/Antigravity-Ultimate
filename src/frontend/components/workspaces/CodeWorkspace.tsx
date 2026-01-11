@@ -30,6 +30,8 @@ synthesizeReality();`);
     const [showArchitect, setShowArchitect] = useState(false);
     const [neuralAgents, setNeuralAgents] = useState<any[]>([]);
     const [traces, setTraces] = useState<any[]>([]);
+    const [activeCodeTab, setActiveCodeTab] = useState<'matrix' | 'forensic'>('matrix');
+    const [comparisonCode, setComparisonCode] = useState('// Archaeological Reference Logic\n// [SELECT ARROW TO COMPARE]');
 
     const isProcessing = isAnalyzing || status === 'thinking' || status === 'executing';
 
@@ -242,22 +244,45 @@ synthesizeReality();`);
                                 <span className="text-[10px] font-mono text-white/30 uppercase mt-1">Status: Neural_Alignment_Active</span>
                             </div>
                         </div>
+                        <div className="flex bg-black/40 p-1.5 rounded-[22px] border border-white/5 mb-2">
+                            <button
+                                onClick={() => setActiveCodeTab('matrix')}
+                                className={`flex-1 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${activeCodeTab === 'matrix' ? 'bg-white text-black shadow-xl' : 'text-white/30 hover:text-white'}`}
+                            >
+                                Logic Matrix
+                            </button>
+                            <button
+                                onClick={() => setActiveCodeTab('forensic')}
+                                className={`flex-1 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${activeCodeTab === 'forensic' ? 'bg-neon-gold/20 text-neon-gold border-neon-gold/50 shadow-[0_0_20px_rgba(255,184,0,0.2)]' : 'text-white/30 hover:text-white'}`}
+                            >
+                                Forensic
+                            </button>
+                        </div>
+
                         <div className="flex items-center gap-3">
-                            <button onClick={handleRefactor} disabled={isProcessing}
-                                className="px-6 py-3 rounded-2xl glass-divine border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-white/60 hover:text-neon-cyan hover:border-neon-cyan/40 transition-all shadow-xl disabled:opacity-50"
-                            >
-                                {isProcessing ? '⏳ Processing' : '⚡ Refactor'}
-                            </button>
-                            <button onClick={handleExplain} disabled={isProcessing}
-                                className="px-6 py-3 rounded-2xl glass-divine border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-white/60 hover:text-neon-magenta hover:border-neon-magenta/40 transition-all shadow-xl disabled:opacity-50"
-                            >
-                                💡 Explain
-                            </button>
-                            <button onClick={handleGenerate} disabled={isProcessing}
-                                className="px-6 py-3 bg-neon-gold/10 hover:bg-neon-gold/20 text-neon-gold border border-neon-gold/30 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl disabled:opacity-50"
-                            >
-                                ✨ Generate
-                            </button>
+                            {activeCodeTab === 'matrix' ? (
+                                <>
+                                    <button onClick={handleRefactor} disabled={isProcessing}
+                                        className="px-6 py-3 rounded-2xl glass-divine border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-white/60 hover:text-neon-cyan hover:border-neon-cyan/40 transition-all shadow-xl disabled:opacity-50"
+                                    >
+                                        {isProcessing ? '⏳ Processing' : '⚡ Refactor'}
+                                    </button>
+                                    <button onClick={handleExplain} disabled={isProcessing}
+                                        className="px-6 py-3 rounded-2xl glass-divine border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-white/60 hover:text-neon-magenta hover:border-neon-magenta/40 transition-all shadow-xl disabled:opacity-50"
+                                    >
+                                        💡 Explain
+                                    </button>
+                                    <button onClick={handleGenerate} disabled={isProcessing}
+                                        className="px-6 py-3 bg-neon-gold/10 hover:bg-neon-gold/20 text-neon-gold border border-neon-gold/30 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl disabled:opacity-50"
+                                    >
+                                        ✨ Generate
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="flex items-center gap-3 text-neon-gold text-[10px] font-black uppercase tracking-widest animate-pulse">
+                                    <span>Archeological Comparison Mode Active</span>
+                                </div>
+                            )}
                             <button onClick={() => setShowArchitect(true)} disabled={isProcessing}
                                 className="px-6 py-3 bg-neon-cyan/20 hover:bg-neon-cyan/30 text-neon-cyan border border-neon-cyan/50 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl disabled:opacity-50 flex items-center gap-2"
                             >
@@ -265,30 +290,54 @@ synthesizeReality();`);
                                 <span>Architect Mode</span>
                             </button>
                         </div>
+
                     </div>
 
-                    <div className="flex-1 rounded-[40px] overflow-hidden border border-white/10 bg-black/30 p-6 shadow-inner relative">
-                        <div className="absolute top-0 right-0 p-4 z-10 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Proprietary Neural Engine</div>
-                        <Editor
-                            height="100%"
-                            defaultLanguage="typescript"
-                            value={code}
-                            onMount={handleEditorDidMount}
-                            onChange={handleEditorChange}
-                            options={{
-                                minimap: { enabled: false },
-                                fontSize: 14,
-                                fontFamily: 'JetBrains Mono, monospace',
-                                scrollBeyondLastLine: false,
-                                automaticLayout: true,
-                                padding: { top: 20, bottom: 20 },
-                                smoothScrolling: true,
-                                cursorBlinking: 'smooth',
-                                cursorSmoothCaretAnimation: 'on',
-                                lineNumbersMinChars: 3,
-                            }}
-                        />
+                    <div className="flex-1 rounded-[40px] overflow-hidden border border-white/10 bg-black/30 p-6 shadow-inner relative flex gap-4">
+                        <div className="flex-1 relative">
+                            <div className="absolute top-0 right-0 p-4 z-10 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Neural Working Space</div>
+                            <Editor
+                                height="100%"
+                                defaultLanguage="typescript"
+                                value={code}
+                                onMount={handleEditorDidMount}
+                                onChange={handleEditorChange}
+                                options={{
+                                    minimap: { enabled: false },
+                                    fontSize: 14,
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    padding: { top: 20, bottom: 20 },
+                                    smoothScrolling: true,
+                                    cursorBlinking: 'smooth',
+                                    cursorSmoothCaretAnimation: 'on',
+                                    lineNumbersMinChars: 3,
+                                }}
+                            />
+                        </div>
+
+                        {activeCodeTab === 'forensic' && (
+                            <div className="w-[45%] border-l border-white/10 pl-4 relative animate-in slide-in-from-right-10 duration-700">
+                                <div className="absolute top-0 right-0 p-4 z-10 text-[8px] font-black text-neon-gold/40 uppercase tracking-[0.4em]">Archeological Truth</div>
+                                <Editor
+                                    height="100%"
+                                    defaultLanguage="typescript"
+                                    value={comparisonCode}
+                                    options={{
+                                        readOnly: true,
+                                        minimap: { enabled: false },
+                                        fontSize: 12,
+                                        fontFamily: 'JetBrains Mono, monospace',
+                                        lineNumbersMinChars: 2,
+                                        theme: 'vs-dark',
+                                        renderSideBySide: false
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
+
                 </div>
 
                 {/* Terminal Console */}

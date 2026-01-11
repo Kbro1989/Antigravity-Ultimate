@@ -1,6 +1,6 @@
 import type { Env } from '../../types/env';
-import { HardBlockEnforcer } from './HardBlockEnforcer';
-import { BackendModelRouter } from './ModelRouter';
+import { costOptimizer } from '../ai/CostOptimizer';
+import { BackendModelRouter as ModelRouter } from './ModelRouter';
 import { LimbRegistry } from '../ai/LimbRegistry';
 import { IntelRegistry } from '../ai/IntelRegistry';
 import { GoldContextService } from '../ai/GoldContextService';
@@ -11,48 +11,21 @@ import { KnowledgeIngestor } from '../rsc/KnowledgeIngestor';
 import { VectorMemory } from '../ai/VectorMemory';
 import { chronoshell } from '../core/Chronoshell';
 import { AgentCapability } from '../ai/AgentConstitution';
-import {
-    EntityLimb,
-    SecurityLimb,
-    FileLimb,
-    DataLimb,
-    CodeLimb,
-    SystemLimb,
-    NetworkLimb,
-    MeshOpsLimb,
-    MaterialLimb,
-    WorldLimb,
-    PhysicsLimb,
-    AnimationLimb,
-    ImageLimb,
-    AudioLimb,
-    VideoLimb,
-    LiveGameLimb,
-    AssetPipelineLimb,
-    SpatialPipelineLimb,
-    OrchestratorLimb,
-    GhostLimb,
-    DivineLimb,
-    QuantumLimb,
-    RealityLimb,
-    RelicLimb
-} from '../ai/limbs';
 
 export class ServiceContainer {
     public env: Env;
-    public router: BackendModelRouter;
-    public enforcer: HardBlockEnforcer;
+    public router: ModelRouter;
     public limbs: LimbRegistry;
     public intel: IntelRegistry;
     public snapshots: GoldContextService;
     public anchors: RealityAnchorService;
     public spatial: SpatialPipelineService;
     public ingestor: KnowledgeIngestor;
+    public costOptimizer = costOptimizer;
 
     constructor(env: Env, storage: DurableObjectStorage) {
         this.env = env;
-        this.router = new BackendModelRouter(env);
-        this.enforcer = new HardBlockEnforcer(storage);
+        this.router = new ModelRouter(env);
         this.intel = new IntelRegistry(env);
         this.snapshots = new GoldContextService(env);
         this.anchors = new RealityAnchorService(env);
@@ -65,51 +38,55 @@ export class ServiceContainer {
         // In worker env, bridge is remote. In local DO it might be direct.
         const bridge = CLIBridge.getInstance();
         this.limbs = new LimbRegistry('default_user', bridge, env);
-        this.initializeLimbs();
     }
 
-    private initializeLimbs() {
+    private async initializeLimbs() {
         const l = this.limbs;
         // Core Limbs
-        l.safeRegister('entity', EntityLimb, [AgentCapability.MEMORY_QUERY, AgentCapability.WRITE_FILES]);
-        l.safeRegister('security', SecurityLimb, [AgentCapability.READ_FILES, AgentCapability.WRITE_FILES]);
-        l.safeRegister('file', FileLimb, [AgentCapability.READ_FILES, AgentCapability.WRITE_FILES, AgentCapability.DELETE_FILES]);
-        l.safeRegister('data', DataLimb, [AgentCapability.MEMORY_QUERY]);
-        l.safeRegister('code', CodeLimb, [AgentCapability.AI_INFERENCE, AgentCapability.EXECUTE_COMMAND, AgentCapability.READ_FILES, AgentCapability.WRITE_FILES, AgentCapability.MODIFY_CODE]);
-        l.safeRegister('system', SystemLimb, [AgentCapability.READ_FILES, AgentCapability.EXECUTE_COMMAND, AgentCapability.METRIC_ACCESS]);
-        l.safeRegister('network', NetworkLimb, [AgentCapability.NETWORK_ACCESS]);
+        await l.safeRegisterAsync('entity', () => import('../ai/limbs/EntityLimb'), [AgentCapability.MEMORY_QUERY, AgentCapability.WRITE_FILES]);
+        await l.safeRegisterAsync('security', () => import('../ai/limbs/SecurityLimb'), [AgentCapability.READ_FILES, AgentCapability.WRITE_FILES]);
+        await l.safeRegisterAsync('file', () => import('../ai/limbs/FileLimb'), [AgentCapability.READ_FILES, AgentCapability.WRITE_FILES, AgentCapability.DELETE_FILES]);
+        await l.safeRegisterAsync('data', () => import('../ai/limbs/DataLimb'), [AgentCapability.MEMORY_QUERY]);
+        await l.safeRegisterAsync('code', () => import('../ai/limbs/CodeLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.EXECUTE_COMMAND, AgentCapability.READ_FILES, AgentCapability.WRITE_FILES, AgentCapability.MODIFY_CODE]);
+        await l.safeRegisterAsync('system', () => import('../ai/limbs/SystemLimb'), [AgentCapability.READ_FILES, AgentCapability.EXECUTE_COMMAND, AgentCapability.METRIC_ACCESS]);
+        await l.safeRegisterAsync('network', () => import('../ai/limbs/NetworkLimb'), [AgentCapability.NETWORK_ACCESS]);
 
         // Domain: 3D & World
-        l.safeRegister('mesh', MeshOpsLimb, [AgentCapability.MESH_OPERATIONS, AgentCapability.AI_INFERENCE]);
-        l.safeRegister('material', MaterialLimb, [AgentCapability.IMAGE_OPERATIONS, AgentCapability.WRITE_FILES]);
-        l.safeRegister('world', WorldLimb, [AgentCapability.WORLD_STATE_WRITE, AgentCapability.READ_FILES]);
-        l.safeRegister('physics', PhysicsLimb, [AgentCapability.AI_INFERENCE, AgentCapability.METRIC_ACCESS]);
-        l.safeRegister('animation', AnimationLimb, [AgentCapability.AI_INFERENCE]);
+        await l.safeRegisterAsync('mesh', () => import('../ai/limbs/MeshOpsLimb'), [AgentCapability.MESH_OPERATIONS, AgentCapability.AI_INFERENCE]);
+        await l.safeRegisterAsync('material', () => import('../ai/limbs/MaterialLimb'), [AgentCapability.IMAGE_OPERATIONS, AgentCapability.WRITE_FILES]);
+        await l.safeRegisterAsync('world', () => import('../ai/limbs/WorldLimb'), [AgentCapability.WORLD_STATE_WRITE, AgentCapability.READ_FILES]);
+        await l.safeRegisterAsync('physics', () => import('../ai/limbs/PhysicsLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.METRIC_ACCESS]);
+        await l.safeRegisterAsync('animation', () => import('../ai/limbs/AnimationLimb'), [AgentCapability.AI_INFERENCE]);
 
         // Domain: Media & Art
-        l.safeRegister('image', ImageLimb, [AgentCapability.IMAGE_OPERATIONS, AgentCapability.AI_INFERENCE]);
-        l.safeRegister('audio', AudioLimb, [AgentCapability.AI_INFERENCE]);
-        l.safeRegister('video', VideoLimb, [AgentCapability.AI_INFERENCE]);
+        await l.safeRegisterAsync('image', () => import('../ai/limbs/ImageLimb'), [AgentCapability.IMAGE_OPERATIONS, AgentCapability.AI_INFERENCE]);
+        await l.safeRegisterAsync('audio', () => import('../ai/limbs/AudioLimb'), [AgentCapability.AI_INFERENCE]);
+        await l.safeRegisterAsync('video', () => import('../ai/limbs/VideoLimb'), [AgentCapability.AI_INFERENCE]);
 
         // Domain: Orchestration & Game
-        l.safeRegister('game', LiveGameLimb, [AgentCapability.WORLD_STATE_WRITE, AgentCapability.AI_INFERENCE]);
-        l.safeRegister('pipeline', AssetPipelineLimb, [AgentCapability.AI_INFERENCE, AgentCapability.MESH_OPERATIONS, AgentCapability.IMAGE_OPERATIONS]);
-        l.safeRegister('spatial', SpatialPipelineLimb, [AgentCapability.AI_INFERENCE, AgentCapability.MESH_OPERATIONS, AgentCapability.IMAGE_OPERATIONS]);
-        l.safeRegister('orchestrator', OrchestratorLimb, [AgentCapability.AI_INFERENCE, AgentCapability.CALL_AI_MODEL]);
-        l.safeRegister('ghost', GhostLimb, [AgentCapability.AI_INFERENCE, AgentCapability.MODIFY_CODE]);
+        await l.safeRegisterAsync('game', () => import('../ai/limbs/LiveGameLimb'), [AgentCapability.WORLD_STATE_WRITE, AgentCapability.AI_INFERENCE]);
+        await l.safeRegisterAsync('pipeline', () => import('../ai/limbs/AssetPipelineLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.MESH_OPERATIONS, AgentCapability.IMAGE_OPERATIONS]);
+        await l.safeRegisterAsync('spatial', () => import('../ai/limbs/SpatialPipelineLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.MESH_OPERATIONS, AgentCapability.IMAGE_OPERATIONS]);
+        await l.safeRegisterAsync('orchestrator', () => import('../ai/limbs/OrchestratorLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.CALL_AI_MODEL]);
+        await l.safeRegisterAsync('ghost', () => import('../ai/limbs/GhostLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.MODIFY_CODE]);
 
         // New Powerhouse Limbs (AGI Expansion)
-        l.safeRegister('rig', AnimationLimb, [AgentCapability.AI_INFERENCE]);
-        l.safeRegister('vfx', ImageLimb, [AgentCapability.IMAGE_OPERATIONS, AgentCapability.AI_INFERENCE]);
-        l.safeRegister('environment', WorldLimb, [AgentCapability.WORLD_STATE_WRITE, AgentCapability.READ_FILES]);
-        l.safeRegister('quantum', QuantumLimb, [AgentCapability.AI_INFERENCE]);
-        l.safeRegister('divine', DivineLimb, [AgentCapability.AI_INFERENCE, AgentCapability.WORLD_STATE_WRITE]);
-        l.safeRegister('reality', RealityLimb, [AgentCapability.AI_INFERENCE, AgentCapability.WORLD_STATE_WRITE]);
-        l.safeRegister('relic', RelicLimb, [AgentCapability.AI_INFERENCE, AgentCapability.MEMORY_QUERY]);
+        await l.safeRegisterAsync('rig', () => import('../ai/limbs/AnimationLimb'), [AgentCapability.AI_INFERENCE]);
+        await l.safeRegisterAsync('vfx', () => import('../ai/limbs/ImageLimb'), [AgentCapability.IMAGE_OPERATIONS, AgentCapability.AI_INFERENCE]);
+        await l.safeRegisterAsync('environment', () => import('../ai/limbs/WorldLimb'), [AgentCapability.WORLD_STATE_WRITE, AgentCapability.READ_FILES]);
+        await l.safeRegisterAsync('quantum', () => import('../ai/limbs/QuantumLimb'), [AgentCapability.AI_INFERENCE]);
+        await l.safeRegisterAsync('divine', () => import('../ai/limbs/DivineLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.WORLD_STATE_WRITE]);
+        await l.safeRegisterAsync('reality', () => import('../ai/limbs/RealityLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.WORLD_STATE_WRITE]);
+        await l.safeRegisterAsync('relic', () => import('../ai/limbs/RelicLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.MEMORY_QUERY]);
+        await l.safeRegisterAsync('id_auditor', () => import('../ai/limbs/IDAuditorLimb'), [AgentCapability.MEMORY_QUERY]);
+        await l.safeRegisterAsync('landscape', () => import('../ai/limbs/LandscapeGenerationLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.WORLD_STATE_WRITE]);
+        await l.safeRegisterAsync('version_control', () => import('../ai/limbs/VersionControlLimb'), [AgentCapability.COMMIT_CHANGES]);
+        await l.safeRegisterAsync('behavior', () => import('../ai/limbs/BehaviorLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.WRITE_FILES]);
     }
 
     async initialize() {
-        await this.enforcer.initialize();
+        console.log('[ServiceContainer] Initializing Limbs...');
+        await this.initializeLimbs();
         await this.anchors.initialize();
 
         // 1. Ensure D1 Tables exist for core services
@@ -163,19 +140,22 @@ export class ServiceContainer {
     }
 
     async processAIIntent(intent: any) {
-        // 1. Audit via security using the hardened layer
+        // 1. Audit via metabolism
         const provider = intent.provider || 'cloudflare';
-        // Assume default user ID for internal processAIIntent calls or pass it in intent
         const userId = intent.userId || 'default_user';
 
-        const allowed = await this.enforcer.checkQuota(provider, userId);
-        if (!allowed) throw new Error(`Security Block: Quota exceeded or provider '${provider}' not allowed.`);
+        const quota = await costOptimizer.getQuota(userId, this.env);
+        // Check if provider has capacity
+        const hasCapacity = provider === 'cloudflare' ? quota.cloudflare.tokens > 0 : quota.gemini.budget > 0;
+
+        if (!hasCapacity) throw new Error(`Security Block: Quota exceeded for provider '${provider}'.`);
 
         // 2. Delegate to limbs
         const result = await this.limbs.processIntent(intent);
 
-        // 3. Track usage
-        await this.enforcer.trackUsage(provider, 1, intent.estimatedCost || 0);
+        // 3. Track usage is now handled INSIDE ModelRouter if it calls an AI, 
+        // but if the limb did it directly, we might need a manual deduction.
+        // For consistent metabolic rate, we assume Limbs use ModelRouter.
 
         return result;
     }

@@ -31,6 +31,8 @@ export interface IRSMVService {
     loadAudio(id: number): Promise<any>;
     loadUI(name: string): Promise<any>;
     getItems(): Promise<any[]>;
+    getNPCs(): Promise<any[]>;
+    getObjects(): Promise<any[]>;
     loadAvatar(name: string): Promise<RSMVAvatar>;
     dispose(): void;
 }

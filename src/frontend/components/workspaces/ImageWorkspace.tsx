@@ -9,14 +9,16 @@ export function ImageWorkspace() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [workspaceMode, setWorkspaceMode] = useState<'TEXTURE' | 'SPRITE' | 'RETRO'>('TEXTURE');
     const [generationMode, setGenerationMode] = useState<'DIRECT' | 'INSPIRE'>('DIRECT');
+    const [activeTab, setActiveTab] = useState<'lab' | 'alchemist'>('lab');
     const [prompt, setPrompt] = useState('Seamless cobblestone texture, mossy, dark gray');
+    const [synthPrompt, setSynthPrompt] = useState('Seamless cobblestone texture, mossy, dark gray');
     const [previewUrl, setPreviewUrl] = useState("https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=800");
 
     const handleGenerate = async (action: string) => {
         setIsProcessing(true);
         try {
             const method = action === 'image_synthesize_texture' ? 'generate' : action;
-            const result = (await callLimb('image', method, { prompt, mode: workspaceMode })) as any;
+            const result = (await callLimb('image', method, { prompt: activeTab === 'alchemist' ? synthPrompt : prompt, mode: workspaceMode })) as any;
 
             if (result.status === 'success') {
                 setPreviewUrl(result.imageUrl);
@@ -116,74 +118,138 @@ export function ImageWorkspace() {
 
             {/* Production Rack */}
             <div className="w-[400px] flex flex-col gap-8">
-                <div className="glass-ultra rounded-[40px] p-8 border border-white/5 shadow-2xl flex flex-col gap-8 flex-1 bg-white/5 backdrop-blur-3xl">
-                    <div className="text-[10px] font-black tracking-[0.4em] text-white/40 uppercase">Texture Orchestrator</div>
-
-                    <div className="flex gap-2">
-                        {(['TEXTURE', 'SPRITE', 'RETRO'] as const).map(m => (
-                            <button key={m} onClick={() => setWorkspaceMode(m)}
-                                className={`flex-1 py-3 rounded-xl text-[9px] font-black transition-all border ${workspaceMode === m ? 'bg-neon-cyan text-black border-neon-cyan' : 'bg-white/5 text-white/40 border-white/5 hover:border-white/20'}`}
-                            >
-                                {m}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="flex gap-2 mb-4">
-                        <button onClick={() => setGenerationMode('DIRECT')} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${generationMode === 'DIRECT' ? 'bg-white text-black' : 'bg-white/5 text-white/40'}`}>Direct</button>
-                        <button onClick={() => setGenerationMode('INSPIRE')} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${generationMode === 'INSPIRE' ? 'bg-white text-black' : 'bg-white/5 text-white/40'}`}>Relic Inspire</button>
-                    </div>
-
-                    {generationMode === 'DIRECT' ? (
-                        <div className="space-y-4">
-                            <div className="text-[9px] font-black uppercase tracking-[0.4em] text-white/30 border-b border-white/5 pb-2">Production Prompt</div>
-                            <textarea
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-[11px] text-white/80 font-mono resize-none focus:border-neon-cyan/50 outline-none h-24"
-                                placeholder="Describe the asset..."
-                            />
-                        </div>
-                    ) : (
-                        <div className="p-4 bg-cyan-900/20 border border-cyan-500/20 rounded-2xl">
-                            <div className="text-[8px] font-black text-cyan-400 uppercase mb-2">Source of Truth</div>
-                            <div className="text-[9px] text-cyan-200/60 leading-relaxed mb-4">
-                                Linked to Relic Archive (Sector 7G).
-                                Latent Style: "RuneScape Classic - Low Poly/Pixel"
-                            </div>
-                            <div className="flex gap-2">
-                                <span className="px-2 py-1 bg-cyan-500/20 rounded text-[8px] text-cyan-300 border border-cyan-500/30">ID: loc_lumbridge_castle</span>
-                                <span className="px-2 py-1 bg-cyan-500/20 rounded text-[8px] text-cyan-300 border border-cyan-500/30">TYPE: SPRITE</span>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="space-y-6">
-                        <div className="text-[9px] font-black uppercase tracking-[0.4em] text-white/30 border-b border-white/5 pb-2">Synthesis Pass</div>
-                        <div className="grid grid-cols-2 gap-4">
-                            {[
-                                { label: 'Seamless', action: 'toggle_seamless', val: 'ON' },
-                                { label: 'PBR Maps', action: 'toggle_pbr', val: 'ON' },
-                                { label: 'Sheet Ext', action: 'toggle_sheet', val: 'OFF' },
-                                { label: 'Palette', action: 'choose_palette', val: 'RETRO' }
-                            ].map(m => (
-                                <div key={m.label} className="p-4 glass rounded-[24px] border border-white/5 flex flex-col gap-1 hover:border-white/20 transition-all cursor-pointer group">
-                                    <span className="text-[9px] font-black text-white/20 uppercase tracking-widest group-hover:text-neon-cyan/50">{m.label}</span>
-                                    <span className={`text-[10px] font-black uppercase ${m.val === 'ON' ? 'text-neon-cyan' : 'text-white/60'}`}>{m.val}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="mt-auto space-y-4">
-                        <button onClick={generationMode === 'DIRECT' ? () => handleGenerate('image_synthesize_texture') : handleInspire} disabled={isProcessing}
-                            className={`w-full py-5 rounded-2xl font-black text-xs tracking-[0.4em] transition-all uppercase shadow-2xl flex items-center justify-center gap-3
-                                ${isProcessing ? 'bg-neon-cyan/20 text-white animate-pulse border border-neon-cyan/50' : 'bg-white text-black hover:bg-neon-cyan hover:shadow-[0_0_40px_rgba(0,242,255,0.4)]'}
-                            `}
+                <div className="glass-ultra rounded-[40px] p-8 border border-white/5 shadow-2xl flex flex-col bg-white/5 backdrop-blur-3xl overflow-hidden flex-1">
+                    {/* Tab Switcher */}
+                    <div className="flex gap-2 mb-8 p-1 glass rounded-2xl border border-white/5 bg-black/20">
+                        <button
+                            onClick={() => setActiveTab('lab')}
+                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'lab' ? 'bg-neon-cyan/20 text-neon-cyan shadow-[0_0_15px_rgba(0,242,255,0.2)]' : 'text-white/20 hover:text-white/40'}`}
                         >
-                            {isProcessing ? 'Synthesizing...' : (generationMode === 'DIRECT' ? '⚡ Generate Asset' : '🎨 Inspire Asset')}
+                            Lab
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('alchemist')}
+                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'alchemist' ? 'bg-neon-purple/20 text-neon-purple shadow-[0_0_15px_rgba(188,0,255,0.2)]' : 'text-white/20 hover:text-white/40'}`}
+                        >
+                            Alchemist
                         </button>
                     </div>
+
+                    {activeTab === 'lab' ? (
+                        <div className="flex-1 flex flex-col gap-8 animate-in fade-in slide-in-from-left-4 duration-500">
+                            <div className="text-[10px] font-black tracking-[0.4em] text-white/40 uppercase">Texture Orchestrator</div>
+
+                            <div className="flex gap-2">
+                                {(['TEXTURE', 'SPRITE', 'RETRO'] as const).map(m => (
+                                    <button key={m} onClick={() => setWorkspaceMode(m)}
+                                        className={`flex-1 py-3 rounded-xl text-[9px] font-black transition-all border ${workspaceMode === m ? 'bg-neon-cyan text-black border-neon-cyan' : 'bg-white/5 text-white/40 border-white/5 hover:border-white/20'}`}
+                                    >
+                                        {m}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="text-[9px] font-black uppercase tracking-[0.4em] text-white/30 border-b border-white/5 pb-2">Production Pass</div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {[
+                                        { label: 'Seamless', action: 'toggle_seamless', val: 'ON' },
+                                        { label: 'PBR Maps', action: 'toggle_pbr', val: 'ON' },
+                                        { label: 'Sheet Ext', action: 'toggle_sheet', val: 'OFF' },
+                                        { label: 'Palette', action: 'choose_palette', val: 'RETRO' }
+                                    ].map(m => (
+                                        <div key={m.label} className="p-4 glass rounded-[24px] border border-white/5 flex flex-col gap-1 hover:border-white/20 transition-all cursor-pointer group">
+                                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest group-hover:text-neon-cyan/50">{m.label}</span>
+                                            <span className={`text-[10px] font-black uppercase ${m.val === 'ON' ? 'text-neon-cyan' : 'text-white/60'}`}>{m.val}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="text-[9px] font-black uppercase tracking-[0.4em] text-white/30 border-b border-white/5 pb-2">Transformation Pipeline (Cloudflare Native)</div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {[
+                                        { label: 'AVIF Polish', val: 'Auto (640px fallback)', color: 'text-neon-cyan' },
+                                        { label: 'WebP Stream', val: 'Lossless Optimizer', color: 'text-white/60' },
+                                        { label: 'SVG Hush', val: 'Sanitized / Safe', color: 'text-neon-magenta' },
+                                        { label: 'Metadata', val: 'Preserve JPEG', color: 'text-white/60' }
+                                    ].map(m => (
+                                        <div key={m.label} className="p-4 glass rounded-[24px] border border-white/5 flex flex-col gap-1 hover:border-white/20 transition-all cursor-pointer group">
+                                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest group-hover:text-neon-cyan/50">{m.label}</span>
+                                            <span className={`text-[10px] font-black uppercase ${m.color}`}>{m.val}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="text-[8px] font-mono text-white/20 px-2 italic">
+                                    * Optimized for serving from your Cloudflare Zones. Hard limits: 12kpx / Soft: 640px (AVIF).
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                            <div className="text-[10px] font-black tracking-[0.4em] text-neon-purple uppercase">Visual Alchemist</div>
+
+                            <div className="flex gap-2 mb-4">
+                                <button onClick={() => setGenerationMode('DIRECT')} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${generationMode === 'DIRECT' ? 'bg-white text-black' : 'bg-white/5 text-white/40'}`}>Direct</button>
+                                <button onClick={() => setGenerationMode('INSPIRE')} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${generationMode === 'INSPIRE' ? 'bg-white text-black' : 'bg-white/5 text-white/40'}`}>Relic Inspire</button>
+                            </div>
+
+                            {generationMode === 'DIRECT' ? (
+                                <div className="space-y-4">
+                                    <div className="text-[10px] font-black uppercase tracking-[0.4em] text-neon-purple border-b border-neon-purple/20 pb-2">Transmutation Prompt</div>
+                                    <textarea
+                                        value={synthPrompt}
+                                        onChange={(e) => setSynthPrompt(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-[11px] text-white/80 font-mono resize-none focus:border-neon-purple/50 outline-none h-32 shadow-inner"
+                                        placeholder="Describe the asset..."
+                                    />
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {[
+                                            { label: 'Ancient Stone', prompt: 'Ancient weathered stone with moss and runic carvings' },
+                                            { label: 'Damaged Steel', prompt: 'Rusted medieval steel with battle damage and scratches' },
+                                            { label: 'Biolume Moss', prompt: 'Bioluminescent alien moss with glowing turquoise veins' },
+                                            { label: 'Abstract Ether', prompt: 'Shifting ethereal energy texture with purple highlights' }
+                                        ].map(preset => (
+                                            <button
+                                                key={preset.label}
+                                                onClick={() => setSynthPrompt(preset.prompt)}
+                                                className="p-3 glass rounded-xl border border-white/5 hover:border-neon-purple/30 text-[9px] font-bold text-white/40 hover:text-white transition-all text-left"
+                                            >
+                                                {preset.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-6 bg-purple-900/20 border border-neon-purple/20 rounded-[32px] flex-1">
+                                    <div className="text-[10px] font-black text-neon-purple uppercase mb-4 tracking-widest">Source of Truth Alchemy</div>
+                                    <div className="text-[11px] text-white/60 leading-relaxed mb-6">
+                                        Transmuting metadata from pinned Relic into high-fidelity PBR buffers.
+                                    </div>
+                                    <div className="flex flex-col gap-3">
+                                        <div className="px-4 py-3 glass rounded-xl border border-white/5 flex items-center justify-between">
+                                            <span className="text-[9px] font-black text-white/20 uppercase">Relic ID</span>
+                                            <span className="text-[10px] font-bold text-neon-purple">{sourceRelic?.id || 'loc_lumbridge_castle'}</span>
+                                        </div>
+                                        <div className="px-4 py-3 glass rounded-xl border border-white/5 flex items-center justify-between">
+                                            <span className="text-[9px] font-black text-white/20 uppercase">Style Context</span>
+                                            <span className="text-[10px] font-bold text-white">Classic_Archive</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <button onClick={generationMode === 'DIRECT' ? () => handleGenerate('image_synthesize_texture') : handleInspire} disabled={isProcessing}
+                                className={`w-full py-5 rounded-2xl mt-auto font-black text-xs tracking-[0.4em] transition-all uppercase shadow-2xl flex items-center justify-center gap-3
+                                    ${isProcessing ? 'bg-neon-purple/20 text-white animate-pulse border border-neon-purple/50' : 'bg-neon-purple text-white hover:shadow-[0_0_40px_rgba(188,0,255,0.4)]'}
+                                `}
+                            >
+                                {isProcessing ? 'Synthesizing...' : (generationMode === 'DIRECT' ? '⚡ Transmute Asset' : '🎨 Inspire Asset')}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

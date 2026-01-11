@@ -13,7 +13,7 @@ export class MaterialLimb extends NeuralLimb {
             domain: '3D',
             modelId: intent.modelId,
             provider: intent.provider
-        });
+        }, this.env);
         return {
             status: 'success',
             uvMapUrl: uvResp.url || `https://api.pog.ai/v1/unwrap/${Date.now()}.png`,
@@ -23,13 +23,21 @@ export class MaterialLimb extends NeuralLimb {
 
     async synthesize_pbr(params: any, intent: BaseIntent & { modelId?: string; provider?: string }) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
-        const { prompt } = params;
+        const { prompt, assetUri } = params;
+
+        // Grounding logic: If assetUri is provided, use RelicLimb to fetch context
+        let groundingContext = "";
+        if (assetUri) {
+            const resolution = await this.limbs.call('relic', 'resolve_asset', { uri: assetUri, type: 'mesh' });
+            groundingContext = ` Grounding Asset: ${JSON.stringify(resolution.data || {})}`;
+        }
+
         const pbrResp = await modelRouter.route({
             type: 'image',
-            prompt: `PBR Texture Maps (ALBEDO, NORMAL, ROUGHNESS, METALLIC) for: ${prompt || 'generic metal'}`,
+            prompt: `PBR Texture Maps (ALBEDO, NORMAL, ROUGHNESS, METALLIC) for: ${prompt || 'generic metal'}.${groundingContext}`,
             modelId: intent.modelId,
             provider: intent.provider
-        }) as any;
+        }, this.env) as any;
         return {
             status: 'success',
             maps: {
@@ -38,8 +46,24 @@ export class MaterialLimb extends NeuralLimb {
                 roughness: pbrResp.roughnessUrl || 'auto-calculated',
                 metallic: pbrResp.metallicUrl || 'auto-calculated'
             },
-            provider: pbrResp.model || 'fal-pbr'
+            provider: pbrResp.model || 'fal-pbr',
+            grounded: !!assetUri
         };
+    }
+
+    /**
+     * TRUTH-BASED REFINEMENT: Guided texture generation from RSC archives
+     */
+    async texture_from_relic(params: any, intent: BaseIntent & { modelId?: string; provider?: string }) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        const { relicUri, refinementPrompt } = params;
+
+        const resolution = await this.limbs.call('relic', 'resolve_asset', { uri: relicUri, type: 'texture' });
+
+        return this.synthesize_pbr({
+            prompt: `Refined high-fidelity PBR version of legacy texture. Original Metadata: ${JSON.stringify(resolution.data || {})}. ${refinementPrompt || ''}`,
+            assetUri: relicUri
+        }, intent);
     }
 
     async bake_lighting(params: any, intent: BaseIntent & { modelId?: string; provider?: string }) {
@@ -51,7 +75,7 @@ export class MaterialLimb extends NeuralLimb {
             domain: '3D',
             modelId: intent.modelId,
             provider: intent.provider
-        });
+        }, this.env);
         return {
             status: 'success',
             lightmap: bakeResp.url || `lightmap_${Date.now()}.exr`,
@@ -61,14 +85,19 @@ export class MaterialLimb extends NeuralLimb {
 
     async generate_shader(params: any, intent: BaseIntent & { modelId?: string; provider?: string }) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
-        const { prompt, properties } = params;
+        const { prompt, properties, isRS3 = false } = params;
+
+        const systemPrompt = isRS3
+            ? "You are an expert in RS3 RT7/RT5 graphics. Return ONLY a JSON object with 'vertexShader', 'fragmentShader', and 'uniforms' using official BRDF functions like GGX and SchlickSmithVis."
+            : "Return ONLY a JSON object with 'vertexShader', 'fragmentShader', and 'uniforms'.";
+
         const shaderResp = await modelRouter.route({
             type: 'text',
             prompt: `Write a Three.js GLSL shader for: ${prompt || 'Holographic glass'}. Properties: ${JSON.stringify(properties || {})}`,
-            systemPrompt: "Return ONLY a JSON object with 'vertexShader', 'fragmentShader', and 'uniforms'.",
+            systemPrompt,
             modelId: intent.modelId,
             provider: intent.provider
-        }) as any;
+        }, this.env) as any;
 
         let shaderData;
         try {
@@ -81,11 +110,43 @@ export class MaterialLimb extends NeuralLimb {
             status: 'success',
             shaderId: `shader_${Date.now()}`,
             manifest: {
-                type: 'CUSTOM_GLSL',
+                type: isRS3 ? 'RS3_RT7_GLSL' : 'CUSTOM_GLSL',
                 code: shaderData,
                 compiled: true
             },
             provider: shaderResp.model || 'gemini-code-exp'
+        };
+    }
+
+    /**
+     * AUTHORITATIVE RS3 ENGINE GROUNDING:
+     * Returns official GLSL fragments extracted from the Jagex WebViewer.
+     */
+    async get_rs3_constants() {
+        return {
+            status: 'success',
+            brdf: {
+                GGXTrowbridgeReitzNDF: `float GGXTrowbridgeReitzNDF(float N, float f) {
+                    float P = N * N, I = f * f, T = I * (P - 1.) + 1.;
+                    return P / (3.14159 * (T * T + .0001));
+                }`,
+                SchlickSmithVis: `float SchlickSmithVis(float V, float f, float S) {
+                    float P = 1. / sqrt(0.78539 * V + 1.5707), d = 1. - P, v = (f * d + P) * (S * d + P);
+                    return 1. / (v + .0001);
+                }`,
+                RunescapeLegacyBRDF: `float RunescapeLegacyBRDF(vec3 d, vec3 v, vec3 f, float B, float S) {
+                    vec3 n = reflect(-d, f);
+                    float C = pow(max(0., dot(n, v)), B);
+                    return C * S;
+                }`,
+                RunescapeRT5BRDF: `float RunescapeRT5BRDF(vec3 d, vec3 v, float S) {
+                    return (S + 2.) * 0.125 * pow(max(0., dot(d, v)), S);
+                }`
+            },
+            tonemapping: {
+                SRGBToLinear: "return pow(srgbColour, vec3(2.2));",
+                LinearToSRGBRunescape: "return sqrt(s);"
+            }
         };
     }
 }

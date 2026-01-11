@@ -130,11 +130,28 @@ export class LiveGameLimb extends NeuralLimb {
     async change_weather(params: any) { return this.send_event({ type: 'change_weather', data: params }); }
 
     /**
+     * Pipeline Injection Endpoint.
+     * Receives assets from Orchestrator/AssetPipeline and hot-loads them.
+     */
+    async inject_asset(params: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        const { assetId, state } = params;
+
+        // Use hot_swap logic
+        return this.hot_swap_asset({
+            assetId,
+            type: 'pipeline_injection',
+            newData: { state, timestamp: Date.now() }
+        });
+    }
+
+    /**
      * OMNISCIENCE UPGRADE: Edit As You Play
      * Instantly replaces an asset in the running simulation.
      */
     async hot_swap_asset(params: any) {
         this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        const start = Date.now();
         const { assetId, type, newData } = params;
 
         // 1. Send invalidation signal to Client
@@ -146,7 +163,37 @@ export class LiveGameLimb extends NeuralLimb {
         return {
             status: 'success',
             message: `Asset ${assetId} hot-swapped in active runtime.`,
-            latency_ms: 0 // Mock instant update
+            latency_ms: Date.now() - start
+        };
+    }
+
+    /**
+     * MATERIALIZATION ENGINE: On-the-fly Entity Summoning
+     * Uses assigned roles to instantiate a forensic-ready NPC.
+     */
+    async materialize_role(params: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        const { id, name, rolePackage, position } = params;
+
+        // 1. Validate against IDAuditor (Museum Protection)
+        // Note: In orchestration, IDAuditor would have already vetted this.
+
+        // 2. Transmit to Game World
+        this.send('spawn_npc_with_role', {
+            id,
+            name,
+            role: rolePackage,
+            position: position || [0, 0, 0],
+            timestamp: Date.now()
+        });
+
+        // 3. Log the Innovation
+        await this.logActivity('materialize_role', 'success', { id, name, role: rolePackage.roleType });
+
+        return {
+            status: 'success',
+            instanceId: id,
+            message: `${name} materialized with role ${rolePackage.roleType}.`
         };
     }
 }

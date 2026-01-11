@@ -9,7 +9,9 @@ import { ParticleSystem } from './ParticleSystem';
 import { BubbleWorldHUD } from './BubbleWorldHUD';
 import { AIDashboardHead } from './AIDashboardHead';
 import { WorkspaceSpine } from './WorkspaceSpine';
-// import { TestRelic } from '../workspaces/TestRelic';
+import { LimbRegistryClient } from '../../../services/LimbRegistryClient';
+import { useServiceHub } from '../../hooks';
+import { googleAuthService } from '../../../services/auth/GoogleAuthService';
 
 // Specialized Workspaces (Lazy Loaded to optimize bundle and break circular dependencies)
 const CodeWorkspace = React.lazy(() => import('../workspaces/CodeWorkspace').then(m => ({ default: m.CodeWorkspace })));
@@ -43,8 +45,8 @@ import { OrchestratorPanel } from '../orchestrator/OrchestratorPanel';
 import { SettingsPanel } from './SettingsPanel';
 import { useStateManager } from '../../../services/core/StateManager';
 import { WorkspaceMode } from '../../../types/workspace';
-import { useServiceHub } from '../../hooks';
 import '../../styles/hub.css';
+
 
 // Map Workspace Modes to registered Limb IDs
 const LimbMap: Record<string, string> = {
@@ -63,10 +65,18 @@ export function POGDashboard() {
     const { callLimb } = useServiceHub();
     const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 });
 
-    const [alerts, setAlerts] = React.useState(["SYSTEM OPTIMAL", "NEURAL LINK ESTABLISHED", "CREATIVE MODE READY"]);
+    const [alerts, setAlerts] = React.useState(["INITIALIZING SYSTEM..."]);
     const [alertIndex, setAlertIndex] = React.useState(0);
     const [showOrchestrator, setShowOrchestrator] = React.useState(false);
     const [showSettings, setShowSettings] = React.useState(false);
+    const [user, setUser] = React.useState<any>(googleAuthService.getUser());
+
+    // Sync Auth State
+    React.useEffect(() => {
+        const handleAuth = (e: CustomEvent) => setUser(e.detail);
+        window.addEventListener('google-auth-success' as any, handleAuth);
+        return () => window.removeEventListener('google-auth-success' as any, handleAuth);
+    }, []);
 
     React.useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
@@ -112,9 +122,32 @@ export function POGDashboard() {
         return () => clearInterval(interval);
     }, [alerts]);
 
+    // Sync URL to State (Hash Routing)
+    React.useEffect(() => {
+        const handleHashChange = () => {
+            const hash = window.location.hash; // #/limbs/code or #/code
+            if (hash.startsWith('#/limbs/') || hash.startsWith('#/')) {
+                const rawId = hash.replace('#/limbs/', '').replace('#/', '');
+                // Basic validation or fallback
+                if (rawId) {
+                    setActiveWorkspace(rawId as WorkspaceMode);
+                    setView('workspace');
+                }
+            } else if (hash === '' || hash === '#') {
+                setView('hub');
+                setActiveWorkspace(null);
+            }
+        };
+
+        window.addEventListener('hashchange', handleHashChange);
+        handleHashChange(); // Initial check on mount
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, [setActiveWorkspace]);
+
     const handleSelectWorkspace = (id: WorkspaceMode) => {
-        setActiveWorkspace(id);
-        setView('workspace');
+        console.log('[POGDashboard] Setting hash for:', id);
+        // Update URL, triggering the effect above
+        window.location.hash = `/limbs/${id}`;
     };
 
     const WorkspaceComponents: Record<WorkspaceMode, React.ComponentType<any> | null> = {
@@ -182,6 +215,27 @@ export function POGDashboard() {
                     <div className="text-[10px] font-black text-neon-cyan transform -rotate-90 origin-left opacity-20 tracking-[1em] uppercase">NEURAL_INTERFACE_ACTIVE</div>
                 </div>
 
+                {/* Hub View Login/Profile - Top Right */}
+                <div className="fixed top-8 right-8 z-[100] flex gap-4">
+                    {/* User Profile / Login */}
+                    {user ? (
+                        <div className="flex items-center gap-3 glass-ultra px-6 py-3 rounded-2xl border border-white/10 shadow-xl animate-in slide-in-from-top-4 duration-700">
+                            <img src={user.picture} alt="User" className="w-8 h-8 rounded-full border border-white/20" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-white">{user.name}</span>
+                                <span className="text-[8px] text-neon-cyan uppercase tracking-wider">OPERATOR</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => googleAuthService.signIn()}
+                            className="px-6 py-3 glass-ultra hover:bg-white/10 rounded-2xl border border-white/10 text-[10px] font-black text-white uppercase tracking-[0.2em] transition-all hover:border-cyan-400/50 hover:shadow-[0_0_20px_rgba( cyan ,0.2)] animate-in slide-in-from-top-4 duration-700"
+                        >
+                            Connect Identity
+                        </button>
+                    )}
+                </div>
+
                 {/* Orchestrator Modal */}
                 {showOrchestrator && (
                     <div className="fixed inset-0 z-[110] flex items-center justify-center p-12 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
@@ -216,7 +270,9 @@ export function POGDashboard() {
                 {/* Header with Back Button */}
                 <div className="flex items-center gap-6">
                     <button
-                        onClick={() => setView('hub')}
+                        onClick={() => {
+                            window.location.hash = '';
+                        }}
                         className="w-16 h-16 rounded-[24px] glass-ultra border border-white/5 flex items-center justify-center text-white/40 hover:text-neon-cyan hover:border-neon-cyan/40 transition-all group shadow-xl"
                     >
                         <svg className="w-6 h-6 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -242,20 +298,17 @@ export function POGDashboard() {
                                 workspace={activeWorkspace as WorkspaceMode}
                                 onToolSelect={async (toolId, capability, params) => {
                                     try {
-                                        // Resolve Limb ID (fallback to workspace name)
-                                        const limbId = LimbMap[activeWorkspace] || activeWorkspace;
+                                        setAlerts(prev => [`EXECUTING ${toolId.toUpperCase()}...`, ...prev.slice(0, 4)]);
 
-                                        // Determine Method & Payload
-                                        const method = capability || toolId;
-                                        const payload = params || {};
-
-                                        setAlerts(prev => [`EXECUTING ${method.toUpperCase()} ON ${limbId.toUpperCase()}...`, ...prev.slice(0, 4)]);
-
-                                        // Call Real Limb Capability
-                                        const result = await callLimb(limbId, method, payload);
+                                        // Execute via Unified Limb Registry Client
+                                        const result = await LimbRegistryClient.executeTool(activeWorkspace, toolId, {
+                                            ...params,
+                                            activeFile: (window as any).activeFile, // Hook into global file tracker if available
+                                            selection: window.getSelection()?.toString()
+                                        });
 
                                         if (result) {
-                                            setAlerts(prev => [`${method.toUpperCase()} SUCCESS`, ...prev.slice(0, 4)]);
+                                            setAlerts(prev => [`${toolId.toUpperCase()} SUCCESS`, ...prev.slice(0, 4)]);
                                         }
                                     } catch (e: any) {
                                         setAlerts(prev => [`ERROR: ${e.message.toUpperCase()}`, ...prev.slice(0, 4)]);

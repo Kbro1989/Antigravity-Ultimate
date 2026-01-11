@@ -9,7 +9,7 @@ import { AgentCapability } from './AgentConstitution';
 export type AIAction =
     | 'file_read' | 'file_write' | 'file_delete' | 'file_list' | 'file_sync' | 'file_audit_provenance'
     | 'code_complete' | 'code_refactor' | 'code_audit' | 'code_cascade' | 'code_explain' | 'code_test' | 'code_analyze_complexity' | 'code_generate_code'
-    | 'data_query' | 'data_persist' | 'data_cache' | 'data_index' | 'data_prune_cache'
+    | 'data_query' | 'data_persist' | 'data_cache' | 'data_index' | 'data_prune_cache' | 'data_prune_vector'
     | 'mesh_generate' | 'mesh_edit' | 'mesh_remesh' | 'mesh_uv' | 'mesh_topo' | 'mesh_process_mesh'
     | 'material_generate' | 'material_apply' | 'material_pbr' | 'material_tex' | 'material_bake' | 'material_generate_shader'
     | 'animation_generate' | 'animation_retarget' | 'animation_record' | 'animation_pose' | 'animation_retarget_motion'
@@ -24,7 +24,7 @@ export type AIAction =
     | 'physics_gravity' | 'physics_time' | 'physics_fluid' | 'physics_coll' | 'physics_step_simulation'
     | 'network_ping' | 'network_mesh' | 'network_fire' | 'network_ping_limbs'
     | 'security_scan' | 'security_vault' | 'security_lock' | 'security_get_logs' | 'security_emergency_lockdown'
-    | 'system_command' | 'system_diag' | 'system_logs' | 'system_core' | 'system_optimize_resources' | 'system_query_health'
+    | 'system_command' | 'system_diag' | 'system_logs' | 'system_core' | 'system_optimize_resources' | 'system_query_health' | 'system_token_ledger' | 'system_economy_mode'
     | 'filesystem_explore' | 'filesystem_search' | 'filesystem_mount'
     | 'live_stream' | 'live_mon' | 'live_sync' | 'live_game_action'
     | 'ghost_fix' | 'ghost_heal' | 'ghost_stealth' | 'ghost_stabilize'
@@ -40,10 +40,26 @@ export type AIAction =
     | 'orchestrate_plan' | 'orchestrate_limb' | 'orchestrate_auto' | 'orchestrate_negotiate' | 'orchestrate_critique' | 'orchestrate_generate_plan' | 'orchestrate_execute_graph' | 'orchestrate_get_symphony_status' | 'orchestrate_architect_solution'
     | 'proxy_forward' | 'version_commit' | 'version_history' | 'audit_landscape_id' | 'audit_item_id' | 'audit_npc_id';
 
+/**
+ * Hardened Tasking Logic ⚖️
+ * -1: REJECT / LOW
+ *  0: UNKNOWN / NORMAL
+ * +1: APPROVE / HIGH
+ */
+export type TernaryState = -1 | 0 | 1;
+
+export const TERNARY = {
+    TRUE: 1 as TernaryState,
+    FALSE: -1 as TernaryState,
+    UNKNOWN: 0 as TernaryState
+};
+
 export interface BaseIntent {
     action: AIAction;
     limbId?: string;
     sessionId?: string;
+    modelId?: string;
+    provider?: string;
     payload: Record<string, any>;
 }
 
@@ -96,6 +112,45 @@ export interface AITool {
 }
 
 export const POG_TOOL_CABINET: Record<AIAction, AITool> = {
+    'file_write': {
+        name: 'Write File',
+        description: 'Writes content to a file. REQUIRES EXPLICIT CONFIRMATION.',
+        capability: AgentCapability.WRITE_FILES,
+        parameters: {
+            type: 'object',
+            required: ['path', 'content', 'confirm'],
+            properties: {
+                path: { type: 'string' },
+                content: { type: 'string' },
+                confirm: { type: 'boolean', const: true, description: 'Must be true to authorize write.' }
+            }
+        }
+    },
+    'file_read': {
+        name: 'Read File',
+        description: 'Reads a file from the local filesystem.',
+        capability: AgentCapability.READ_FILES,
+        parameters: {
+            type: 'object',
+            required: ['path'],
+            properties: {
+                path: { type: 'string' }
+            }
+        }
+    },
+    'data_prune_vector': {
+        name: 'Prune Vector Index',
+        description: 'Removes embeddings from the vector database. DESTRUCTIVE.',
+        capability: AgentCapability.EXECUTE_COMMAND,
+        parameters: {
+            type: 'object',
+            required: ['ids', 'confirm'],
+            properties: {
+                ids: { type: 'array', items: { type: 'string' } },
+                confirm: { type: 'boolean', const: true }
+            }
+        }
+    },
     'landscape_generate': {
         name: 'Generate Landscape',
         description: 'Generates authentic RSC JAG/MEM landscape data from biomes.',

@@ -153,6 +153,55 @@ export class ClassicRSMVService implements IRSMVService {
             };
         }
 
+        if (category === "item" || category === "items") {
+            const itemDef = this.configData.items[id];
+            if (!itemDef) throw new Error(`Item ${id} definition not found`);
+
+            const modelId = itemDef.baseSymbol || itemDef.sprite || id;
+            console.log(`[ClassicRSMV] Loading item model ${modelId} for ${itemDef.name}`);
+
+            const modelDef: any = [{ modelid: modelId, mods: {} }];
+            const rsModel = new RSModel(this.sceneCache, modelDef, `item_model:${modelId}`);
+            const loaded = await rsModel.model;
+
+            return {
+                id,
+                name: itemDef.name,
+                scene: rsModel.rootnode,
+                metadata: {
+                    ...itemDef,
+                    type: "item",
+                    modelId
+                }
+            };
+        }
+
+        if (category === "object" || category === "objects") {
+            const objDef = this.configData.objects[id];
+            if (!objDef) throw new Error(`Object ${id} definition not found`);
+
+            const modelId = objDef.model.id;
+            if (modelId === undefined) throw new Error(`Object ${id} has no valid model ID`);
+
+            console.log(`[ClassicRSMV] Loading object model ${modelId} (${objDef.model.name}) for ${objDef.name}`);
+
+            const modelDef: any = [{ modelid: modelId, mods: {} }];
+            const rsModel = new RSModel(this.sceneCache, modelDef, `object_model:${modelId}`);
+            const loaded = await rsModel.model;
+
+            return {
+                id,
+                name: objDef.name,
+                scene: rsModel.rootnode,
+                metadata: {
+                    ...objDef,
+                    type: "object",
+                    modelId,
+                    modelName: objDef.model.name
+                }
+            };
+        }
+
         // Default or other categories load normally
         const modelDef = [{ modelid: id, mods: {} }];
         const rsModel = new RSModel(this.sceneCache, modelDef as any, `classic_model:${id}`);
@@ -185,6 +234,30 @@ export class ClassicRSMVService implements IRSMVService {
 
     async getItems() {
         return this.configData?.items || [];
+    }
+
+    async getNPCs() {
+        return this.configData?.npcs || [];
+    }
+
+    async getObjects() {
+        return this.configData?.objects || [];
+    }
+
+    async getSpells() {
+        return this.configData?.spells || [];
+    }
+
+    async getPrayers() {
+        return this.configData?.prayers || [];
+    }
+
+    async getWallObjects() {
+        return this.configData?.wallobjects || [];
+    }
+
+    async getTiles() {
+        return this.configData?.tiles || [];
     }
 
     async loadMap(id: number): Promise<any> {

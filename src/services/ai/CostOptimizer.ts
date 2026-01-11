@@ -37,11 +37,11 @@ const COST_PER_1K = {
 // Model mappings by provider and type
 const MODEL_MAP: Record<string, Record<string, string>> = {
     cloudflare: {
-        text: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
-        code: '@cf/qwen/qwen-2.5-coder-32b',
-        reasoning: '@cf/deepseek-ai/deepseek-r1-distill-llama-70b',
+        text: '@cf/openai/gpt-oss-120b',
+        code: '@cf/qwen/qwen2.5-coder-32b-instruct',
+        reasoning: '@cf/qwen/qwq-32b',
         image: '@cf/black-forest-labs/flux-1-schnell',
-        audio: '@cf/openai/whisper'
+        audio: '@cf/openai/whisper-large-v3-turbo'
     },
     gemini: {
         text: 'gemini-2.0-flash',
@@ -75,8 +75,8 @@ export class CostOptimizer {
     /**
      * Get optimal route for an AI request
      */
-    async route(request: AIRequest): Promise<Route> {
-        const quota = await this.getQuota(request.userId);
+    async route(request: AIRequest, env: Env): Promise<Route> {
+        const quota = await this.getQuota(request.userId, env);
         const estimatedTokens = request.estimatedTokens || this.estimateTokens(request.prompt);
         const estimatedCost = (estimatedTokens / 1000) * COST_PER_1K.gemini;
 
@@ -103,19 +103,15 @@ export class CostOptimizer {
         }
 
         // Priority 3: Ollama (Local fallback)
-        if (quota.ollama.available) {
-            console.log(`[CostOptimizer] Quotas exceeded, falling back to Ollama`);
-            return {
-                provider: 'ollama',
-                model: MODEL_MAP.ollama[request.type] || MODEL_MAP.ollama.text,
-                cost: 0,
-                confidence: 0.85,
-                latency: 'high'
-            };
-        }
-
-        // Emergency: All providers exhausted
-        throw new Error('All AI providers exhausted. Please try again later.');
+        // Note: Ollama availability is currently checked via local config, assuming yes for now if others fail
+        console.log(`[CostOptimizer] Quotas exceeded, checking local fallback`);
+        return {
+            provider: 'ollama',
+            model: MODEL_MAP.ollama[request.type] || MODEL_MAP.ollama.text,
+            cost: 0,
+            confidence: 0.85,
+            latency: 'high'
+        };
     }
 
     /**
@@ -123,61 +119,26 @@ export class CostOptimizer {
      */
     async deductUsage(
         userId: string,
-        usage: { provider: string; tokens: number; cost: number }
+        usage: { provider: string; tokens: number; cost: number },
+        env: any
     ): Promise<void> {
-        const quota = await this.getQuota(userId);
+        const id = env.METABOLISM_DO.idFromName(userId);
+        const stub = env.METABOLISM_DO.get(id);
 
-        if (usage.provider === 'cloudflare') {
-            quota.cloudflare.tokens -= usage.tokens;
-        } else if (usage.provider === 'gemini') {
-            quota.gemini.budget -= usage.cost;
-        }
+        await stub.deductUsage(userId, usage.provider, usage.tokens, usage.cost);
 
-        this.quotaCache.set(userId, quota);
-
-        // Persist to storage (D1) in production
-        console.log(`[CostOptimizer] Deducted ${usage.tokens} tokens from ${usage.provider} for ${userId}`);
+        console.log(`[CostOptimizer] Deducted ${usage.tokens} tokens from ${usage.provider} for ${userId} (RPC)`);
     }
 
     /**
-     * Get current quota status for a user
+     * Get current quota status for a user from MetabolismDO
      */
-    async getQuota(userId: string): Promise<QuotaStatus> {
-        // Check cache first
-        if (this.quotaCache.has(userId)) {
-            const cached = this.quotaCache.get(userId)!;
+    async getQuota(userId: string, env: any): Promise<QuotaStatus> {
+        const id = env.METABOLISM_DO.idFromName(userId);
+        const stub = env.METABOLISM_DO.get(id);
 
-            // Check for reset
-            const now = new Date();
-            if (now >= cached.cloudflare.resetAt) {
-                cached.cloudflare.tokens = this.TIERS.free.cloudflare.tokensPerDay;
-                cached.cloudflare.resetAt = this.getNextDayReset();
-            }
-            if (now >= cached.gemini.resetAt) {
-                cached.gemini.budget = this.TIERS.free.gemini.budgetPerMonth;
-                cached.gemini.resetAt = this.getNextMonthReset();
-            }
-
-            return cached;
-        }
-
-        // Initialize new user quota
-        const quota: QuotaStatus = {
-            cloudflare: {
-                tokens: this.TIERS.free.cloudflare.tokensPerDay,
-                limit: this.TIERS.free.cloudflare.tokensPerDay,
-                resetAt: this.getNextDayReset()
-            },
-            gemini: {
-                budget: this.TIERS.free.gemini.budgetPerMonth,
-                limit: this.TIERS.free.gemini.budgetPerMonth,
-                resetAt: this.getNextMonthReset()
-            },
-            ollama: { available: true } // Assume available
-        };
-
-        this.quotaCache.set(userId, quota);
-        return quota;
+        const data = await stub.getQuota(userId) as QuotaStatus;
+        return { ...data, ollama: { available: true } }; // Client-side mixin
     }
 
     /**
@@ -189,36 +150,16 @@ export class CostOptimizer {
     }
 
     /**
-     * Get next daily reset time (midnight UTC)
-     */
-    private getNextDayReset(): Date {
-        const tomorrow = new Date();
-        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-        tomorrow.setUTCHours(0, 0, 0, 0);
-        return tomorrow;
-    }
-
-    /**
-     * Get next monthly reset time (1st of next month)
-     */
-    private getNextMonthReset(): Date {
-        const nextMonth = new Date();
-        nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1, 1);
-        nextMonth.setUTCHours(0, 0, 0, 0);
-        return nextMonth;
-    }
-
-    /**
      * Get usage metrics for display
      */
-    async getMetrics(userId: string): Promise<{
+    async getMetrics(userId: string, env: Env): Promise<{
         cloudflareUsed: number;
         cloudflareLimit: number;
         geminiSpent: number;
         geminiLimit: number;
         savingsEstimate: number;
     }> {
-        const quota = await this.getQuota(userId);
+        const quota = await this.getQuota(userId, env);
         const cfUsed = quota.cloudflare.limit - quota.cloudflare.tokens;
         const geminiSpent = quota.gemini.limit - quota.gemini.budget;
 
@@ -227,7 +168,7 @@ export class CostOptimizer {
             cloudflareLimit: quota.cloudflare.limit,
             geminiSpent,
             geminiLimit: quota.gemini.limit,
-            savingsEstimate: (cfUsed / 1000) * COST_PER_1K.gemini // What it would have cost on Gemini
+            savingsEstimate: (cfUsed / 1000) * COST_PER_1K.gemini
         };
     }
 }

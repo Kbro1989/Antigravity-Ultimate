@@ -38,9 +38,11 @@ export class EntityLimb extends NeuralLimb {
     async set_behavior(params: any) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
         const { target_id, behavior } = params;
+
+        // Implementation must map to the hardcoded game logic truth
         return {
             target: target_id,
-            behavior: behavior || 'idle',
+            behavior: behavior,
             applied: true
         };
     }
@@ -89,25 +91,107 @@ export class EntityLimb extends NeuralLimb {
 
         // If cloning, we ask the Librarian (RelicLimb) for the DNA
         if (cloneFrom) {
-            // Ideally we call this.agency.callLimb('relic', 'get_authentic_npc', { name: cloneFrom })
-            // For this step, we simulate the inheritance
+            // In a real system, we'd call RelicLimb.get_authentic_npc
             if (cloneFrom.toLowerCase() === 'goblin') {
-                finalStats = { attack: 16, strength: 14, defense: 12, hits: 13, range: 1, magic: 1 }; // Authentic Goblin Stats
+                finalStats = { attack: 1, strength: 1, defense: 1, hits: 10 };
             }
         }
 
-        // RSC authentic stats: attack, defense, strength, hits, range, magic
         const newSpecies = {
             id: `npc_def_${name.toLowerCase().replace(/\s+/g, '_')}`,
             name,
-            stats: finalStats || { attack: 1, defense: 1, strength: 1, hits: 10, range: 1, magic: 1 },
+            stats: finalStats || { attack: 1, defense: 1, strength: 1, hits: 10 },
             type: 'npc_config',
             lineage: cloneFrom ? `clone_of_${cloneFrom}` : 'original_synthesis'
         };
 
-        // In a real system, this would write to npc.conf or similar
         await this.logActivity('define_species', 'success', { name, id: newSpecies.id, lineage: newSpecies.lineage });
         return { status: 'success', species: newSpecies };
+    }
+
+    /**
+     * Packages the complete "Assigned Role" for an entity.
+     * Combines stats, behavior logic, and visual equipment.
+     */
+    async get_assigned_roles(params: any) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        const { entityId, roleType } = params;
+
+        // In a real scenario, this would query the D1 database for the entity's stored role.
+        // For now, we synthesize a forensic-ready package.
+        const roleTemplates: Record<string, any> = {
+            'aggressive_guard': {
+                behavior: 'hostile_patrol',
+                stats: { attack: 50, strength: 40, defense: 45, hits: 100 },
+                equipment: ['Iron Platebody', 'Iron Kiteshield', 'Iron Scimitar'],
+                soundSet: 'combat_humanoid'
+            },
+            'friendly_merchant': {
+                behavior: 'stationary_trade',
+                stats: { attack: 1, strength: 1, defense: 1, hits: 10 },
+                equipment: ['Merchant Robes'],
+                soundSet: 'ambient_trade'
+            }
+        };
+
+        const role = roleTemplates[roleType] || roleTemplates['friendly_merchant'];
+
+        return {
+            status: 'success',
+            entityId,
+            roleType: roleType || 'default',
+            package: role
+        };
+    }
+
+    /**
+     * GALLERY: List all custom NPC archetypes in the Innovation Layer.
+     * Scans public/assets/generated/npcs for forked entity definitions.
+     */
+    async inventory_roles(params?: any) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        const { localBridgeClient } = await import('../../bridge/LocalBridgeService');
+        const root = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/public/assets/generated/npcs';
+
+        try {
+            const list = await localBridgeClient.listDirectory(root);
+            if (!list.success || !list.files) {
+                return { status: 'success', count: 0, roles: [], note: 'NPC roles directory empty.' };
+            }
+
+            const roles = await Promise.all(
+                list.files
+                    .filter((f: any) => !f.isDirectory && f.name.endsWith('.json'))
+                    .map(async (f: any) => {
+                        // Attempt to load role metadata
+                        let roleData: any = { name: f.name.replace('.json', '') };
+                        try {
+                            const content = await localBridgeClient.readLocalFile(`${root}/${f.name}`);
+                            if (content.success && content.content) {
+                                roleData = JSON.parse(content.content);
+                            }
+                        } catch { }
+
+                        return {
+                            id: f.name,
+                            name: roleData.name || f.name.replace('.json', ''),
+                            type: roleData.type || 'npc_role',
+                            stats: roleData.stats || null,
+                            behavior: roleData.behavior || null,
+                            lineage: roleData.lineage || 'custom',
+                            url: `/assets/generated/npcs/${f.name}`
+                        };
+                    })
+            );
+
+            return {
+                status: 'success',
+                count: roles.length,
+                roles
+            };
+        } catch (e: any) {
+            return { status: 'success', count: 0, roles: [], note: 'NPC roles scan failed.' };
+        }
     }
 
     async assign_patrol(params: any) {

@@ -3,19 +3,12 @@
  * Central export for all AI-related services
  */
 
-export * from './FlowEngine';
-export * from './CostOptimizer';
-export * from './ModelRouter';
-export * from './Orchestrator';
-export * from './VectorMemory';
-export * from './LimbRegistry';
-export * from './IntelRegistry';
-export * from './GoldContextService';
-export * from './RealityAnchorService';
+// Isomorphic Services (Safe for Frontend)
 export * from './ModelRegistry';
 export * from './ExternalModelProvider';
 export * from './AICacheService';
-export * from './DirectorMemoryService'; // Also missed earlier export
+export * from './CostOptimizer';
+export * from './CloudflareService';
 
 export {
     setWorkerUrl,
@@ -32,7 +25,9 @@ export {
     type TokenMetrics
 } from './CloudflareService';
 
-export { limbRegistry } from './ModelRouter';
-export { NeuralRegistry } from './NeuralRegistry';
 export { modelRegistry } from './ModelRegistry';
 export { externalModelProvider } from './ExternalModelProvider';
+
+// Backend/Worker Only Services (Do not export here to avoid frontend bundling issues)
+// These should be imported directly from their files (e.g., import { NeuralRegistry } from './services/ai/NeuralRegistry')
+// FlowEngine, ModelRouter, Orchestrator, VectorMemory, LimbRegistry, IntelRegistry, GoldContextService, RealityAnchorService, NeuralRegistry

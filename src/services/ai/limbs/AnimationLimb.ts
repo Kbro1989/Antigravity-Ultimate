@@ -21,7 +21,7 @@ export class AnimationLimb extends NeuralLimb {
             options: options,
             modelId: intent.modelId,
             provider: intent.provider
-        });
+        }, this.env);
 
         if (motionResult.clipUrl || motionResult.resultUrl) {
             await this.persistAsset('animation', motionResult.clipUrl || motionResult.resultUrl, { action: 'generate' });
@@ -45,7 +45,7 @@ export class AnimationLimb extends NeuralLimb {
             options: { ...params, action: 'retarget' },
             modelId: intent.modelId,
             provider: intent.provider
-        });
+        }, this.env);
 
         return {
             status: 'success',

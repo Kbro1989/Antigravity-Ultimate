@@ -14,7 +14,7 @@ export class QuantumLimb extends NeuralLimb {
             systemPrompt: 'You are a Procedural Asset Variator. Return ONLY a JSON array of strings, each being a detailed descriptive prompt for a variant.',
             modelId: intent.modelId,
             provider: intent.provider
-        });
+        }, this.env);
 
         let variants;
         try {

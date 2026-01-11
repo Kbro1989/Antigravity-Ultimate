@@ -223,18 +223,31 @@ export async function classicConfig(source: ClassicFileSource, buildnr: number) 
         examine: getstring,
         command: getstring,
         sprite: getushort,
-        price: (buildnr < 180 ? getushort : getuint),//exact build nr unknown
+        price: getuint,
         stackable: getbool,
         special: getbool,
         equip: getushort,
         color: getuint,
-        untradeable: (buildnr < 180 ? () => false : getbool),//exact build nr unknown
-        member: (buildnr < 180 ? () => false : getbool)//exact build nr unknown
-    });
+        untradeable: getbool,
+        member: getbool
+    }) as ({
+        name: string;
+        examine: string;
+        command: string;
+        sprite: number;
+        price: number;
+        stackable: boolean;
+        special: boolean;
+        equip: number;
+        color: number;
+        untradeable: boolean;
+        member: boolean;
+        baseSymbol?: number;
+    })[];
     let npcs = mapprops(getushort(), {
         name: getstring,
         examine: getstring,
-        command: (buildnr < 180 ? () => "" : getstring),//exact build nr unknown
+        command: getstring,
         attack: getubyte,
         strength: getubyte,
         hits: getubyte,

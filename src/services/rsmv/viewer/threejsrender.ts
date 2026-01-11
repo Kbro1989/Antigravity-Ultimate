@@ -82,7 +82,6 @@ export class ThreeJsRenderer extends TypedEmitter<ThreeJsRendererEvents> {
 
 	constructor(canvas: HTMLCanvasElement, params?: THREE.WebGLRendererParameters) {
 		super();
-		(globalThis as any).render = this;//TODO remove
 		this.canvas = canvas;
 		this.renderer = new THREE.WebGLRenderer({
 			canvas,

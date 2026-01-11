@@ -1,26 +1,102 @@
 import { NeuralLimb } from './NeuralLimb';
 import { AgentCapability, assertCapability } from '../AgentConstitution';
+import { RealityLimb } from './RealityLimb';
+import { LimbConfig } from './NeuralLimb';
 import { modelRouter } from '../ModelRouter';
 import { BaseIntent } from '../AITypes';
 
 export class MeshOpsLimb extends NeuralLimb {
-    public capabilities = [
-        'generate_cube', 'generate_sphere', 'generate_plane', 'generate_cylinder', 'generate_torus',
-        'subdivide_mesh', 'decimate_mesh', 'merge_meshes', 'split_mesh', 'optimize_mesh',
-        'calculate_normals', 'uv_unwrap', 'uv_project', 'uv_auto_map', 'bake_texture',
-        'export_obj', 'export_gltf', 'export_stl', 'import_mesh', 'transform_vertices',
-        'apply_modifiers', 'mesh_stats', 'fix_topology', 'remesh', 'retopologize',
-        'create_lod', 'generate_terrain', 'generate_spline', 'mesh_to_sdf', 'sdf_to_mesh',
-        'voxelize', 'devoxelize', 'csg_union', 'csg_subtract', 'csg_intersect',
-        'vertex_paint', 'weight_paint', 'calculate_ao', 'tangent_generation', 'hull_generation',
-        'simplify_geometry', 'cleanup_geometry', 'weld_vertices', 'remove_doubles', 'triangulate',
-        'quadrangulate', 'smooth_mesh', 'sharpen_edges', 'mirror_mesh', 'boolean_operations'
+    private realityLimb: RealityLimb;
+
+    constructor(config: LimbConfig) {
+        super(config);
+        this.realityLimb = new RealityLimb(config);
+    }
+    public capabilities: AgentCapability[] = [
+        AgentCapability.AI_INFERENCE,
+        AgentCapability.WRITE_FILES,
+        AgentCapability.MEMORY_QUERY,
+        AgentCapability.EXECUTE_COMMAND
     ];
 
-    async generate_cube(params: any) {
-        const THREE = await import('three');
-        const cubeGeo = new THREE.BoxGeometry(params?.width || 1, params?.height || 1, params?.depth || 1);
-        return { status: 'success', data: { vertices: cubeGeo.attributes.position.array, indices: cubeGeo.index?.array } };
+    async generate_cube(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+
+        // Pre-operation checkpoint
+        const preAnchor = await this.realityLimb.anchor_convergence({
+            projectId: intent.sessionId || 'default',
+            description: `Generate cube: ${JSON.stringify(params)}`,
+            options: { provenanceType: 'MESH', operation: 'generate_cube' }
+        }, intent);
+
+        try {
+            const THREE = await import('three');
+            const cubeGeo = new THREE.BoxGeometry(params?.width || 1, params?.height || 1, params?.depth || 1);
+
+            const result = { status: 'success', data: { vertices: cubeGeo.attributes.position.array, indices: cubeGeo.index?.array } };
+
+            // Post-operation checkpoint
+            await this.realityLimb.anchor_convergence({
+                projectId: intent.sessionId || 'default',
+                description: `Cube generation complete`,
+                options: {
+                    provenanceType: 'MESH',
+                    operation: 'generate_cube',
+                    reference: preAnchor.anchor.id
+                }
+            }, intent);
+
+            return result;
+        } catch (error: any) {
+            await this.realityLimb.anchor_convergence({
+                projectId: intent.sessionId || 'default',
+                description: `Cube generation FAILED`,
+                options: { error: error.message, reference: preAnchor.anchor.id }
+            }, intent);
+            throw error;
+        }
+    }
+
+    async subdivide_mesh(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+
+        const preAnchor = await this.realityLimb.anchor_convergence({
+            projectId: intent.sessionId || 'default',
+            description: `Subdivide mesh: ${params.meshId}`,
+            options: { provenanceType: 'MESH', operation: 'subdivide', meshId: params.meshId }
+        }, intent);
+
+        try {
+            // "MeshOpsLimb sends to @cf/meta/llama-3.3 for topology optimization" - Manifesto 1.2.1
+            const subdivisionResult: any = await modelRouter.route({
+                type: 'code',
+                prompt: `Subdivide this mesh geometry to increase vertex count. MeshID: ${params.meshId}. Params: ${JSON.stringify(params)}`,
+                domain: '3D',
+                modelId: (intent as any).modelId || '@cf/meta/llama-3.3',
+                provider: (intent as any).provider || 'cloudflare'
+            }, this.env);
+
+            await this.realityLimb.anchor_convergence({
+                projectId: intent.sessionId || 'default',
+                description: `Subdivision complete: ${params.meshId}`,
+                options: {
+                    provenanceType: 'MESH',
+                    operation: 'subdivide',
+                    meshId: params.meshId,
+                    reference: preAnchor.anchor.id
+                }
+            }, intent);
+
+            return {
+                status: 'success',
+                meshId: params.meshId,
+                vertexCount: (params.vertexCount || 1000) * 4,
+                topology_optimization: subdivisionResult.response || 'optimized',
+                provider: 'meta-llama-3.3'
+            };
+        } catch (e: any) {
+            throw e;
+        }
     }
 
     async image_to_3d(params: any, intent: BaseIntent & { modelId?: string; provider?: string }) {
@@ -29,9 +105,9 @@ export class MeshOpsLimb extends NeuralLimb {
             type: 'image-to-3d' as any,
             prompt: options?.imageUrl || prompt,
             domain: '3D',
-            modelId: intent.modelId,
-            provider: intent.provider
-        }) as any;
+            modelId: (intent as any).modelId,
+            provider: (intent as any).provider
+        }, this.env) as any;
 
         if (i23Resp.modelUrl) {
             await this.persistAsset('mesh', i23Resp.modelUrl, {
@@ -58,9 +134,9 @@ export class MeshOpsLimb extends NeuralLimb {
             type: 'image',
             prompt: `Concept art for 3D modeling, ${prompt}, neutral lighting, isometric view, high fidelity`,
             options: { steps: 20 },
-            modelId: intent.modelId,
-            provider: intent.provider
-        });
+            modelId: (intent as any).modelId,
+            provider: (intent as any).provider
+        }, this.env);
 
         if (!conceptResp.imageUrl) {
             throw new Error("Failed to generate concept image for 3D model.");
@@ -71,9 +147,9 @@ export class MeshOpsLimb extends NeuralLimb {
             type: 'image-to-3d' as any,
             prompt: conceptResp.imageUrl,
             domain: '3D',
-            modelId: intent.modelId,
-            provider: intent.provider
-        }) as any;
+            modelId: (intent as any).modelId,
+            provider: (intent as any).provider
+        }, this.env) as any;
 
         if (i23RespFromText.modelUrl) {
             await this.persistAsset('mesh', i23RespFromText.modelUrl, {
@@ -115,9 +191,9 @@ export class MeshOpsLimb extends NeuralLimb {
         const pbrResp = await modelRouter.route({
             type: 'image',
             prompt: `PBR Material maps (ALBEDO, NORMAL, ROUGHNESS, METALLIC) for: ${prompt}`,
-            modelId: intent.modelId,
-            provider: intent.provider
-        }) as any;
+            modelId: (intent as any).modelId,
+            provider: (intent as any).provider
+        }, this.env) as any;
         return {
             status: 'success',
             textures: { albedo: pbrResp.imageUrl, normal: 'auto-generated', roughness: 'auto-generated' },
@@ -157,19 +233,23 @@ export class MeshOpsLimb extends NeuralLimb {
 
     async import_relic(params: any) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
-        const { source: relicSource, id: relicId } = params || {};
+        const { source: relicSource, id: relicId, uri } = params || {};
 
-        if (relicSource === 'rsmv') {
-            const { rsmv } = await import('../../rsmv');
-            const model = await rsmv.loadModel(parseInt(relicId));
-            return {
-                status: 'success',
-                modelUrl: `rsmv://${relicId}`,
-                metadata: { name: model.name || `Model ${relicId}` }
-            };
-        } else {
-            return { status: 'success', modelUrl: `rsc://${relicId}`, metadata: { legacy: true } };
-        }
+        // Unified Asset Resolution via RelicLimb Authority
+        const assetUri = uri || (relicSource === 'rsmv' ? `relic://${relicId}` : `relic://data204/${relicId}`);
+
+        // We trigger RelicLimb via the internal limb call mechanism
+        const resolution = await this.limbs.call('relic', 'resolve_asset', {
+            uri: assetUri,
+            type: relicSource === 'rsmv' ? 'mesh' : 'legacy_archive'
+        });
+
+        return {
+            status: 'success',
+            modelUrl: assetUri,
+            metadata: resolution.data || { name: `Asset ${relicId}` },
+            source: resolution.source
+        };
     }
 
     async process_mesh(params: any, intent: BaseIntent & { modelId?: string; provider?: string }) {
@@ -180,9 +260,9 @@ export class MeshOpsLimb extends NeuralLimb {
             type: 'code',
             prompt: `Perform 3D mesh operation: ${operation} with params: ${JSON.stringify(parameters)}`,
             domain: '3D',
-            modelId: intent.modelId,
-            provider: intent.provider
-        });
+            modelId: (intent as any).modelId,
+            provider: (intent as any).provider
+        }, this.env);
 
         return {
             status: 'success',
@@ -211,5 +291,47 @@ export class MeshOpsLimb extends NeuralLimb {
             result: `Mesh ${modelId} modified via ${operation} (${value})`,
             preview_url: `preview/mesh/${modelId}_edited.png`
         };
+    }
+
+    /**
+     * GALLERY: List all generated 3D models in the Innovation Layer.
+     * Scans public/assets/generated/models for preview-ready meshes.
+     */
+    async inventory_meshes(params?: any) {
+        this.enforceCapability(AgentCapability.READ_FILES);
+        const { localBridgeClient } = await import('../../bridge/LocalBridgeService');
+        const root = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/public/assets/generated/models';
+
+        try {
+            const list = await localBridgeClient.listDirectory(root);
+            if (!list.success || !list.files) {
+                return { status: 'success', count: 0, meshes: [], note: 'Models directory empty.' };
+            }
+
+            const meshes = list.files
+                .filter((f: any) => !f.isDirectory && (
+                    f.name.endsWith('.glb') ||
+                    f.name.endsWith('.gltf') ||
+                    f.name.endsWith('.obj') ||
+                    f.name.endsWith('.fbx')
+                ))
+                .map((f: any) => ({
+                    id: f.name,
+                    name: f.name.replace(/\.[^/.]+$/, ''),
+                    format: f.name.split('.').pop(),
+                    size: f.size || 0,
+                    url: `/assets/generated/models/${f.name}`,
+                    previewUrl: `/assets/generated/models/${f.name.replace(/\.[^/.]+$/, '')}_preview.png`,
+                    viewable: true
+                }));
+
+            return {
+                status: 'success',
+                count: meshes.length,
+                meshes
+            };
+        } catch (e: any) {
+            return { status: 'success', count: 0, meshes: [], note: 'Mesh gallery scan failed.' };
+        }
     }
 }

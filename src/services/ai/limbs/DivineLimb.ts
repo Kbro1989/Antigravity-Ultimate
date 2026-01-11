@@ -14,7 +14,7 @@ export class DivineLimb extends NeuralLimb {
             systemPrompt: 'You are a World Architect AI. Return ONLY a valid JSON object describing the world layout.',
             modelId: intent.modelId,
             provider: intent.provider
-        });
+        }, this.env);
 
         let worldData;
         try {
@@ -55,9 +55,12 @@ export class DivineLimb extends NeuralLimb {
         // 1. Fetch Source Truth (if a relic ID is provided)
         let context = "";
         if (sourceRelic && sourceRelic.id) {
-            // In a real scenario, we'd fetch the actual content content here using RelicLimb.read_record
-            // For now, we simulate the "Truth" context derived from the relic metadata
-            context = `Source Inspiration: ${JSON.stringify(sourceRelic)}`;
+            // Authoritative Truth Retrieval: Get real data from Scoured archives
+            const truth = await this.limbs.call('relic', 'resolve_asset', {
+                uri: `relic://${sourceRelic.id}`,
+                type: sourceRelic.type || 'mesh'
+            });
+            context = `Authentic Source Truth [${sourceRelic.id}]: ${JSON.stringify(truth.data || truth.asset || sourceRelic)}`;
         }
 
         // 2. Inference for New Creation
@@ -72,7 +75,7 @@ export class DivineLimb extends NeuralLimb {
             systemPrompt: 'You are a Divine Creator AI. You create production-ready game assets from ancient source truth.',
             modelId: intent.modelId,
             provider: intent.provider
-        });
+        }, this.env);
 
         let creationData;
         try {
@@ -101,11 +104,22 @@ export class DivineLimb extends NeuralLimb {
 
     async manifest_reality(params: any) {
         this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        const { description, projectId = 'pog-ultimate-v6' } = params || {};
+
+        // Finalize the creation with a Reality Anchor
+        const manifestationId = `divine_${Date.now()}`;
+        const anchor = await this.limbs.call('reality', 'anchor_convergence', {
+            projectId,
+            description: description || `Manifestation: ${manifestationId}`,
+            options: { provenanceType: 'INTENT', reference: manifestationId }
+        });
+
         return {
             status: 'success',
-            manifestationId: `divine_${Date.now()}`,
-            realityScale: 'infinite',
-            resonance: 1.0,
+            manifestationId,
+            anchor: anchor.anchor,
+            stability: anchor.stability,
+            integrity: anchor.integrity,
             timestamp: Date.now()
         };
     }

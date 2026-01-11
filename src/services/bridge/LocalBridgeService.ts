@@ -43,7 +43,7 @@ class LocalBridgeClient {
     private isRelayMode: boolean = false;
     private syncMode: SyncMode = SyncMode.CLOUD;
     private statusListeners: Array<(status: BridgeStatus) => void> = [];
-    private bridgeUrl: string = 'ws://localhost:8788/ws';
+    private bridgeUrl: string = 'ws://localhost:3040/ws';
     private fileCache: Map<string, { content: string, timestamp: number }> = new Map();
     private readonly CACHE_TTL = 30000; // 30 seconds
     private connectionPromise: Promise<void> | null = null;

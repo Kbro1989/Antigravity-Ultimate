@@ -8,8 +8,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-# dist (Uncommented for dashboard visibility as requested)
-# dist
 dist-ssr
 *.local
 
@@ -27,45 +25,30 @@ dist-ssr
 # Wrangler
 .wrangler
 
-# Build output
+# Build output - ONLY TSC REPORTS IGNORED
 tsc_errors.txt
 tsc_output.txt
 tsc_output_v2.txt
-*.log
 build_log*.txt
 debug_result.txt
-r2_list*.txt
-kv_list*.txt
-vec_list*.txt
-d1_list*.txt
-resources_*.txt
-project_info.py
-project_basic_info_snapshot.txt
-combined_scripts.txt
-build_debug*.txt
 tsc_*.txt
-d1_ids*.txt
-kv_ids*.txt
-vec_ids*.txt
 tsc_*.log
-wrangler_error*.txt
-cli_error.log
-firebase-debug.log
 typecheck_output.txt
-build_error_analysis.log
+tsc_errors*.log
+tsc_output*.log
+tsc_full*.log
+type-check-*.txt
 
-# Reference Data
-reference/rsc-cloudflare/**
-!reference/rsc-cloudflare/*.json
-!reference/rsc-cloudflare/*.md
-!reference/rsc-cloudflare/*.js
-!reference/rsc-cloudflare/*.cjs
-
-# OKComputer sub-repos
-**/node_modules
-**/dist
-
-# Ensure everything in public is tracked (RSC assets, build output, etc.)
+# Ensure everything else is tracked
+# Ensure public is tracked (optional, but good for assets)
 !public/
 !public/**
 
+# Ignore build artifacts and references
+dist/
+dist/**
+reference/
+reference/**
+
+
+combined_scripts.txt

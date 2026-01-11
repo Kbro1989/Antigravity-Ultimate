@@ -1,4 +1,4 @@
-export type GameSource = 'runescape' | 'morrowind' | 'fallout';
+export type GameSource = 'runescape' | 'classic' | 'morrowind' | 'fallout';
 export type ModelCategory = 'items' | 'npcs' | 'objects' | 'models' | 'animations';
 
 export interface RSMVModelEntry {

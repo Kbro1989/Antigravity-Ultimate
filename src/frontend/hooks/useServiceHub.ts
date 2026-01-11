@@ -33,8 +33,16 @@ export function useServiceHub(userId: string = 'default-user') {
         const updateStatus = async () => {
             try {
                 const bridgeStatus = ServiceHub.bridge.getStatus();
-                // Cost management is currently aliased/integrated differently on frontend
-                const quotaMetrics = null; // To be re-implemented via new endpoint if needed
+                const stats = await ServiceHub.stats.get() as any;
+
+                const quotaMetrics = stats ? {
+                    cloudflareUsed: stats.quota?.used || 0,
+                    cloudflareLimit: stats.quota?.limit || 1000000,
+                    geminiSpent: 0,
+                    geminiLimit: 0,
+                    savingsEstimate: stats.cost?.estimatedSavings || 0
+                } : null;
+
                 const circuitStates = {}; // Circuit breaker moved to backend internal
 
                 setState({

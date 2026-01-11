@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { RSMVEngine } from '../../../services/rsmvService';
+import { GameSource } from '../../../types/rsmv';
+
 import AppErrorBoundary from '../AppErrorBoundary';
 
 const ScanningSchematic: React.FC = () => {
@@ -56,10 +58,11 @@ const ScanningSchematic: React.FC = () => {
 interface RealModelViewProps {
     modelId?: number;
     filePath?: string;
+    gameSource?: GameSource;
     wireframe: boolean;
 }
 
-export const RealModelView: React.FC<RealModelViewProps> = ({ modelId, filePath, wireframe }) => {
+export const RealModelView: React.FC<RealModelViewProps> = ({ modelId, filePath, gameSource, wireframe }) => {
     const meshRef = useRef<THREE.Group>(null);
     const [sceneNode, setSceneNode] = useState<THREE.Object3D | 'schematic' | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -73,7 +76,7 @@ export const RealModelView: React.FC<RealModelViewProps> = ({ modelId, filePath,
             try {
                 if (modelId) {
                     const engine = RSMVEngine.getInstance();
-                    const rsmvModel = await engine.loadModel(modelId);
+                    const rsmvModel = await engine.loadModel(modelId, gameSource);
 
                     if (isMounted) {
                         setSceneNode(rsmvModel.scene as any);

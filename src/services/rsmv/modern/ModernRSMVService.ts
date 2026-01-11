@@ -58,7 +58,7 @@ export class ModernRSMVService implements IRSMVService {
         return true;
     }
 
-    async loadModel(id: number): Promise<RSMVModel> {
+    async loadModel(id: number, category?: string): Promise<RSMVModel> {
         if (this.config.useGlbFirst && this.config.glbBaseUrl) {
             try {
                 const glbUrl = `${this.config.glbBaseUrl}/model_${id}.glb`;
@@ -72,17 +72,57 @@ export class ModernRSMVService implements IRSMVService {
             } catch (e) { }
         }
 
-        if (!this.sceneCache) throw new Error("RSMV: Not initialized or cache not linked.");
+        if (!this.sceneCache || !this.engineCache) throw new Error("RSMV: Not initialized or cache not linked.");
 
-        const modelDef: SimpleModelDef = [{ modelid: id, mods: {} }];
-        const rsModel = new RSModel(this.sceneCache, modelDef, `model:${id}`);
-        const loaded = await rsModel.model;
+        let modelData: SimpleModelDef = [];
+        let name = `model:${id}`;
+        let metadata: any = { id };
 
+        if (category === 'npc' || category === 'npcs') {
+            const file = await this.engineCache.getFile(cacheMajors.npcs, id);
+            const def = parse.npc.read(file, this.engineCache);
+            name = def.name ?? "Unknown NPC";
+            metadata = { ...def, type: 'npc' };
+            if (def.models) {
+                modelData = def.models.map((mid: number) => ({ modelid: mid, mods: {} }));
+            }
+        } else if (category === 'item' || category === 'items') {
+            const file = await this.engineCache.getFile(cacheMajors.items, id);
+            const def = parse.item.read(file, this.engineCache);
+            name = def.name ?? "Unknown Item";
+            metadata = { ...def, type: 'item' };
+            const modelId = (def as any).model; // Modern items use 'model' index
+            if (modelId) {
+                modelData = [{ modelid: modelId, mods: {} }];
+            }
+        } else if (category === 'object' || category === 'objects') {
+            const file = await this.engineCache.getFile(cacheMajors.objects, id);
+            const def = parse.object.read(file, this.engineCache);
+            name = def.name ?? "Unknown Object";
+            metadata = { ...def, type: 'object' };
+            if (def.models) {
+                // Modern objects can have multiple models or animation sets
+                const mids = Array.isArray(def.models) ? def.models : [def.models];
+                modelData = mids.map((m: any) => ({ modelid: typeof m === 'number' ? m : m.id, mods: {} }));
+            }
+        } else {
+            modelData = [{ modelid: id, mods: {} }];
+        }
+
+        if (modelData.length === 0) {
+            // Fallback to the ID as a model ID if no models found in def
+            modelData = [{ modelid: id, mods: {} }];
+        }
+
+        const rsModel = new RSModel(this.sceneCache, modelData, name);
+
+        // Lazy Loading: We return the rootnode immediately so the viewer can mount it.
+        // The RSModel internal logic will populate the rootnode once the geometry is ready.
         return {
             id,
-            name: rsModel.rootnode.name,
+            name,
             scene: rsModel.rootnode,
-            metadata: loaded.modeldata as any
+            metadata: metadata // Return base definition metadata immediately
         };
     }
 
@@ -99,7 +139,42 @@ export class ModernRSMVService implements IRSMVService {
     }
 
     async getItems(): Promise<any[]> {
-        return [];
+        if (!this.engineCache) return [];
+        const items: any[] = [];
+        const { iterateConfigFiles } = await import("../3d/enginecache");
+        for await (const { id, file } of iterateConfigFiles(this.engineCache, cacheMajors.items)) {
+            try {
+                const def = parse.item.read(file, this.engineCache);
+                items.push({ id, name: def.name, description: def.buff_effect || '', metadata: def });
+            } catch (e) { }
+        }
+        return items;
+    }
+
+    async getNPCs(): Promise<any[]> {
+        if (!this.engineCache) return [];
+        const npcs: any[] = [];
+        const { iterateConfigFiles } = await import("../3d/enginecache");
+        for await (const { id, file } of iterateConfigFiles(this.engineCache, cacheMajors.npcs)) {
+            try {
+                const def = parse.npc.read(file, this.engineCache);
+                npcs.push({ id, name: def.name, description: '', metadata: def });
+            } catch (e) { }
+        }
+        return npcs;
+    }
+
+    async getObjects(): Promise<any[]> {
+        if (!this.engineCache) return [];
+        const objects: any[] = [];
+        const { iterateConfigFiles } = await import("../3d/enginecache");
+        for await (const { id, file } of iterateConfigFiles(this.engineCache, cacheMajors.objects)) {
+            try {
+                const def = parse.object.read(file, this.engineCache);
+                objects.push({ id, name: def.name, description: '', metadata: def });
+            } catch (e) { }
+        }
+        return objects;
     }
 
     async loadAvatar(name: string): Promise<RSMVAvatar> {

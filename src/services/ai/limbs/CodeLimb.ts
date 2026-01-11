@@ -3,6 +3,18 @@ import { CLIBridge } from '../../cli/CLIBridge';
 import { AgentCapability } from '../AgentConstitution';
 import { modelRouter } from '../ModelRouter';
 import { BaseIntent } from '../AITypes';
+import * as path from 'path';
+
+
+interface CodeIntentPayload {
+    code?: string;
+    path?: string;
+    content?: string;
+    prompt?: string;
+    context?: string;
+    payload?: any;
+    confirm?: boolean; // HITL Requirement
+}
 
 export class CodeLimb extends NeuralLimb {
     private bridge: CLIBridge;
@@ -12,7 +24,7 @@ export class CodeLimb extends NeuralLimb {
         this.bridge = CLIBridge.getInstance();
     }
 
-    async analyze_complexity(params: any, intent: BaseIntent) {
+    async analyze_complexity(params: CodeIntentPayload, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
         return await this.callAI({
             type: 'text',
@@ -22,17 +34,21 @@ export class CodeLimb extends NeuralLimb {
         });
     }
 
-    async read(params: any) {
+    async read(params: CodeIntentPayload) {
         this.enforceCapability(AgentCapability.READ_FILES);
+        if (!params.path) throw new Error("Missing path for read operation");
         return await this.bridge.readFile(params.path);
     }
 
-    async write(params: any) {
+    async write(params: CodeIntentPayload) {
         this.enforceCapability(AgentCapability.WRITE_FILES);
-        return await this.bridge.writeFile(params.path, params.content);
+        if (!params.confirm) {
+            throw new Error('[HITL Shield] File writes require explicit user confirmation. Add { confirm: true } to payload.');
+        }
+        return await this.bridge.writeFile(params.path!, params.content!);
     }
 
-    async complete(params: any, intent: BaseIntent) {
+    async complete(params: CodeIntentPayload, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
         return await this.callAI({
             type: 'code',
@@ -41,7 +57,7 @@ export class CodeLimb extends NeuralLimb {
         });
     }
 
-    async refactor(params: any, intent: BaseIntent) {
+    async refactor(params: CodeIntentPayload, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.MODIFY_CODE);
         return await this.callAI({
             type: 'code',
@@ -52,7 +68,7 @@ export class CodeLimb extends NeuralLimb {
         });
     }
 
-    async explain(params: any, intent: BaseIntent) {
+    async explain(params: CodeIntentPayload, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
         return await this.callAI({
             type: 'text',
@@ -62,12 +78,12 @@ export class CodeLimb extends NeuralLimb {
         });
     }
 
-    async test(params: any) {
+    async test(params: CodeIntentPayload) {
         this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
         return await this.bridge.runCommand(`npm run test ${params.path || ''}`);
     }
 
-    async generate_code(params: any, intent: BaseIntent) {
+    async generate_code(params: CodeIntentPayload, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
         return await this.callAI({
             type: 'code',
@@ -78,7 +94,7 @@ export class CodeLimb extends NeuralLimb {
         });
     }
 
-    async cascade(params: any, intent: BaseIntent) {
+    async cascade(params: CodeIntentPayload, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.MODIFY_CODE);
         return await this.callAI({
             type: 'code',
@@ -88,7 +104,7 @@ export class CodeLimb extends NeuralLimb {
         });
     }
 
-    async audit(params: any, intent: BaseIntent) {
+    async audit(params: CodeIntentPayload, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
         return await this.callAI({
             type: 'text',
@@ -97,8 +113,89 @@ export class CodeLimb extends NeuralLimb {
         });
     }
 
+    /**
+     * DECOMPILE CLIENTSCRIPT: Archeological Logic Restoration
+     * Leverages the existing RSMV ClientScript engine to view binary logic.
+     */
+    async decompile_clientscript(params: { scriptId: number; era?: 'classic' | 'modern' }) {
+        this.enforceCapability(AgentCapability.READ_FILES);
+        const { scriptId, era = 'classic' } = params;
+
+        return {
+            status: 'success',
+            scriptId,
+            era,
+            instruction: 'CALL_INTERNAL_SERVICE',
+            service: 'rsmv.clientscript.render',
+            args: [scriptId]
+        };
+    }
+
+    /**
+     * ANALYZE LOGIC FLOW: Archeological Insight
+     * Uses AI to interpret decompiled logic without suggesting modifications.
+     */
+    async analyze_logic_flow(params: { code: string }) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        return await this.callAI({
+            type: 'text',
+            prompt: `Analyze the following decompiled ClientScript logic. Explain its purpose and flow within the original RSC game engine. DO NOT suggest modifications; focus on archeological understanding.\n\nCODE:\n${params.code}`,
+            systemPrompt: 'You are an RSC Archeologist specialized in Jagex ClientScript logic.'
+        });
+    }
+
+    /**
+     * RECONSTRUCT FORENSIC HANDLING: Authentic JS Logic
+     * Retrieves the JS handling logic from the reference implementation.
+     */
+    async reconstruct_forensic_handling(params: { id: number; type: 'npc' | 'item' | 'object' | 'spell' | 'prayer' }) {
+        this.enforceCapability(AgentCapability.READ_FILES);
+        const { id, type } = params;
+
+        const root = process.cwd();
+        const refRoot = path.join(root, 'reference', 'rsc-cloudflare', 'rsc-server', 'src', 'plugins');
+
+        try {
+            const constantsPath = path.join(root, 'reference', 'rsc-cloudflare', 'rsc-server', 'src', 'constants', 'ids.js');
+            const constants = await this.bridge.readFile(constantsPath);
+
+            const typeKey = type === 'npc' ? 'Npcs' : type === 'item' ? 'Items' : type === 'object' ? 'Objects' : null;
+            let constantName = '';
+
+            if (typeKey) {
+                const regex = new RegExp(`${typeKey} = \\{[^\\}]*?(\\w+): ${id},?`, 's');
+                const match = constants.match(regex);
+                if (match) constantName = match[1];
+            }
+
+            const searchTerm = constantName ? `${typeKey}.${constantName}` : id.toString();
+            const searchResult = await this.bridge.runCommand(`grep -r "${searchTerm}" "${refRoot}"`);
+
+            if (searchResult && searchResult.includes(':')) {
+                const firstFile = searchResult.split(':')[0].trim();
+                const logic = await this.bridge.readFile(firstFile);
+
+                return {
+                    status: 'success',
+                    id,
+                    type,
+                    logic,
+                    sourceFile: firstFile,
+                    message: `Forensic logic successfully reconstructed: ${path.basename(firstFile)}`
+                };
+            }
+        } catch (e: any) {
+            console.warn('[CodeLimb] Forensic reconstruction failed:', e.message);
+        }
+
+        return {
+            status: 'error',
+            message: "No specific gameplay handling found in forensic archives."
+        };
+    }
+
     private async callAI(request: any) {
-        const response: any = await modelRouter.route(request);
+        const response: any = await modelRouter.route(request, this.env);
         return {
             status: 'success',
             ...(typeof response === 'object' ? response : { content: response }),

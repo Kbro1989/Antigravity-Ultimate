@@ -2,7 +2,7 @@
   "$schema": "./mcp_schema.json",
   "providers": {
     "cloudflare": {
-      "accountId": "6872653edcee9c787c1b783173793",
+      "accountId": "6872653edcee9c791787c1b783173793",
       "apiToken": "",
       "enabled": true
     },

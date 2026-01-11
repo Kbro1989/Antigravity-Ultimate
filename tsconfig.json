@@ -5,7 +5,8 @@
         "lib": [
             "DOM",
             "DOM.Iterable",
-            "ESNext"
+            "ESNext",
+            "ES2017.SharedMemory"
         ],
         "allowJs": false,
         "skipLibCheck": true,
@@ -31,7 +32,8 @@
         "emitDecoratorMetadata": true,
     },
     "include": [
-        "src"
+        "src",
+        "worker-configuration.d.ts"
     ],
     "exclude": [
         "node_modules",

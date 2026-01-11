@@ -8,7 +8,8 @@ import { ThreejsSceneCache } from "../3d/enginecache";
 import { prepareClientScript, renderClientScript } from "../clientscript";
 import { ClientscriptObfuscation } from "../clientscript/callibrator";
 import classNames from "classnames";
-import { limbRegistry as neuralRegistry } from "../../ai";
+import { ServiceHub } from "../../ServiceHub";
+const neuralRegistry = ServiceHub.limbs;
 
 export function ClientScriptViewer(p: { data: string, fileid: number }) {
     let redraw = useForceUpdate();

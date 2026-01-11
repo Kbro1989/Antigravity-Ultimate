@@ -5,13 +5,21 @@ import { routePartykitRequest } from 'partyserver';
 import { SessionAgent } from './agents/SessionAgent';
 import { Collaboration } from './services/network/CollaborationServer';
 import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
-// @ts-ignore
-import manifestJSON from '__STATIC_CONTENT_MANIFEST';
+
+// Safe import for __STATIC_CONTENT_MANIFEST (may not exist in local dev mode)
+let manifestJSON: any = {};
+try {
+    // @ts-ignore - This module is injected by Cloudflare during deploy
+    manifestJSON = require('__STATIC_CONTENT_MANIFEST');
+} catch {
+    console.warn('[MANIFEST] __STATIC_CONTENT_MANIFEST not available (local dev mode)');
+}
 
 // Export Workflow for Cloudflare Runtime
 export { SymphonyWorkflow } from './workflows/SymphonyWorkflow';
 
 import { Env } from './types/env';
+import { ensurePipeline } from './services/ai/trinity/TrinityWorker';
 
 // Helper for lazy manifest retrieval
 let cachedManifest: any = null;
@@ -107,9 +115,9 @@ app.use('/api/*', async (c, next) => {
         c.req.path.includes('/api/generate-image') ||
         c.req.path.includes('/api/code-complete') ||
         c.req.path.includes('/api/limb/execute') ||
-        c.req.path.includes('/api/session/stats') ||
+        c.req.path.endsWith('/api/session/stats') ||
         c.req.path.includes('/api/assets') ||
-        c.req.path.includes('/health/')
+        c.req.path.includes('/health')
     ) return next();
 
     // Verify
@@ -128,32 +136,52 @@ app.onError((err, c) => {
 
 // Proxy to Session Agent
 app.all('/api/session/:sessionId/*', async (c) => {
-    const sessionId = c.req.param('sessionId');
-    const id = c.env.SESSION_AGENT!.idFromName(sessionId);
-    const stub = c.env.SESSION_AGENT!.get(id);
+    try {
+        const sessionId = c.req.param('sessionId');
+        const id = c.env.SESSION_AGENT!.idFromName(sessionId);
+        const stub = c.env.SESSION_AGENT!.get(id);
 
-    // Strip /api/session/:sessionId prefix
-    const url = new URL(c.req.url);
-    url.pathname = url.pathname.replace(`/api/session/${sessionId}`, '');
+        // Strip /api/session/:sessionId prefix
+        const url = new URL(c.req.url);
+        const prefix = `/api/session/${sessionId}`;
 
-    return stub.fetch(url.toString(), c.req.raw);
+        // Ensure accurate pathname stripping
+        if (url.pathname.startsWith(prefix)) {
+            url.pathname = url.pathname.slice(prefix.length);
+        }
+
+        // Ensure path starts with / if it's now empty
+        if (!url.pathname) url.pathname = '/';
+        if (!url.pathname.startsWith('/')) url.pathname = '/' + url.pathname;
+
+        console.log(`[SESSION_PROXY] Forwarding to DO: ${url.pathname} (Session: ${sessionId}) | Original: ${c.req.path}`);
+
+        // Create a new request and forward it to the DO stub
+        // We use the stripped pathname but keep the rest of the request info
+        const proxyRequest = new Request(url.toString(), c.req.raw);
+        const response = await stub.fetch(proxyRequest);
+
+        if (!response.ok) {
+            const errorBody = await response.clone().text();
+            console.error(`[SESSION_PROXY] DO Error ${response.status} for ${url.pathname}. Body: ${errorBody.slice(0, 500)}`);
+            // If body is empty, inject a helpful error message to prevent "Unexpected end of JSON input"
+            if (!errorBody.trim()) {
+                return c.json({
+                    error: `Durable Object returned ${response.status} with empty body`,
+                    path: url.pathname,
+                    sessionId
+                }, response.status as any);
+            }
+        }
+
+        return response;
+    } catch (e: any) {
+        console.error(`[SESSION_PROXY] Error: ${e.message}`);
+        return c.json({ error: e.message }, 500);
+    }
 });
 
-// Stress Test / Failover Verification Endpoint
-app.post('/test-failover', async (c) => {
-    const { triggerProvider, forceError } = await c.req.json();
-    console.log(`[STRESS_TEST] Simulating failure for: ${triggerProvider}`);
 
-    // In a real implementation, we'd inject a failure flag into the session or context.
-    // For this test, we'll return a diagnostic of how the router WOULD respond.
-    return c.json({
-        status: 'simulated',
-        provider: triggerProvider,
-        fallback_active: forceError,
-        strategy: 'cloudflare-first',
-        action_required: 'Check ModelRouter logs for retry/continue block'
-    });
-});
 
 // Comprehensive Neural Chain Health Check
 app.get('/health/chain', async (c) => {
@@ -183,8 +211,23 @@ app.get('/health/chain', async (c) => {
 });
 
 // --------------------------------------------------------------------------------
-// [Distribution] Limb & Asset Serving
+// [Distribution] Limb & Asset Serving (R2 & KV)
 // --------------------------------------------------------------------------------
+app.get('/ai/assets/*', async (c) => {
+    const key = c.req.path.replace('/ai/assets/', '');
+    if (!c.env.ASSETS_BUCKET) return c.text('R2 Not Configured', 503);
+
+    const object = await c.env.ASSETS_BUCKET.get(key);
+    if (!object) return c.text('Asset Not Found', 404);
+
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set('etag', object.httpEtag);
+    headers.set('Access-Control-Allow-Origin', '*');
+
+    return new Response(object.body, { headers });
+});
+
 app.get('/limbs/:limbId', async (c) => {
     const limbId = c.req.param('limbId');
     const manifest = getAssetManifest();
@@ -240,8 +283,59 @@ app.get('/dist/:assetName', async (c) => {
     }
 });
 
+// --------------------------------------------------------------------------------
+// [Trinity] Conscious Neural Mesh Integration
+// --------------------------------------------------------------------------------
+app.post('/trinity/execute', async (c) => {
+    try {
+        const pipeline = await ensurePipeline(c.env as any);
+        const task = await c.req.json();
+        const result = await pipeline.execute(task);
+        return c.json(result);
+    } catch (e: any) {
+        return c.json({ error: e.message, stack: e.stack }, 500);
+    }
+});
+
+app.get('/trinity/introspect', async (c) => {
+    try {
+        const pipeline = await ensurePipeline(c.env as any);
+        return c.json(pipeline.getHealth());
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500);
+    }
+});
+
+// --------------------------------------------------------------------------------
+// [API Fallback] Route global /api/* to default session if not handled above
+// --------------------------------------------------------------------------------
+app.all('/api/*', async (c) => {
+    // If we got here, it wasn't /api/session/... or other specific routes
+    // Forward to 'default' session agent to support CloudflareService.ts stateless calls
+    const id = c.env.SESSION_AGENT!.idFromName('default');
+    const stub = c.env.SESSION_AGENT!.get(id);
+    return stub.fetch(c.req.raw);
+});
+
 // Static asset serving from Workers Sites
+import { VariantRouter } from './services/core/VariantRouter';
+
 app.get('/*', async (c) => {
+    // --------------------------------------------------------------------------------
+    // [Variant Routing] Multi-Variant Architecture Interception
+    // --------------------------------------------------------------------------------
+    try {
+        const router = VariantRouter.getInstance();
+        const variantResponse = await router.getAsset(new URL(c.req.url).pathname, c.env, c.req.raw, c.executionCtx as any);
+
+        // If the router handled it (200 OK) and it's not a passthrough fallback, return it
+        // Note: VariantRouter returns standard KV response, so we check if it found something distinct
+        // But simply returning the response is usually enough as it wraps getAssetFromKV
+        if (variantResponse) return variantResponse;
+    } catch (e) {
+        console.warn(`[VariantRouter] Bypass: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    }
+
     const manifest = getAssetManifest();
     try {
         console.log(`[ASSET] Attempting to serve: ${c.req.url}`);
@@ -292,5 +386,12 @@ export default {
     fetch: app.fetch,
 };
 
-// Export DO classes so Cloudflare can find them
-export { SessionAgent, Collaboration };
+// Export DO classes so Cloudflare can find them (Aliased for SQLite Migration + Legacy Support)
+export { SessionAgent as SessionAgentSQL, Collaboration as CollaborationSQL };
+export { SessionAgent, Collaboration }; // Legacy export for v1/v2 history
+
+export { SessionDO as SessionDOSQL } from './services/symphony/SessionDO';
+export { SessionDO } from './services/symphony/SessionDO'; // Legacy export for v3
+
+export { MetabolismDO as MetabolismDOSQL } from './services/durable_objects/MetabolismDO';
+export { MetabolismDO } from './services/durable_objects/MetabolismDO';

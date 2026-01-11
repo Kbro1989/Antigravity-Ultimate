@@ -26,6 +26,7 @@ export function Chat() {
 
     const {
         chat,
+        callLimb,
         bridgeStatus,
         quotaMetrics,
         circuitStates,
@@ -49,8 +50,64 @@ export function Chat() {
         return newMsg;
     }, []);
 
+    const handleCommand = async (input: string) => {
+        const [cmd, ...args] = input.slice(1).split(' ');
+        const payload = args.join(' ');
+
+        addMessage({ role: 'user', content: input });
+        setIsTyping(true);
+
+        try {
+            let result;
+            switch (cmd.toLowerCase()) {
+                case 'mesh':
+                case '3d':
+                    result = await callLimb('mesh', 'analyze_mesh', { path: payload });
+                    break;
+                case 'relic':
+                case 'museum':
+                    result = await callLimb('relic', args[0] || 'explore_museum', { path: args.slice(1).join(' ') });
+                    break;
+                case 'anchor':
+                case 'reality':
+                    result = await callLimb('reality', 'anchor_convergence', { note: payload });
+                    break;
+                case 'security':
+                case 'audit':
+                    result = await callLimb('security', 'get_logs', {});
+                    break;
+                case 'id':
+                case 'item':
+                    result = await callLimb('id_auditor', 'validate_id', { type: 'item', id: parseInt(args[0]) });
+                    break;
+                default:
+                    throw new Error(`Unknown command: /${cmd}`);
+            }
+
+            addMessage({
+                role: 'assistant',
+                content: `[COMMAND_SUCCESS: /${cmd}]\n${JSON.stringify(result, null, 2)}`,
+                model: 'Neural Limb Bridge v6.5'
+            });
+        } catch (error: any) {
+            addMessage({
+                role: 'assistant',
+                content: `Command Failed: ${error.message}`,
+                isError: true
+            });
+        } finally {
+            setIsTyping(false);
+        }
+    };
+
     const handleSend = useCallback(async () => {
         if (!input.trim()) return;
+
+        if (input.startsWith('/')) {
+            const commandInput = input;
+            setInput('');
+            return handleCommand(commandInput);
+        }
 
         const userMessage = input;
         setInput('');
@@ -77,7 +134,7 @@ export function Chat() {
         } finally {
             setIsTyping(false);
         }
-    }, [input, messages, chat, addMessage]);
+    }, [input, messages, chat, addMessage, callLimb]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {

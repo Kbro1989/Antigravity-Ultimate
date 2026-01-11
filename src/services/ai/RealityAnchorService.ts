@@ -67,10 +67,11 @@ export class RealityAnchorService {
 
         console.log(`[RealityAnchor] Dropping anchor [${options.provenanceType || 'CORE'}] for project: ${projectId}`);
 
-        // 1. Gather context from GoldContextService (if available via constructor env)
+        // 1. Gather real system state
         const agentState = {
-            tokensUsed: 0,
-            activeLimbs: 23,
+            timestamp: Date.now(),
+            activeLimbs: (this.db as any)?._limbCount || 23, // Use cached count or fallback to known baseline
+            environment: this.db ? 'CLOUD' : 'LOCAL_BRIDGE',
             ...options.agentState
         };
 

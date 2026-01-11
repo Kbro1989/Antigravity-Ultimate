@@ -1,5 +1,6 @@
 
 import type { Env } from '../../../types/env';
+import { rateLimiter } from '../RateLimiter';
 
 export interface CloudflareTextRequest {
     prompt: string;
@@ -7,6 +8,7 @@ export interface CloudflareTextRequest {
     systemPrompt?: string;
     maxTokens?: number;
     model?: string;
+    lora?: string;
 }
 
 class CloudflareProvider {
@@ -56,6 +58,8 @@ class CloudflareProvider {
         if (this.isBackend()) {
             // Direct Worker Binding Implementation
             const model = request.model || '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+            await rateLimiter.enforce(model);
+
             const messages = [
                 { role: 'system', content: request.systemPrompt || 'You are POG AI.' },
                 ...(request.history || []),
@@ -64,12 +68,15 @@ class CloudflareProvider {
 
             return this.env!.AI.run(model, {
                 messages,
-                stream
+                stream,
+                ...(request.lora ? { lora: request.lora } : {})
             });
         }
 
         // Frontend/Remote Fallback
         const workerUrl = this.getWorkerUrl();
+        await rateLimiter.enforce(request.model || 'text-default');
+
         const response = await fetch(`${workerUrl}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -88,14 +95,46 @@ class CloudflareProvider {
 
     async generateImage(request: { prompt: string, negativePrompt?: string }): Promise<{ imageUrl: string, model: string }> {
         if (this.isBackend()) {
-            const result = await this.env!.AI.run('@cf/stabilityai/stable-diffusion-xl-base-1.0', {
+            const model = '@cf/stabilityai/stable-diffusion-xl-base-1.0';
+            await rateLimiter.enforce(model);
+
+            const result = await this.env!.AI.run(model, {
                 prompt: request.prompt
             });
-            // Result is a binary stream in workers, would need to handle R2/Response here
-            return { imageUrl: 'data:image/png;base64,...', model: 'SDXL-Direct' };
+
+            // result is the image stream in workers, convert to base64
+            const reader = result.getReader();
+            const chunks = [];
+            let totalLength = 0;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+                totalLength += value.length;
+            }
+
+            const fullArray = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const chunk of chunks) {
+                fullArray.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            // Standard Web API Base64
+            let binary = '';
+            const bytes = new Uint8Array(fullArray);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            const b64 = btoa(binary);
+
+            return { imageUrl: `data:image/png;base64,${b64}`, model: '@cf/stabilityai/stable-diffusion-xl-base-1.0' };
         }
 
         const workerUrl = this.getWorkerUrl();
+        await rateLimiter.enforce('image-default');
+
         const response = await fetch(`${workerUrl}/api/generate-image`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -107,7 +146,10 @@ class CloudflareProvider {
 
     async codeCompletion(request: any): Promise<{ code: string, model: string }> {
         if (this.isBackend()) {
-            const result = await this.env!.AI.run('@cf/qwen/qwen2.5-coder-32b-instruct', {
+            const model = '@cf/qwen/qwen2.5-coder-32b-instruct';
+            await rateLimiter.enforce(model);
+
+            const result = await this.env!.AI.run(model, {
                 prompt: request.prefix
             });
             return { code: result.response || result, model: 'Qwen-Direct' };
@@ -121,6 +163,53 @@ class CloudflareProvider {
         });
         const data = await response.json() as any;
         return { code: data.code || data.result, model: 'qwen-2.5-coder' };
+    }
+
+    async generateAudio(request: { prompt: string }): Promise<{ audioUrl: string, model: string }> {
+        if (this.isBackend()) {
+            const model = '@cf/myshell/melotts';
+            await rateLimiter.enforce(model);
+
+            const result = await this.env!.AI.run(model, {
+                text: request.prompt
+            });
+
+            // Handle the audio stream
+            const reader = result.getReader();
+            const chunks = [];
+            let totalLength = 0;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+                totalLength += value.length;
+            }
+
+            const fullArray = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const chunk of chunks) {
+                fullArray.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            // Standard Web API Base64
+            let binary = '';
+            for (let i = 0; i < fullArray.byteLength; i++) {
+                binary += String.fromCharCode(fullArray[i]);
+            }
+            const b64 = btoa(binary);
+
+            return { audioUrl: `data:audio/mpeg;base64,${b64}`, model: '@cf/myshell/melotts' };
+        }
+
+        const workerUrl = this.getWorkerUrl();
+        const response = await fetch(`${workerUrl}/api/generate-audio`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request)
+        });
+        const blob = await response.blob();
+        return { audioUrl: URL.createObjectURL(blob), model: '@cf/myshell/melotts' };
     }
 }
 

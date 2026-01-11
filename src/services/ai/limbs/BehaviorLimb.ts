@@ -1,0 +1,131 @@
+import { NeuralLimb, LimbConfig } from './NeuralLimb';
+import { AgentCapability } from '../AgentConstitution';
+import { BaseIntent } from '../AITypes';
+import { modelRouter } from '../ModelRouter';
+
+/**
+ * BEHAVIOR TREE SCHEMA (Standard Selector/Sequence/Action)
+ */
+export type BTNodeType = 'selector' | 'sequence' | 'action' | 'condition';
+
+export interface BTNode {
+    id: string;
+    type: BTNodeType;
+    name: string;
+    children?: BTNode[];
+    action?: string;
+    params?: any;
+    status?: 'running' | 'success' | 'failure';
+}
+
+export interface BehaviorDefinition {
+    id: string;
+    name: string;
+    root: BTNode;
+    metadata: {
+        author: string;
+        timestamp: number;
+        description: string;
+    };
+}
+
+export class BehaviorLimb extends NeuralLimb {
+    name = 'BehaviorLimb';
+    private behaviors: Map<string, BehaviorDefinition> = new Map();
+
+    /**
+     * AI SYNTHESIS: Generate a Behavior Tree from a natural language prompt.
+     */
+    async synthesize_logic(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        const { prompt, context } = params;
+
+        await this.logActivity('synthesize_logic', 'pending', { prompt });
+
+        // Logic generation using the architectural model core
+        const response = await this.callAI({
+            type: 'text',
+            prompt: `
+            You are a Game Logic Architect. Generate a Behavior Tree in JSON format.
+            The schema is: { id, name, root: { type: 'selector'|'sequence'|'action'|'condition', name, children: [], action, params: {} } }
+            Prompt: ${prompt}
+            Context: ${JSON.stringify(context || {})}
+            
+            Return ONLY the valid JSON block.
+            `,
+            ...intent
+        });
+
+        try {
+            const cleanJson = (response as any).content.match(/\{[\s\S]*\}/)?.[0];
+            const bt = JSON.parse(cleanJson || '{}') as BehaviorDefinition;
+
+            bt.metadata = {
+                author: 'pog-ai-v6.5',
+                timestamp: Date.now(),
+                description: prompt
+            };
+
+            const path = `behaviors/${bt.id}.json`;
+            const contentJson = JSON.stringify(bt, null, 2);
+
+            // Persist the logic asset (matches NeuralLimb persistAsset(type, url, metadata, contentBody))
+            await this.persistAsset('behavior', `staged://${path}`, bt.metadata, contentJson);
+
+            this.behaviors.set(bt.id, bt);
+
+            await this.logActivity('synthesize_logic', 'success', { id: bt.id });
+            return { status: 'success', behaviorId: bt.id, behavior: bt };
+        } catch (e: any) {
+            await this.logActivity('synthesize_logic', 'failure', { error: e.message });
+            throw new Error(`Failed to parse AI behavior synthesis: ${e.message}`);
+        }
+    }
+
+    private async callAI(request: any) {
+        return await modelRouter.route(request, this.env);
+    }
+
+    /**
+     * ATTACH: Link a behavior to an entity.
+     */
+    async attach_to_target(params: any) {
+        this.enforceCapability(AgentCapability.WRITE_FILES);
+        const { entityId, behaviorId } = params;
+
+        // In a real scenario, this would call EntityLimb.update
+        // For now, we return a hydration manifest
+        return {
+            status: 'success',
+            entityId,
+            behaviorId,
+            action: 'attach_behavior',
+            timestamp: Date.now()
+        };
+    }
+
+    /**
+     * SIMULATE: Run a tick of the behavior tree against a mock world state.
+     */
+    async simulate_tick(params: any) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        const { behaviorId, worldState } = params;
+
+        const bt = this.behaviors.get(behaviorId);
+        if (!bt) throw new Error(`Behavior ${behaviorId} not found.`);
+
+        // Minimal logic simulation (Tick Start)
+        return {
+            status: 'success',
+            active_node: bt.root.name,
+            state: worldState,
+            result: 'executing',
+            timestamp: Date.now()
+        };
+    }
+
+    async get_behavior(params: any) {
+        const { id } = params;
+        return this.behaviors.get(id);
+    }
+}

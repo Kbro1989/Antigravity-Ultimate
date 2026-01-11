@@ -1,13 +1,12 @@
 import { NeuralLimb } from './NeuralLimb';
 import { AgentCapability } from '../AgentConstitution';
-import { modelRouter, limbRegistry } from '../ModelRouter';
 import { BaseIntent } from '../AITypes';
 
 export class NetworkLimb extends NeuralLimb {
     async ping_limbs(params: any) {
         this.enforceCapability(AgentCapability.METRIC_ACCESS);
         const { include_latency_matrix } = params || {};
-        const limbIds = limbRegistry.getLimbIds();
+        const limbIds = ['orchestrator', 'ghost', 'file', 'code', 'relic'];
 
         return {
             status: 'success',

@@ -19,7 +19,7 @@ export interface RouteResult {
 }
 
 const QUOTA_LIMITS = {
-    CLOUDFLARE_DAILY: 100000,
+    CLOUDFLARE_DAILY: 10000,
     GEMINI_FLASH_DAILY: 1500, // 1500 free requests/day
     PAID_HARD_LIMIT_USD: 1.00
 };

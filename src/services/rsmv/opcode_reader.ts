@@ -771,16 +771,16 @@ function arrayNullTerminatedParser(args: unknown[], parent: ChunkParentCallback,
 		},
 		write(state, value) {
 			if (!Array.isArray(value)) { throw new Error("array expected"); }
-			//TODO probably very wrong
-			state.stack.push(value);
-			state.hiddenstack.push({});
+
 			for (let prop of value) {
 				lengthtype.write(state, 1);
+				state.stack.push(prop);
+				state.hiddenstack.push({});
 				subtype.write(state, prop);
+				state.stack.pop();
+				state.hiddenstack.pop();
 			}
 			lengthtype.write(state, 0);
-			state.stack.pop();
-			state.hiddenstack.pop();
 		},
 		getTypescriptType(indent) {
 			return `${subtype.getTypescriptType(indent)}[]`;
