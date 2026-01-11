@@ -1,56 +1,26 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Wrangler
-.wrangler
-
-# Build output - ONLY TSC REPORTS IGNORED
-tsc_errors.txt
-tsc_output.txt
-tsc_output_v2.txt
-build_log*.txt
-debug_result.txt
-tsc_*.txt
-tsc_*.log
-typecheck_output.txt
-tsc_errors*.log
-tsc_output*.log
-tsc_full*.log
-type-check-*.txt
-
-# Ensure everything else is tracked
-# Ensure public is tracked (optional, but good for assets)
-!public/
-!public/**
-
-# Track build artifacts for Cloudflare deployment
-!dist/
-!dist/**
-
-# Ignore references
+# Large Platform Reference (19.8GB)
 reference/
 reference/**
 
+# TSC Error Reports & Build Logs
+tsc_*.txt
+tsc_*.log
+tsc_errors.txt
+tsc_errors*.log
+tsc_output*.txt
+tsc_output*.log
+tsc_full*.log
+type-check-*.txt
+typecheck_output.txt
+build_log*.txt
+debug_result.txt
+*.log
+!dist/**/*.log # Keep any needed logs in dist if they exist
 
-combined_scripts.txt
+# Standard JS / Workspace Exclusions (Safety)
+node_modules/
+.wrangler/
+.vscode/
+.idea/
+.DS_Store
+
