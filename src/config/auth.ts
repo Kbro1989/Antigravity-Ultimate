@@ -1,5 +1,5 @@
 export const GOOGLE_AUTH_CONFIG = {
-    clientId: '69738697936-19e5pblp68pom37lf8kajs3v04ju0in4.apps.googleusercontent.com',
+    clientId: '69738697936-j2u08l6ll3hg1am1pecb9b4860rphtar.apps.googleusercontent.com',
     scopes: [
         'openid',
         'email',
