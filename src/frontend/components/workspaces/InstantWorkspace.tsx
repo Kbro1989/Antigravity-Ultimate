@@ -1,5 +1,5 @@
 import React from 'react';
-import { db } from '../components/InstantProvider';
+import { db } from '../InstantProvider';
 import { AppSchema } from '../../../services/data/instant.schema';
 import { InstaQLEntity } from '@instantdb/react';
 
