@@ -201,7 +201,7 @@ export function POGDashboard() {
 
     if (view === 'hub') {
         return (
-            <div className="h-screen w-screen overflow-hidden bg-void relative z-0">
+            <div className="dashboard-root h-screen w-screen overflow-hidden bg-void relative z-0">
                 <div className="scanner-sweep" />
                 <ParticleSystem layer="background" />
                 <BubbleWorldHUD onSelectWorkspace={handleSelectWorkspace} activeWorkspace={activeWorkspace as WorkspaceMode} />

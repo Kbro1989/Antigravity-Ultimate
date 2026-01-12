@@ -20,6 +20,7 @@
     --glass-bg: rgba(15, 15, 26, 0.6);
     --glass-border: rgba(0, 255, 255, 0.3);
     --divine-glow: 0 0 40px rgba(0, 242, 255, 0.15);
+    pointer-events: auto;
 }
 
 .bg-void {
@@ -217,6 +218,7 @@
     justify-content: center;
     overflow: hidden;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    pointer-events: auto;
 }
 
 .bubble-node::before {

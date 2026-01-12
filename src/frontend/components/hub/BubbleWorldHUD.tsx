@@ -57,12 +57,12 @@ export function BubbleWorldHUD({ onSelectWorkspace, activeWorkspace }: BubbleWor
     ], []);
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[1000]">
             {/* Background is now globally handled by ParticleSystem */}
 
-            <div className="relative w-[900px] h-[900px] pointer-events-none z-50">
+            <div className="relative w-[900px] h-[900px] pointer-events-none z-[1001]">
                 {/* Center Core */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[1002]">
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
