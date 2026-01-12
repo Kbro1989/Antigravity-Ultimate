@@ -54,6 +54,7 @@ export function BubbleWorldHUD({ onSelectWorkspace, activeWorkspace }: BubbleWor
         { id: 'network', icon: '🌐', label: 'NET', color: '#0080ff', description: 'Edge Logic & Network Orchestration' },
         { id: 'reality', icon: '🔮', label: 'REAL', color: '#ffd700', description: 'State Checkpointing' },
         { id: 'divine', icon: '🤍', label: 'DIVINE', color: '#ffffff', description: 'World Logic & Narrative' },
+        { id: 'instant' as WorkspaceMode, icon: '⚡', label: 'DB', color: '#ff00ff', description: 'InstantDB Realtime Offloading' },
     ], []);
 
     return (

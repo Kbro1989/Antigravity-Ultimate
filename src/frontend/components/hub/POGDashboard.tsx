@@ -41,6 +41,7 @@ const RelicWorkspace = React.lazy(() => import('../workspaces/RelicWorkspace').t
 const DivineWorkspace = React.lazy(() => import('../workspaces/DivineWorkspace').then(m => ({ default: m.DivineWorkspace })));
 const ClassicWorkspace = React.lazy(() => import('../workspaces/ClassicWorkspace').then(m => ({ default: m.ClassicWorkspace })));
 const ArchitectInterface = React.lazy(() => import('../workspaces/ArchitectInterface').then(m => ({ default: m.ArchitectInterface })));
+const InstantWorkspace = React.lazy(() => import('../workspaces/InstantWorkspace').then(m => ({ default: m.InstantWorkspace })));
 
 import { OrchestratorPanel } from '../orchestrator/OrchestratorPanel';
 import { SettingsPanel } from './SettingsPanel';
@@ -194,7 +195,8 @@ export function POGDashboard() {
         file: FileWorkspace,
         landscape: WorldWorkspace,
         idauditor: ArchitectInterface,
-        versioncontrol: CodeWorkspace
+        versioncontrol: CodeWorkspace,
+        instant: InstantWorkspace
     };
 
     const WorkspaceComponent = activeWorkspace ? WorkspaceComponents[activeWorkspace as WorkspaceMode] : null;

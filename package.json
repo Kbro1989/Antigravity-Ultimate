@@ -30,6 +30,7 @@
     "@cloudflare/workers-types": "^4.20240117.0",
     "@google/generative-ai": "^0.24.1",
     "@instantdb/admin": "latest",
+    "@instantdb/react": "^0.22.101",
     "@ledgerhq/compressjs": "^1.3.2",
     "@monaco-editor/react": "^4.7.0",
     "@react-three/drei": "^10.7.7",

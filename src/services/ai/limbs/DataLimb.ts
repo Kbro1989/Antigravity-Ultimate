@@ -3,6 +3,7 @@ import { AppDataManager } from '../../storage/AppDataManager';
 import { AgentCapability } from '../AgentConstitution';
 import { useStateManager } from '../../core/StateManager';
 import { BaseIntent } from '../AITypes';
+import { InstantService } from '../../data/InstantService';
 
 export class DataLimb extends NeuralLimb {
     private appData: AppDataManager;
@@ -60,6 +61,21 @@ export class DataLimb extends NeuralLimb {
         } catch (e: any) {
             return { status: 'error', error: e.message };
         }
+    }
+
+    async sync_metabolism(params: any) {
+        this.enforceCapability(AgentCapability.METRIC_ACCESS);
+        const { userId, stats } = params;
+        const instant = InstantService.getInstance(this.env);
+        await instant.recordMetabolism(userId || 'default_user', stats);
+        return { success: true, timestamp: Date.now() };
+    }
+
+    async log_trace(params: any) {
+        const { userId, trace } = params;
+        const instant = InstantService.getInstance(this.env);
+        await instant.recordTrace(userId || 'default_user', trace);
+        return { success: true };
     }
 
     async get_metrics(params: any) {

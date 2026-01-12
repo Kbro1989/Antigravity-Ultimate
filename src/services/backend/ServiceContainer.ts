@@ -11,6 +11,7 @@ import { KnowledgeIngestor } from '../rsc/KnowledgeIngestor';
 import { VectorMemory } from '../ai/VectorMemory';
 import { chronoshell } from '../core/Chronoshell';
 import { AgentCapability } from '../ai/AgentConstitution';
+import { InstantService } from '../data/InstantService';
 
 export class ServiceContainer {
     public env: Env;
@@ -38,6 +39,9 @@ export class ServiceContainer {
 
         // Sovereignty: Bridge is strictly an optional extension. Core is zero-dependency.
         this.limbs = new LimbRegistry('default_user', env, state);
+
+        // Initialize Data Offloading
+        InstantService.getInstance(env);
     }
 
     private async initializeLimbs() {
