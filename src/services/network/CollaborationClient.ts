@@ -20,6 +20,9 @@ export class CollaborationClient {
         this.onUpdate = onUpdate;
     }
 
+    private retryCount = 0;
+    private readonly MAX_RETRIES = 3;
+
     public connect(roomId: string = 'default') {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.host === 'localhost:5173' ? 'localhost:8787' : window.location.host;
@@ -28,14 +31,26 @@ export class CollaborationClient {
         console.log(`[CollaborationClient] Connecting to ${url}`);
         this.socket = new WebSocket(url);
 
+        this.socket.onopen = () => {
+            console.log('[CollaborationClient] Connected.');
+            this.retryCount = 0;
+        };
+
         this.socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             this.handleMessage(data);
         };
 
         this.socket.onclose = () => {
-            console.warn('[CollaborationClient] Disconnected. Retrying in 3s...');
-            setTimeout(() => this.connect(roomId), 3000);
+            if (this.retryCount >= this.MAX_RETRIES) {
+                console.warn('[CollaborationClient] Max retries reached. Collaboration features disabled for this session.');
+                return;
+            }
+
+            this.retryCount++;
+            const backoff = 3000 * this.retryCount;
+            console.warn(`[CollaborationClient] Disconnected. Retrying in ${backoff / 1000}s (Attempt ${this.retryCount}/${this.MAX_RETRIES})...`);
+            setTimeout(() => this.connect(roomId), backoff);
         };
     }
 

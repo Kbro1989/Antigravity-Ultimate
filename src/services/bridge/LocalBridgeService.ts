@@ -62,8 +62,9 @@ class LocalBridgeClient {
             const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname === '127.0.0.1';
 
             if (isSecure && !isLocalhost) {
-                console.log("[LocalBridge] Secure Cloud Environment. defaulting to Relay Mode.");
-                this.setRelayMode();
+                console.log("[LocalBridge] Secure Cloud Environment. Defaulting to Cloud Mode (Bridge Disabled).");
+                // this.setRelayMode(); // DISABLE AUTO-RELAY: User requested no WebSocket dependency
+                this.isCloudMode = true;
             } else if (isLocalhost) {
                 // If local, we can still auto-connect, but we start in Cloud sync mode
                 // so we don't accidentally write to local FS without user toggle
