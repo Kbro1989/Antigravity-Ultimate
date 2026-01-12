@@ -23,6 +23,10 @@ app.use('/*', async (c, next) => {
         c.req.path.includes('/api/generate-image') ||
         c.req.path.includes('/api/code-complete') ||
         c.req.path.includes('/api/limb/execute') ||
+        c.req.path.includes('/api/assets') ||
+        c.req.path.includes('/ai/assets') ||
+        c.req.path.includes('/ai/complete') ||
+        c.req.path.includes('/ai/process') ||
         c.req.path.endsWith('/api/session/stats') ||
         c.req.path.includes('/health')
     ) return next();
