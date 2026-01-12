@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { Env } from '../types/env';
 import { SignatureVerifier } from '../services/security/SignatureVerifier';
 import { ensurePipeline } from '../services/ai/trinity/TrinityWorker';
+import { modelRouter } from '../services/ai/ModelRouter';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -114,8 +115,35 @@ app.get('/trinity/introspect', async (c) => {
 
 // Fallback for generic API calls
 app.all('/*', async (c) => {
-    // If we got here, it wasn't /session/... or other specific routes
-    // Forward to 'default' session agent to support CloudflareService.ts stateless calls
+    const path = c.req.path;
+
+    // --- STATELESS AI BYPASS ---
+    // Handle expensive AI calls directly in the Worker context to save DO CPU/Memory
+    if (path.includes('/api/chat') || path.includes('/api/generate-image') || path.includes('/api/code-complete')) {
+        try {
+            const body = await c.req.json();
+            const result = await modelRouter.route({
+                userId: c.req.header('X-User-ID') || 'anonymous',
+                type: path.includes('chat') ? 'text' : path.includes('image') ? 'image' : 'code',
+                prompt: body.prompt || body.message || '',
+                history: body.history,
+                systemPrompt: body.systemPrompt,
+                modelId: body.model || body.modelId,
+                provider: body.provider
+            }, c.env);
+
+            if (result instanceof ReadableStream) {
+                return c.body(result);
+            }
+            return c.json(result);
+        } catch (e: any) {
+            console.error(`[ApiHandler] Stateless AI Failure: ${e.message}`);
+            // Fallback to DO if stateless fails
+        }
+    }
+
+    // If we got here, it wasn't a bypass or the bypass failed
+    // Forward to 'default' session agent to support legacy stateful calls
     const id = c.env.SESSION_AGENT!.idFromName('default');
     const stub = c.env.SESSION_AGENT!.get(id);
     return stub.fetch(c.req.raw);

@@ -8,6 +8,7 @@ import { chronoshell } from '../services/core/Chronoshell';
 import { AIAction } from '../services/ai/AITypes';
 import { limitObserver } from '../services/core/ObservabilityLimiter';
 import { costOptimizer } from '../services/ai/CostOptimizer';
+import { InstantService } from '../services/data/InstantService';
 
 export interface AssetMetadata {
     id: string;
@@ -77,8 +78,16 @@ export class SessionAgent extends DurableObject<Env> {
                     metadata: asset.metadata
                 };
 
+                // Offload to InstantDB via InstantService
+                const instant = InstantService.getInstance(this.env);
+                await instant.recordTrace(this.state.id.toString(), {
+                    layer: 'asset_ledger',
+                    action: `register_${asset.type}`,
+                    metadata: JSON.stringify(record)
+                });
+
                 await this.state.storage.put(`asset:${assetId}`, record);
-                console.log(`[AssetLedger] Registered new ${asset.type}: ${assetId}`);
+                console.log(`[AssetLedger] Registered and Offloaded ${asset.type}: ${assetId}`);
             });
         });
 

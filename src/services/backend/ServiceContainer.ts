@@ -114,8 +114,17 @@ export class ServiceContainer {
             }
         }
 
-        // 2. Wire up Chronoshell to D1 Persistence
+        // 2. Wire up Chronoshell to D1 Persistence & InstantDB Offloading
         chronoshell.setPersistenceHandler(async (record) => {
+            // Offload to InstantDB (Primary Offloading Path)
+            try {
+                const instant = InstantService.getInstance(this.env);
+                await instant.recordTrace('global', record);
+            } catch (e) {
+                console.warn('[ServiceContainer] InstantDB Trace Offload Failed', e);
+            }
+
+            // Fallback to D1 for cold storage
             if (this.env.DB) {
                 try {
                     await this.env.DB.prepare(
@@ -129,7 +138,7 @@ export class ServiceContainer {
                         record.reasoning || null
                     ).run();
                 } catch (e) {
-                    console.error('[ServiceContainer] Failed to persist trace', e);
+                    console.error('[ServiceContainer] Failed to persist trace to D1', e);
                 }
             }
         });

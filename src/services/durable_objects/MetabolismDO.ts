@@ -2,7 +2,11 @@ import { DurableObject } from "cloudflare:workers";
 
 interface Env {
     METABOLISM_DO: DurableObjectNamespace;
+    INSTANT_APP_ID: string;
+    INSTANT_APP_ADMIN_TOKEN: string;
 }
+
+import { InstantService } from "../data/InstantService";
 
 interface QuotaStatus {
     cloudflare: { tokens: number; limit: number; resetAt: number };
@@ -141,8 +145,25 @@ export class MetabolismDO extends DurableObject<Env> {
         };
     }
 
+    private async syncToInstant(userId: string, quota: QuotaStatus) {
+        try {
+            const instant = InstantService.getInstance(this.env as any);
+            await instant.recordMetabolism(userId, {
+                cfTokens: quota.cloudflare.tokens,
+                cfLimit: quota.cloudflare.limit,
+                cfResetAt: quota.cloudflare.resetAt,
+                geminiBudget: quota.gemini.budget,
+                geminiLimit: quota.gemini.limit,
+                geminiResetAt: quota.gemini.resetAt,
+                tier: quota.tier
+            });
+        } catch (e) {
+            console.warn('[MetabolismDO] InstantDB Sync Failed', e);
+        }
+    }
+
     private deduct(userId: string, provider: string, tokens: number, cost: number) {
-        this.getOrInitUser(userId); // Ensure exists/reset
+        const quota = this.getOrInitUser(userId); // Ensure exists/reset
 
         if (provider === 'cloudflare') {
             this.sql.exec(`
@@ -157,6 +178,9 @@ export class MetabolismDO extends DurableObject<Env> {
                 WHERE user_id = ?
             `, cost, userId);
         }
+
+        // Sync to InstantDB (Async/WaitUntil if possible)
+        this.syncToInstant(userId, this.getOrInitUser(userId));
     }
 
     private getNextDayReset(): number {
