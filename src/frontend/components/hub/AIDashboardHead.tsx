@@ -3,7 +3,8 @@ import { useStateManager } from '../../../services/core/StateManager';
 import { WorkspaceMode } from '../../../services/core/ModeManager';
 import { usePresence } from '../../hooks/usePresence';
 import { ModelSelector } from './ModelSelector';
-import { googleAuthService } from '../../../services/auth/GoogleAuthService';
+
+import { db } from '../InstantProvider';
 
 interface AIDashboardHeadProps {
     workspace: WorkspaceMode | null;
@@ -14,7 +15,6 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
     const { users } = usePresence('global');
     const collaboratorsCount = Object.keys(users).length;
     const [showModels, setShowModels] = useState(false);
-    const [user, setUser] = useState<any>(googleAuthService.getUser());
     const [localStats, setLocalStats] = useState({
         tokensUsed: 0,
         tokensLimit: 10000,
@@ -28,10 +28,23 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
         'KV': true, 'R2': true, 'D1': true, 'DO': true, 'AI': true
     });
 
+    // InstantDB User Hook
+    const { user: instantUser } = db.useAuth();
+    const [user, setUser] = useState<any>(null);
+
     useEffect(() => {
-        // Auth Listener
-        const handleAuth = (e: CustomEvent) => setUser(e.detail);
-        window.addEventListener('google-auth-success' as any, handleAuth);
+        if (instantUser) {
+            setUser({
+                name: instantUser.email?.split('@')[0] || 'Unknown Operator',
+                picture: (instantUser as any).picture || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y', // Fallback
+                email: instantUser.email
+            });
+        }
+    }, [instantUser]);
+
+    // Stats Fetching Logic
+    useEffect(() => {
+
 
         const fetchStats = async () => {
             try {
@@ -69,7 +82,6 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
 
         return () => {
             clearInterval(interval);
-            window.removeEventListener('google-auth-success' as any, handleAuth);
         };
     }, []);
 
@@ -119,7 +131,16 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
                         </div>
                     ) : (
                         <button
-                            onClick={() => googleAuthService.signIn()}
+                            onClick={() => {
+                                // InstantDB Auth Redirect Flow
+                                import('../InstantProvider').then(({ db }) => {
+                                    const url = db.auth.createAuthorizationURL({
+                                        clientName: "pog-auth-client",
+                                        redirectURL: window.location.href,
+                                    });
+                                    window.location.href = url;
+                                });
+                            }}
                             className="px-6 py-3 glass-ultra hover:bg-white/10 rounded-2xl border border-white/10 text-[10px] font-black text-white uppercase tracking-[0.2em] transition-all hover:border-cyan-400/50 hover:shadow-[0_0_20px_rgba( cyan ,0.2)]"
                         >
                             Connect Identity

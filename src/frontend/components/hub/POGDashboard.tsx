@@ -11,7 +11,7 @@ import { AIDashboardHead } from './AIDashboardHead';
 import { WorkspaceSpine } from './WorkspaceSpine';
 import { LimbRegistryClient } from '../../../services/LimbRegistryClient';
 import { useServiceHub } from '../../hooks';
-import { googleAuthService } from '../../../services/auth/GoogleAuthService';
+import { db } from '../InstantProvider';
 
 // Specialized Workspaces (Lazy Loaded to optimize bundle and break circular dependencies)
 const CodeWorkspace = React.lazy(() => import('../workspaces/CodeWorkspace').then(m => ({ default: m.CodeWorkspace })));
@@ -64,6 +64,8 @@ const LimbMap: Record<string, string> = {
 export function POGDashboard() {
     const [view, setView] = React.useState<'hub' | 'workspace'>('hub');
     const { activeWorkspace, setActiveWorkspace } = useStateManager();
+
+    // ...
     const { callLimb } = useServiceHub();
     const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 });
 
@@ -71,15 +73,11 @@ export function POGDashboard() {
     const [alertIndex, setAlertIndex] = React.useState(0);
     const [showOrchestrator, setShowOrchestrator] = React.useState(false);
     const [showSettings, setShowSettings] = React.useState(false);
-    const [user, setUser] = React.useState<any>(googleAuthService.getUser());
 
-    // Sync Auth State
-    React.useEffect(() => {
-        const handleAuth = (e: CustomEvent) => setUser(e.detail);
-        window.addEventListener('google-auth-success' as any, handleAuth);
-        return () => window.removeEventListener('google-auth-success' as any, handleAuth);
-    }, []);
+    // InstantDB Auth Hook
+    const { user: instantUser } = db.useAuth();
 
+    // Mouse Tracking Logic
     React.useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             setMousePos({ x: e.clientX, y: e.clientY });
@@ -232,17 +230,25 @@ export function POGDashboard() {
                 {/* Hub View Login/Profile - Top Right */}
                 <div className="fixed top-8 right-8 z-[100] flex gap-4">
                     {/* User Profile / Login */}
-                    {user ? (
+                    {instantUser ? (
                         <div className="flex items-center gap-3 glass-ultra px-6 py-3 rounded-2xl border border-white/10 shadow-xl animate-in slide-in-from-top-4 duration-700">
-                            <img src={user.picture} alt="User" className="w-8 h-8 rounded-full border border-white/20" />
+                            <img src={(instantUser as any).picture || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt="User" className="w-8 h-8 rounded-full border border-white/20" />
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-white">{user.name}</span>
+                                <span className="text-[10px] font-black text-white">{instantUser.email?.split('@')[0]}</span>
                                 <span className="text-[8px] text-neon-cyan uppercase tracking-wider">OPERATOR</span>
                             </div>
                         </div>
                     ) : (
                         <button
-                            onClick={() => googleAuthService.signIn()}
+                            onClick={() => {
+                                import('../InstantProvider').then(({ db }) => {
+                                    const url = db.auth.createAuthorizationURL({
+                                        clientName: "pog-auth-client",
+                                        redirectURL: window.location.href,
+                                    });
+                                    window.location.href = url;
+                                });
+                            }}
                             className="px-6 py-3 glass-ultra hover:bg-white/10 rounded-2xl border border-white/10 text-[10px] font-black text-white uppercase tracking-[0.2em] transition-all hover:border-cyan-400/50 hover:shadow-[0_0_20px_rgba( cyan ,0.2)] animate-in slide-in-from-top-4 duration-700"
                         >
                             Connect Identity
@@ -275,81 +281,79 @@ export function POGDashboard() {
             </div>
         );
     }
+}
 
-    return (
-        <div className="h-screen w-screen overflow-hidden bg-void relative flex flex-col p-8">
-            <ParticleSystem layer="background" />
+return (
+    <div className="h-screen w-screen overflow-hidden bg-void relative flex flex-col p-8">
+        <ParticleSystem layer="background" />
+        <div className="flex-1 flex flex-col gap-6 relative z-10">
+            {/* Header with Back Button */}
+            <div className="flex items-center gap-6">
+                <button
+                    onClick={() => {
+                        window.location.hash = '';
+                    }}
+                    className="w-16 h-16 rounded-[24px] glass-ultra border border-white/5 flex items-center justify-center text-white/40 hover:text-neon-cyan hover:border-neon-cyan/40 transition-all group shadow-xl"
+                >
+                    <svg className="w-6 h-6 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                </button>
 
-            <div className="flex-1 flex flex-col gap-6 relative z-10">
-                {/* Header with Back Button */}
-                <div className="flex items-center gap-6">
-                    <button
-                        onClick={() => {
-                            window.location.hash = '';
-                        }}
-                        className="w-16 h-16 rounded-[24px] glass-ultra border border-white/5 flex items-center justify-center text-white/40 hover:text-neon-cyan hover:border-neon-cyan/40 transition-all group shadow-xl"
-                    >
-                        <svg className="w-6 h-6 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                    </button>
-
-                    <div className="flex-1 flex items-center gap-6">
-                        <AIDashboardHead workspace={activeWorkspace as WorkspaceMode} />
-                        <div className="flex gap-4 glass-ultra px-6 py-3 rounded-2xl border border-white/5 shadow-xl">
-                            <button onClick={() => setShowOrchestrator(true)} className="text-[10px] font-black text-neon-cyan/40 hover:text-neon-cyan tracking-widest transition-colors uppercase">Orchestrator</button>
-                            <button onClick={() => setShowSettings(true)} className="text-[10px] font-black text-white/20 hover:text-white tracking-widest transition-colors uppercase">Settings</button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Workspace Area */}
-                <div className="flex-1 flex gap-6 overflow-hidden">
-                    <div className="w-24 shrink-0 flex flex-col items-center">
-
-                        {activeWorkspace && (
-                            <WorkspaceSpine
-                                workspace={activeWorkspace as WorkspaceMode}
-                                onToolSelect={async (toolId, capability, params) => {
-                                    try {
-                                        setAlerts(prev => [`EXECUTING ${toolId.toUpperCase()}...`, ...prev.slice(0, 4)]);
-
-                                        // Execute via Unified Limb Registry Client
-                                        const result = await LimbRegistryClient.executeTool(activeWorkspace, toolId, {
-                                            ...params,
-                                            activeFile: (window as any).activeFile, // Hook into global file tracker if available
-                                            selection: window.getSelection()?.toString()
-                                        });
-
-                                        if (result) {
-                                            setAlerts(prev => [`${toolId.toUpperCase()} SUCCESS`, ...prev.slice(0, 4)]);
-                                        }
-                                    } catch (e: any) {
-                                        setAlerts(prev => [`ERROR: ${e.message.toUpperCase()}`, ...prev.slice(0, 4)]);
-                                    }
-                                }}
-                            />
-                        )}
-                    </div>
-
-                    <div className="flex-1 glass-ultra rounded-[40px] border border-white/5 overflow-hidden relative shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-                        <Suspense fallback={
-                            <div className="flex flex-col items-center justify-center h-full gap-4">
-                                <div className="text-4xl animate-pulse">💠</div>
-                                <div className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20">Syncing Workspace Matrix...</div>
-                            </div>
-                        }>
-                            {WorkspaceComponent ? <WorkspaceComponent /> : (
-                                <div className="flex flex-col items-center justify-center h-full gap-4">
-                                    <div className="text-4xl animate-pulse">💠</div>
-                                    <div className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20">Initializing Interface...</div>
-                                </div>
-                            )}
-                        </Suspense>
+                <div className="flex-1 flex items-center gap-6">
+                    <AIDashboardHead workspace={activeWorkspace as WorkspaceMode} />
+                    <div className="flex gap-4 glass-ultra px-6 py-3 rounded-2xl border border-white/5 shadow-xl">
+                        <button onClick={() => setShowOrchestrator(true)} className="text-[10px] font-black text-neon-cyan/40 hover:text-neon-cyan tracking-widest transition-colors uppercase">Orchestrator</button>
+                        <button onClick={() => setShowSettings(true)} className="text-[10px] font-black text-white/20 hover:text-white tracking-widest transition-colors uppercase">Settings</button>
                     </div>
                 </div>
             </div>
+
+            {/* Workspace Area */}
+            <div className="flex-1 flex gap-6 overflow-hidden">
+                <div className="w-24 shrink-0 flex flex-col items-center">
+                    {activeWorkspace && (
+                        <WorkspaceSpine
+                            workspace={activeWorkspace as WorkspaceMode}
+                            onToolSelect={async (toolId, capability, params) => {
+                                try {
+                                    setAlerts(prev => [`EXECUTING ${toolId.toUpperCase()}...`, ...prev.slice(0, 4)]);
+                                    // Execute via Unified Limb Registry Client
+                                    const result = await LimbRegistryClient.executeTool(activeWorkspace, toolId, {
+                                        ...params,
+                                        activeFile: (window as any).activeFile, // Hook into global file tracker if available
+                                        selection: window.getSelection()?.toString()
+                                    });
+
+                                    if (result) {
+                                        setAlerts(prev => [`${toolId.toUpperCase()} SUCCESS`, ...prev.slice(0, 4)]);
+                                    }
+                                } catch (e: any) {
+                                    setAlerts(prev => [`ERROR: ${e.message.toUpperCase()}`, ...prev.slice(0, 4)]);
+                                }
+                            }}
+                        />
+                    )}
+                </div>
+
+                <div className="flex-1 glass-ultra rounded-[40px] border border-white/5 overflow-hidden relative shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+                    <Suspense fallback={
+                        <div className="flex flex-col items-center justify-center h-full gap-4">
+                            <div className="text-4xl animate-pulse">💠</div>
+                            <div className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20">Syncing Workspace Matrix...</div>
+                        </div>
+                    }>
+                        {WorkspaceComponent ? <WorkspaceComponent /> : (
+                            <div className="flex flex-col items-center justify-center h-full gap-4">
+                                <div className="text-4xl animate-pulse">💠</div>
+                                <div className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20">Initializing Interface...</div>
+                            </div>
+                        )}
+                    </Suspense>
+                </div>
+            </div>
         </div>
-    );
-}
+    </div>
+);
+
 
