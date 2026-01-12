@@ -1,6 +1,6 @@
 import React from 'react';
 import { init } from "@instantdb/react";
-import schema from "../services/data/instant.schema";
+import schema from "../../services/data/instant.schema";
 
 const appId = "9e151e9b-e6b2-4efd-88a4-c21276ae1e9b";
 
