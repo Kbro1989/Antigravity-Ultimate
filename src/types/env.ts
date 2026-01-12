@@ -17,6 +17,7 @@ export interface Env {
     VECTOR_INDEX: VectorizeIndex; // RAG Memory
     INSTANT_APP_ID: string;
     INSTANT_ADMIN_TOKEN: string;
+    GOOGLE_CLIENT_SECRET: string; // OAuth Client Secret (Confidential)
     __STATIC_CONTENT: KVNamespace; // Workers Sites
     [key: string]: unknown;
 }
