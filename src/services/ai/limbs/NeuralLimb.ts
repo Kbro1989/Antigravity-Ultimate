@@ -53,14 +53,39 @@ export abstract class NeuralLimb {
     async process(intent: BaseIntent & { modelId?: string; provider?: string }): Promise<any> {
         const { action, payload } = intent;
 
-        // Remove limb prefix if present (e.g., 'audio_generate' -> 'generate')
-        const methodSuffix = action.includes('_') ? action.split('_').slice(1).join('_') : action;
+        // 1. Precise Match
+        let targetMethod = (this as any)[action];
 
-        // Strategy: Look for specific method first, then fallback to general action method
-        const targetMethod = (this as any)[methodSuffix] || (this as any)[action];
+        // 2. Prefix-aware Suffix Match (e.g., 'image_generate' -> 'generate')
+        if (!targetMethod && action.includes('_')) {
+            const methodSuffix = action.split('_').slice(1).join('_');
+            targetMethod = (this as any)[methodSuffix];
+        }
+
+        // 3. Case-Insensitive Fuzzy Match (Hermit Crab Upgrade)
+        if (!targetMethod) {
+            const normalizedAction = action.toLowerCase().replace(/_/g, '');
+            const allMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(this));
+
+            const fuzzyMatch = allMethods.find(m => {
+                const normalizedM = m.toLowerCase().replace(/_/g, '');
+                return normalizedM === normalizedAction ||
+                    (action.includes('_') && normalizedM === action.split('_').slice(1).join('_').toLowerCase().replace(/_/g, ''));
+            });
+
+            if (fuzzyMatch) {
+                targetMethod = (this as any)[fuzzyMatch];
+                console.log(`[NeuralLimb] Fuzzy resolution: ${action} -> ${fuzzyMatch}`);
+            }
+        }
 
         if (typeof targetMethod === 'function') {
-            return await targetMethod.call(this, payload, intent);
+            try {
+                return await targetMethod.call(this, payload, intent);
+            } catch (err: any) {
+                console.error(`[NeuralLimb] Execution Error in ${this.id}.${action}:`, err);
+                throw err;
+            }
         }
 
         // Fallback or explicit implementation requirement

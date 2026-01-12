@@ -199,7 +199,7 @@ export class LimbRegistry {
             'audit_': 'id_auditor',
             'version_': 'version_control',
             'quantum_': 'quantum',
-            'spatial_': 'spatial_pipeline',
+            'spatial_': 'spatial',
             'reality_': 'reality',
             'divine_': 'divine',
             'proxy_': 'proxy',

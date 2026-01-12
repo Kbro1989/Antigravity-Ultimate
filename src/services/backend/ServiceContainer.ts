@@ -68,7 +68,7 @@ export class ServiceContainer {
         await l.safeRegisterAsync('video', () => import('../ai/limbs/VideoLimb'), [AgentCapability.AI_INFERENCE]);
 
         // Domain: Orchestration & Game
-        await l.safeRegisterAsync('game', () => import('../ai/limbs/LiveGameLimb'), [AgentCapability.WORLD_STATE_WRITE, AgentCapability.AI_INFERENCE]);
+        await l.safeRegisterAsync('live_game', () => import('../ai/limbs/LiveGameLimb'), [AgentCapability.WORLD_STATE_WRITE, AgentCapability.AI_INFERENCE]);
         await l.safeRegisterAsync('pipeline', () => import('../ai/limbs/AssetPipelineLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.MESH_OPERATIONS, AgentCapability.IMAGE_OPERATIONS]);
         await l.safeRegisterAsync('spatial', () => import('../ai/limbs/SpatialPipelineLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.MESH_OPERATIONS, AgentCapability.IMAGE_OPERATIONS]);
         await l.safeRegisterAsync('orchestrator', () => import('../ai/limbs/OrchestratorLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.CALL_AI_MODEL]);
