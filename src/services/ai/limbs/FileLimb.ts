@@ -1,51 +1,72 @@
 import { NeuralLimb, LimbConfig } from './NeuralLimb';
-import { CLIBridge } from '../../cli/CLIBridge';
 import { AgentCapability } from '../AgentConstitution';
 import { BaseIntent } from '../AITypes';
 
 export class FileLimb extends NeuralLimb {
-    private bridge: CLIBridge;
-
-    constructor(config: LimbConfig) {
-        super(config);
-        this.bridge = CLIBridge.getInstance();
-    }
-
     async read(params: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
-        await this.logActivity('file_read', 'pending', { path: params.path });
-        const result = await this.bridge.readFile(params.path);
-        await this.logActivity('file_read', 'success', { path: params.path });
-        return result;
+        const { path } = params;
+        await this.logActivity('file_read', 'pending', { path });
+
+        if (this.env?.ASSETS_BUCKET) {
+            const obj = await this.env.ASSETS_BUCKET.get(path);
+            if (obj) {
+                const content = await obj.text();
+                await this.logActivity('file_read', 'success', { path });
+                return { success: true, content };
+            }
+        }
+
+        throw new Error(`Cloud Artifact not found: ${path}`);
     }
 
     async write(params: any) {
         this.enforceCapability(AgentCapability.WRITE_FILES);
-        await this.logActivity('file_write', 'pending', { path: params.path });
-        const result = await this.bridge.writeFile(params.path, params.content);
-        await this.logActivity('file_write', 'success', { path: params.path });
-        return result;
+        const { path, content } = params;
+        await this.logActivity('file_write', 'pending', { path });
+
+        if (this.env?.ASSETS_BUCKET) {
+            await this.env.ASSETS_BUCKET.put(path, content);
+            await this.logActivity('file_write', 'success', { path });
+            return { success: true };
+        }
+
+        throw new Error("Cloud Storage (R2) unavailable for write.");
     }
 
     async list(params: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
-        await this.logActivity('file_list', 'pending', { path: params.path });
-        const result = await this.bridge.listDirectory(params.path);
-        await this.logActivity('file_list', 'success', { path: params.path });
-        return result;
+        const { path = '' } = params;
+        await this.logActivity('file_list', 'pending', { path });
+
+        if (this.env?.ASSETS_BUCKET) {
+            const list = await this.env.ASSETS_BUCKET.list({ prefix: path });
+            const files = list.objects.map(o => o.key);
+            await this.logActivity('file_list', 'success', { path, count: files.length });
+            return files;
+        }
+
+        return [];
     }
 
     async delete(params: any) {
         this.enforceCapability(AgentCapability.DELETE_FILES);
-        await this.logActivity('file_delete', 'pending', { path: params.path });
-        const result = await this.bridge.execute(`del /f /q "${params.path}"`);
-        await this.logActivity('file_delete', 'success', { path: params.path });
-        return result;
+        const { path } = params;
+        await this.logActivity('file_delete', 'pending', { path });
+
+        if (this.env?.ASSETS_BUCKET) {
+            await this.env.ASSETS_BUCKET.delete(path);
+            await this.logActivity('file_delete', 'success', { path });
+            return { success: true };
+        }
+
+        throw new Error("Cloud Storage (R2) unavailable for delete.");
     }
 
     async sync(params: any) {
         this.enforceCapability(AgentCapability.WRITE_FILES);
         await this.logActivity('file_sync', 'pending', params);
-        return { status: 'synced' };
+        return { status: 'synced_to_cloud' };
     }
 }
+

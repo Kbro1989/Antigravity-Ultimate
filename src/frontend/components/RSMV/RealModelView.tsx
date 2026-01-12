@@ -83,7 +83,7 @@ export const RealModelView: React.FC<RealModelViewProps> = ({ modelId, filePath,
                     }
                 } else if (filePath) {
                     if (filePath.toLowerCase().endsWith('.nif')) {
-                        const { BethesdaAssetService } = await import('../../../services/bethesdaAssetService');
+                        const { BethesdaAssetService } = await import('../../../services/game/BethesdaAssetService');
                         // Infer game source from path or context (for now defaulting to morrowind as it's the main target)
                         // In a real app we'd pass this prop or derive it.
                         // However, filePath in indexedModels usually implies a known source.

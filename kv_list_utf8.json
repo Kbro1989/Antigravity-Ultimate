@@ -1,11 +1,32 @@
-﻿
-wrangler kv:namespace list
-
-Output a list of all KV namespaces associated with your account id
-
-GLOBAL FLAGS
-  -c, --config   Path to Wrangler configuration file  [string]
-      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-  -h, --help     Show help  [boolean]
-  -v, --version  Show version number  [boolean]
+﻿[
+  {
+    "id": "d2115d86d630412a92875739f813eeea",
+    "title": "ASSET_NAMESPACE",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "4e0486384e414f548dc71a41ed629b97",
+    "title": "pog-sites_assets",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "f2881801ac59415a86236d0841f27103",
+    "title": "RSC_PLAYERS_v2",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "6b8ebd5a1a134b67b6e12a5a5675e884",
+    "title": "SESSION_KV",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "b6da4d0c89f843409c799eb8b9005e6b",
+    "title": "To-Do List App",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "58fba013729b43cc9024c7ee86e2b82b",
+    "title": "VARIABLES",
+    "supports_url_encoding": true
+  }
+]

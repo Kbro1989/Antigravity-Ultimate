@@ -1,26 +1,27 @@
-# Large Platform Reference (19.8GB)
+# External Desktop References
+webviewer-deconstructed/
 reference/
 reference/**
+/reference/
+/C:/Users/Destiny/Desktop/New folder/reference/
 
-# TSC Error Reports & Build Logs
-tsc_*.txt
-tsc_*.log
-tsc_errors.txt
-tsc_errors*.log
-tsc_output*.txt
-tsc_output*.log
-tsc_full*.log
-type-check-*.txt
-typecheck_output.txt
-build_log*.txt
-debug_result.txt
-*.log
-!dist/**/*.log # Keep any needed logs in dist if they exist
-
-# Standard JS / Workspace Exclusions (Safety)
-node_modules/
+# Large Snapshots & Combined Files
+combined_scripts.txt
+project_basic_info_snapshot.txt
+worker-configuration.d.ts
+*.bin
+public/dist/
+public/assets/
+dist/
 .wrangler/
+.wrangler/state/
 .vscode/
 .idea/
 .DS_Store
 
+# Standard JS / Workspace Exclusions (Safety)
+node_modules/
+
+
+# External Desktop References
+webviewer-deconstructed/

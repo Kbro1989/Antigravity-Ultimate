@@ -26,19 +26,28 @@ export class VariantRouter {
     }
 
     async getAsset(path: string, env: Env, request: Request, ctx: ExecutionContext): Promise<Response> {
+        // Fix for "Key name cannot be empty" - if path is / we should look for /index.html
+        const normalizedPath = path === '/' ? '/index.html' : path;
+
         // Path: /assets/AnimationWorkspace-XXXXXXXX.js
-        const match = path.match(/^\/assets\/(.+?)-([A-Za-z0-9_-]{8,})\.js$/);
+        const match = normalizedPath.match(/^\/assets\/(.+?)-([A-Za-z0-9_-]{8,})\.js$/);
 
         // Construct the event object expected by getAssetFromKV
         const kvEvent = {
-            request,
+            request: new Request(`${new URL(request.url).origin}${normalizedPath}`, request),
             waitUntil: (p: Promise<any>) => ctx.waitUntil(p)
         };
 
         // Helper for manifest parsing
         const getManifest = () => {
             try {
-                return JSON.parse(env.__STATIC_CONTENT_MANIFEST as unknown as string);
+                const raw = env.__STATIC_CONTENT_MANIFEST as any;
+                if (!raw) return {};
+                let data = raw;
+                if (typeof data === 'object' && 'default' in data) {
+                    data = data.default;
+                }
+                return typeof data === 'string' ? JSON.parse(data) : data;
             } catch (e) {
                 return {};
             }
@@ -47,7 +56,7 @@ export class VariantRouter {
         // If it's not a hashed asset, or we fail routing, pass through to KV handler
         if (!match) {
             return getAssetFromKV(kvEvent, {
-                mapRequestToAsset: (req) => new Request(req.url, req),
+                mapRequestToAsset: (req) => req,
                 ASSET_NAMESPACE: env.__STATIC_CONTENT,
                 ASSET_MANIFEST: getManifest()
             });

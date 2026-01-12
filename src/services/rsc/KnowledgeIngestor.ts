@@ -1,5 +1,5 @@
 import { VectorMemory } from '../ai/VectorMemory';
-import { localBridgeClient } from '../bridge/LocalBridgeService';
+// Sovereignty: Static bridge import removed to ensure zero cloud dependency.
 
 export class KnowledgeIngestor {
     constructor(private memory: VectorMemory) { }
@@ -9,27 +9,65 @@ export class KnowledgeIngestor {
      * Uses LocalBridge to read the files.
      */
     async ingestCanonicalData(projectRoot: string) {
-        if (!localBridgeClient.getStatus().isConnected) {
-            console.log('[KnowledgeIngestor] Skipping ingestion: LocalBridge not connected');
+        // Sovereignty: Optional bridge lookup
+        const bridge = await this.getBridge();
+        if (!bridge || !bridge.getStatus().isConnected) {
+            console.log('[KnowledgeIngestor] Skipping ingestion: Bridge not connected or unavailable');
             return;
         }
 
         console.log('[KnowledgeIngestor] Starting ingestion...');
 
-        // Use forward slashes for cross-platform compatibility
+        // 1. Core Configs (Incremental)
         const itemsPath = `${projectRoot}/rsc-data/config/items.json`.replace(/\\/g, '/');
         const npcsPath = `${projectRoot}/rsc-data/config/npcs.json`.replace(/\\/g, '/');
 
-        await this.ingestFile(itemsPath, 'rsc_item', 'name');
-        await this.ingestFile(npcsPath, 'rsc_npc', 'name');
+        await this.ingestFile(bridge, itemsPath, 'rsc_item', 'name');
+        await this.ingestFile(bridge, npcsPath, 'rsc_npc', 'name');
+
+        // 2. 30GB Binary Forensic Scaling (.jag headers)
+        const dataPath = `${projectRoot}/public/data204`.replace(/\\/g, '/');
+        await this.ingestArchives(bridge, dataPath);
 
         console.log('[KnowledgeIngestor] Ingestion complete.');
     }
 
-    private async ingestFile(path: string, type: string, labelKey: string) {
+    private async getBridge() {
+        try {
+            const { localBridgeClient } = await import('../bridge/LocalBridgeService');
+            return localBridgeClient;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    private async ingestArchives(bridge: any, dirPath: string) {
+        try {
+            console.log(`[KnowledgeIngestor] Scanning for Archives in ${dirPath}...`);
+            const list = await bridge.listDirectory(dirPath);
+            if (!list.success || !list.files) return;
+
+            const jagFiles = list.files.filter((f: any) => f.name.endsWith('.jag'));
+            console.log(`[KnowledgeIngestor] Found ${jagFiles.length} archives to index.`);
+
+            for (const file of jagFiles) {
+                const filePath = `${dirPath}/${file.name}`;
+                // Index the archive name itself as a relic
+                await this.memory.store({
+                    id: `rsc_relic:${file.name}`,
+                    text: `Canonical RSC Relic Archive: ${file.name} (Source: 30GB Knowledge Cortex)`,
+                    metadata: { type: 'relic_archive', filename: file.name, path: filePath }
+                });
+            }
+        } catch (e) {
+            console.error(`[KnowledgeIngestor] Binary Sweep Failed:`, e);
+        }
+    }
+
+    private async ingestFile(bridge: any, path: string, type: string, labelKey: string) {
         try {
             console.log(`[KnowledgeIngestor] Reading ${path}...`);
-            const result = await localBridgeClient.readLocalFile(path);
+            const result = await bridge.readLocalFile(path);
             if (!result.success || typeof result.content === 'undefined') {
                 throw new Error(result.error || `Failed to read file: ${path}`);
             }

@@ -3,8 +3,7 @@ import { AgentCapability } from '../AgentConstitution';
 import { BaseIntent } from '../AITypes';
 import { LandscapeGenerator } from '../../rsmv/map/LandscapeGenerator';
 import { CollisionMapGenerator } from '../../rsmv/map/CollisionMapGenerator';
-import * as fs from 'fs';
-import * as path from 'path';
+import { Buffer } from 'buffer'; // Use cloud-native buffer shim
 
 export interface LandscapeRequest {
     name: string;
@@ -27,13 +26,19 @@ export class LandscapeGenerationLimb extends NeuralLimb {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
         await this.logActivity('generate_landscape', 'pending', { name: params.name });
 
-        // RSC Forensic Version Mapping
+        // RSC Forensic Version Mapping (Cloud Sovereign)
         let referenceTemplate: Buffer | null = null;
-        if (params.baseVersion.includes('63') || params.baseVersion === 'relic') {
-            const refPath = path.join(process.cwd(), 'reference', 'rsc-cloudflare', 'rsc-data', 'landscape', 'land63.jag');
-            if (fs.existsSync(refPath)) {
-                console.log(`[LandscapeLimb] Sourcing salvaged relic template: land63.jag`);
-                referenceTemplate = fs.readFileSync(refPath);
+        if ((params.baseVersion.includes('63') || params.baseVersion === 'relic') && this.env?.ASSETS_BUCKET) {
+            try {
+                const r2Path = `landscape/land63.jag`;
+                const r2Object = await this.env.ASSETS_BUCKET.get(r2Path);
+                if (r2Object) {
+                    console.log(`[LandscapeLimb] Sourcing salvaged relic template from R2: ${r2Path}`);
+                    const arrayBuffer = await r2Object.arrayBuffer();
+                    referenceTemplate = Buffer.from(arrayBuffer);
+                }
+            } catch (e) {
+                console.warn('[LandscapeLimb] Cloud template fetch failed:', e);
             }
         }
 

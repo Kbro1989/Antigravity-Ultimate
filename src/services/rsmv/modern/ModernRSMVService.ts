@@ -25,29 +25,48 @@ export class ModernRSMVService implements IRSMVService {
     async linkLocalCache(path: string = 'C:\\ProgramData\\Jagex\\RuneScape'): Promise<boolean> {
         await this.ensureInitialized();
 
-        const files = await localBridgeClient.listDirectory(path);
-        if (!files?.success || !files.files) {
-            console.error(`RSMV: Failed to read cache at ${path}`);
-            return false;
-        }
-
         const dbFiles: Record<string, Blob> = {};
-        for (const file of files.files) {
-            if (file.name.endsWith('.jcache')) {
-                const data = await localBridgeClient.readLocalFile(file.path, true);
-                if (data.success && data.content) {
-                    const binaryString = atob(data.content);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
+
+        if (this.config.env?.ASSETS_BUCKET) {
+            // --- CLOUD-NATIVE: R2 LOADING ---
+            console.log(`[ModernRSMV] Loading cache from R2 prefix: ${path}`);
+            const list = await this.config.env.ASSETS_BUCKET.list({ prefix: path + '/' });
+
+            for (const obj of list.objects) {
+                if (obj.key.endsWith('.jcache')) {
+                    const res = await this.config.env.ASSETS_BUCKET.get(obj.key);
+                    if (res) {
+                        const arr = await res.arrayBuffer();
+                        const filename = obj.key.split('/').pop()!;
+                        dbFiles[filename] = new Blob([arr]);
                     }
-                    dbFiles[file.name] = new Blob([bytes]);
+                }
+            }
+        } else {
+            // --- OPTIONAL LOCAL BRIDGE FALLBACK ---
+            const files = await localBridgeClient.listDirectory(path);
+            if (!files?.success || !files.files) {
+                console.error(`RSMV: Failed to read cache at ${path}`);
+                return false;
+            }
+
+            for (const file of files.files) {
+                if (file.name.endsWith('.jcache')) {
+                    const data = await localBridgeClient.readLocalFile(file.path, true);
+                    if (data.success && data.content) {
+                        const binaryString = atob(data.content);
+                        const bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        dbFiles[file.name] = new Blob([bytes]);
+                    }
                 }
             }
         }
 
         if (Object.keys(dbFiles).length === 0) {
-            console.warn("RSMV: No .jcache files found in the specified directory");
+            console.warn("RSMV: No .jcache files found.");
             return false;
         }
 

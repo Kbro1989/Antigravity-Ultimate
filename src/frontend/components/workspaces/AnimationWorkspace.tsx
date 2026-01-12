@@ -10,8 +10,8 @@ export function AnimationWorkspace() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [activeLayer, setActiveLayer] = useState('Base_Walk');
-    const [animationUrl, setAnimationUrl] = useState<string | null>(null);
-    const [modelUrl, setModelUrl] = useState<string | null>("models://humanoid_generic");
+    const [animationUrl, setAnimationUrl] = useState<string | undefined>(undefined);
+    const [modelUrl, setModelUrl] = useState<string | undefined>("models://humanoid_generic");
 
     const handleRetarget = async () => {
         setIsProcessing(true);

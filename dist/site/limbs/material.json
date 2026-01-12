@@ -1,8 +1,0 @@
-{
-  "id": "material",
-  "version": "6.5.0-CORE",
-  "status": "READY",
-  "endpoint": "/limbs/material",
-  "payload": "/dist/material.bin",
-  "capabilities": []
-}

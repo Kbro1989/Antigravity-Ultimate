@@ -1,5 +1,5 @@
 import { NeuralLimb, LimbConfig } from './NeuralLimb';
-import { CLIBridge } from '../../cli/CLIBridge';
+// CLIBridge import removed for Sovereignty (Dynamically loaded)
 import { AgentCapability } from '../AgentConstitution';
 import { modelRouter } from '../ModelRouter';
 import { BaseIntent } from '../AITypes';
@@ -17,11 +17,16 @@ interface CodeIntentPayload {
 }
 
 export class CodeLimb extends NeuralLimb {
-    private bridge: CLIBridge;
-
     constructor(config: LimbConfig) {
         super(config);
-        this.bridge = CLIBridge.getInstance();
+        // Sovereignty: Bridge initialization is deferred to dynamic usage
+    }
+
+    private async getSafeBridge() {
+        const { CLIBridge } = await import('../../cli/CLIBridge');
+        const bridge = CLIBridge.getInstance();
+        if (!bridge) throw new Error('[Sovereignty Shield] CLIBridge is offline. Local code operations are restricted to cloud-native sandboxes.');
+        return bridge;
     }
 
     async analyze_complexity(params: CodeIntentPayload, intent: BaseIntent) {
@@ -37,7 +42,8 @@ export class CodeLimb extends NeuralLimb {
     async read(params: CodeIntentPayload) {
         this.enforceCapability(AgentCapability.READ_FILES);
         if (!params.path) throw new Error("Missing path for read operation");
-        return await this.bridge.readFile(params.path);
+        const bridge = await this.getSafeBridge();
+        return await bridge.readFile(params.path);
     }
 
     async write(params: CodeIntentPayload) {
@@ -45,7 +51,8 @@ export class CodeLimb extends NeuralLimb {
         if (!params.confirm) {
             throw new Error('[HITL Shield] File writes require explicit user confirmation. Add { confirm: true } to payload.');
         }
-        return await this.bridge.writeFile(params.path!, params.content!);
+        const bridge = await this.getSafeBridge();
+        return await bridge.writeFile(params.path!, params.content!);
     }
 
     async complete(params: CodeIntentPayload, intent: BaseIntent) {
@@ -80,7 +87,8 @@ export class CodeLimb extends NeuralLimb {
 
     async test(params: CodeIntentPayload) {
         this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
-        return await this.bridge.runCommand(`npm run test ${params.path || ''}`);
+        const bridge = await this.getSafeBridge();
+        return await bridge.runCommand(`npm run test ${params.path || ''}`);
     }
 
     async generate_code(params: CodeIntentPayload, intent: BaseIntent) {
@@ -147,17 +155,29 @@ export class CodeLimb extends NeuralLimb {
     /**
      * RECONSTRUCT FORENSIC HANDLING: Authentic JS Logic
      * Retrieves the JS handling logic from the reference implementation.
+     * Sovereignty: This operation is restricted to environments with local bridge access.
      */
     async reconstruct_forensic_handling(params: { id: number; type: 'npc' | 'item' | 'object' | 'spell' | 'prayer' }) {
         this.enforceCapability(AgentCapability.READ_FILES);
         const { id, type } = params;
 
-        const root = process.cwd();
+        // Sovereignty Shield: Local FS operations are restricted
+        let bridge;
+        try {
+            bridge = await this.getSafeBridge();
+        } catch (e) {
+            return {
+                status: 'error',
+                message: "[Sovereignty Alert] Forensic reconstruction requires a Local Bridge connection to access historical reference archives."
+            };
+        }
+
+        const root = (typeof process !== 'undefined' && process.cwd) ? process.cwd() : '/';
         const refRoot = path.join(root, 'reference', 'rsc-cloudflare', 'rsc-server', 'src', 'plugins');
 
         try {
             const constantsPath = path.join(root, 'reference', 'rsc-cloudflare', 'rsc-server', 'src', 'constants', 'ids.js');
-            const constants = await this.bridge.readFile(constantsPath);
+            const constants = await bridge.readFile(constantsPath);
 
             const typeKey = type === 'npc' ? 'Npcs' : type === 'item' ? 'Items' : type === 'object' ? 'Objects' : null;
             let constantName = '';
@@ -169,11 +189,11 @@ export class CodeLimb extends NeuralLimb {
             }
 
             const searchTerm = constantName ? `${typeKey}.${constantName}` : id.toString();
-            const searchResult = await this.bridge.runCommand(`grep -r "${searchTerm}" "${refRoot}"`);
+            const searchResult = await bridge.runCommand(`grep -r "${searchTerm}" "${refRoot}"`);
 
             if (searchResult && searchResult.includes(':')) {
                 const firstFile = searchResult.split(':')[0].trim();
-                const logic = await this.bridge.readFile(firstFile);
+                const logic = await bridge.readFile(firstFile);
 
                 return {
                     status: 'success',

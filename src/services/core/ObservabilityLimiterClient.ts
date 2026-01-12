@@ -89,7 +89,8 @@ export class ObservabilityLimiterClient {
     }
 
     private requestTokens(count: number): void {
-        if (this.ws?.readyState === WebSocket.OPEN) {
+        const WS_OPEN = typeof WebSocket !== 'undefined' ? WebSocket.OPEN : 1;
+        if (this.ws?.readyState === WS_OPEN) {
             this.ws.send(JSON.stringify({
                 type: 'REQUEST_TOKENS',
                 count

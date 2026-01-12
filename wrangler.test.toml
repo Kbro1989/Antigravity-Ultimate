@@ -1,0 +1,33 @@
+name = "pog-ultimate-test"
+main = "src/index.ts"
+compatibility_date = "2026-01-06"
+compatibility_flags = [ "nodejs_compat" ]
+account_id = "6872653edcee9c791787c1b783173793"
+
+# Durable Objects for Agents
+[durable_objects]
+bindings = [
+  { name = "SESSION_AGENT", class_name = "SessionAgent" },
+  { name = "COLLABORATION_SERVER", class_name = "Collaboration" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["SessionAgent", "Collaboration"]
+
+# AI Binding
+[ai]
+binding = "AI"
+
+# KV Namespace for Cache
+[[kv_namespaces]]
+binding = "CACHE"
+id = "4a452d73838945b5a3065ef63c68d951"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "4a452d73838945b5a3065ef63c68d951"
+
+[[kv_namespaces]]
+binding = "BRAIN"
+id = "4c5b0b6debf347828647fdcc76824a60"

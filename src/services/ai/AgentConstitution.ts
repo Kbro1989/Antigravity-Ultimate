@@ -26,7 +26,8 @@ export enum AgentCapability {
     MESH_OPERATIONS = 'MESH_OPERATIONS',
     IMAGE_OPERATIONS = 'IMAGE_OPERATIONS',
     WORLD_STATE_WRITE = 'WORLD_STATE_WRITE',
-    NEGOTIATE_INTENT = 'NEGOTIATE_INTENT'
+    NEGOTIATE_INTENT = 'NEGOTIATE_INTENT',
+    SECURITY_AUDIT = 'SECURITY_AUDIT'
 }
 
 export enum AgentLawType {
@@ -103,9 +104,10 @@ export function assertCapability(limbName: string, capability: AgentCapability, 
         "VFXLimb": [AgentCapability.IMAGE_OPERATIONS, AgentCapability.AI_INFERENCE],
         "EnvironmentLimb": [AgentCapability.WORLD_STATE_WRITE, AgentCapability.READ_FILES],
         "RelicLimb": [AgentCapability.READ_FILES, AgentCapability.EXECUTE_COMMAND],
-        "RealityLimb": [AgentCapability.READ_FILES, AgentCapability.WRITE_FILES, AgentCapability.MEMORY_QUERY, AgentCapability.WORLD_STATE_WRITE],
+        "RealityLimb": [AgentCapability.READ_FILES, AgentCapability.WRITE_FILES, AgentCapability.MEMORY_QUERY, AgentCapability.WORLD_STATE_WRITE, AgentCapability.SECURITY_AUDIT],
         "VersionControlLimb": [AgentCapability.READ_FILES, AgentCapability.COMMIT_CHANGES, AgentCapability.EXECUTE_COMMAND],
-        "GhostLimb": [AgentCapability.AI_INFERENCE, AgentCapability.EXECUTE_COMMAND, AgentCapability.READ_FILES, AgentCapability.MODIFY_CODE]
+        "GhostLimb": [AgentCapability.AI_INFERENCE, AgentCapability.EXECUTE_COMMAND, AgentCapability.READ_FILES, AgentCapability.MODIFY_CODE],
+        "IDAuditorLimb": [AgentCapability.MEMORY_QUERY, AgentCapability.WRITE_FILES]
     };
 
     const allowedCapabilities = limbManifest[limbName] || [];

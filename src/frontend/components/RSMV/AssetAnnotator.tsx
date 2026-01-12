@@ -105,7 +105,7 @@ export const AssetAnnotator: React.FC<AssetAnnotatorProps> = ({ asset, onSave, o
                             <label className="text-[8px] font-black text-white/60 uppercase">Category</label>
                             <select
                                 value={category}
-                                onChange={(e) => setCategory(e.target.value)}
+                                onChange={(e) => setCategory(e.target.value as any)}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] text-white focus:outline-none focus:border-neon-cyan/50 transition-all font-bold appearance-none cursor-pointer"
                             >
                                 <option value="items">Items</option>

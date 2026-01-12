@@ -110,7 +110,7 @@ const TASK_PATTERNS: Array<{ pattern: RegExp; models: ModelCatalogKey[]; priorit
 
 export interface ModelRequest {
     userId?: string;
-    type: 'text' | 'image' | 'audio' | 'video' | 'code' | 'stt' | 'tts' | 'rsc_material' | 'function_calling' | 'image-to-3d' | 'animation';
+    type: 'text' | 'image' | 'audio' | 'video' | 'code' | 'stt' | 'tts' | 'rsc_material' | 'function_calling' | 'image-to-3d' | 'animation' | 'upscale' | 'remove_background' | 'translation' | 'summarization' | 'sentiment';
     prompt: string;
     history?: Array<{ role: 'user' | 'model'; content: string }>;
     systemPrompt?: string;
@@ -139,12 +139,30 @@ export interface ModelResponse {
     modelUrl?: string;
     functionCalls?: any[];
     model: string;
-    provider: 'gemini' | 'cloudflare' | 'local' | 'local-rsmv' | 'unknown';
+    provider: 'gemini' | 'cloudflare' | 'local' | 'local-rsmv' | 'emergency' | 'unknown';
     latency: number;
     tokensUsed?: number;
     cost?: number;
     metadata?: any;
     provenance?: string;
+}
+
+/**
+ * HopCircuitBreaker - Prevents the 32-hop "Recursive Trap"
+ */
+class HopCircuitBreaker {
+    static check(request: Request | any) {
+        // cf-ew-via contains the number of worker invocations
+        const hopsHeader = request.headers?.get('cf-ew-via');
+        if (hopsHeader) {
+            const hops = hopsHeader.split(',').length;
+            if (hops > 25) {
+                console.warn(`[HopCircuitBreaker] High hop count detected: ${hops}. Activating circuit breaker.`);
+                return { tripped: true, hops };
+            }
+        }
+        return { tripped: false, hops: 0 };
+    }
 }
 
 export async function route(request: ModelRequest, env: any): Promise<ModelResponse | ReadableStream> {
@@ -222,24 +240,57 @@ export async function route(request: ModelRequest, env: any): Promise<ModelRespo
         throw new Error(`[SECURITY] ${validation.error}`);
     }
 
-    // 4. Execution Pipeline (Cloudflare First -> Gemini Fallback)
-    const pipeline = [];
+    // 4. Execution Pipeline (Vickrey Auction Logic)
+    const options: Array<{ provider: string; executor: any; confidence: number; cost: number }> = [];
 
-    // Explicit Provider
-    if (activeRequest.provider === 'gemini') {
-        pipeline.push({ provider: 'gemini', executor: routeToGemini });
-    } else if (activeRequest.provider === 'cloudflare') {
-        pipeline.push({ provider: 'cloudflare', executor: routeToCloudflare });
-    } else {
-        // Auto-Routing via Metabolism Status
-        const quota = await costOptimizer.getQuota(activeRequest.userId || 'anonymous', env);
+    // Gather "Bids" from providers based on quota
+    const quota = await costOptimizer.getQuota(activeRequest.userId || 'anonymous', env);
 
-        if (quota.cloudflare.tokens > 0) {
-            pipeline.push({ provider: 'cloudflare', executor: routeToCloudflare });
-        }
-        if (quota.gemini.budget > 0) {
-            pipeline.push({ provider: 'gemini', executor: routeToGemini });
-        }
+    // Bid 1: Cloudflare
+    if (quota.cloudflare.tokens > 0) {
+        options.push({
+            provider: 'cloudflare',
+            executor: routeToCloudflare,
+            confidence: 0.90, // Baseline CF confidence
+            cost: 0
+        });
+    }
+
+    // Bid 2: Gemini
+    if (quota.gemini.budget > 0) {
+        options.push({
+            provider: 'gemini',
+            executor: routeToGemini,
+            confidence: 0.98, // High Gemini confidence
+            cost: 0.0005 // Average cost per 1K
+        });
+    }
+
+    // Vickrey Selection: Rank by Utility (Confidence / (Cost + 1))
+    const sortedOptions = options.sort((a, b) => (b.confidence / (b.cost + 1)) - (a.confidence / (a.cost + 1)));
+
+    const pipeline = sortedOptions.map(o => ({ provider: o.provider, executor: o.executor }));
+
+    if (pipeline.length === 0) {
+        console.warn('[ROUTER] No sustainable routes found. Checking local survival fallback.');
+        pipeline.push({
+            provider: 'emergency',
+            executor: async () => {
+                const { WasmEmergencyService } = await import('./emergency/WasmEmergencyService');
+                return { content: "Emergency Fallback: AI systems offline.", model: 'wasm-deterministic', provider: 'emergency', latency: 0 };
+            }
+        });
+    }
+
+    // --- Hop Guard Protection ---
+    const circuit = HopCircuitBreaker.check(env.request || {});
+    if (circuit.tripped) {
+        return {
+            content: "Architectural Guardrail Tripped: hop limit (32) approached. System halting safety protocol active.",
+            model: 'hop-limit-breaker',
+            provider: 'local',
+            latency: Date.now() - startTime
+        };
     }
 
     // 5. Special Handling: RSC Pipeline
@@ -258,16 +309,13 @@ export async function route(request: ModelRequest, env: any): Promise<ModelRespo
         }
     }
 
-    // ... (rest of the pipeline execution logic is identical to previous, just re-using it) ...
-    // To save context window space, I will re-implement the execution loop concisely
-
+    // 6. Pipeline Execution
     let finalResponse: ModelResponse | ReadableStream | undefined;
     let lastError: any;
 
     for (const step of pipeline) {
         try {
-            // console.log(`[ROUTER] Attempting ${step.provider}...`);
-            const result = await step.executor(activeRequest, undefined); // Signal logic omitted for brevity in this rewrite step
+            const result = await step.executor(activeRequest, env, undefined);
 
             if (result instanceof ReadableStream) return result;
 
@@ -313,7 +361,7 @@ export async function route(request: ModelRequest, env: any): Promise<ModelRespo
 // We need to keep routeToGemini and routeToCloudflare but ensuring routeToCloudflare uses the `modelId`
 // passed to it.
 
-async function routeToGemini(request: ModelRequest, signal?: AbortSignal): Promise<any> {
+async function routeToGemini(request: ModelRequest, env: any, signal?: AbortSignal): Promise<any> {
     // ... Keep existing implementation ...
     // For this artifact I will assume specific implementation details are preserved
     // or imported from the previous file if I was editing partially.
@@ -336,7 +384,7 @@ async function routeToGemini(request: ModelRequest, signal?: AbortSignal): Promi
     }
 }
 
-async function routeToCloudflare(request: ModelRequest, signal?: AbortSignal): Promise<any> {
+async function routeToCloudflare(request: ModelRequest, env: any, signal?: AbortSignal): Promise<any> {
     // This is where the magic happens - we use the resolved modelId
     const targetModel = request.modelId || MODELS.GPT_OSS;
 
@@ -382,6 +430,21 @@ async function routeToCloudflare(request: ModelRequest, signal?: AbortSignal): P
         case 'animation':
             // Fallback for AnimationLimb requests
             throw new Error("Native Animation Model not bound. Use VideoLimb/AnimationLimb for Sprite Sheet/Rig generation.");
+        case 'remove_background':
+            const rmRes = await (env.AI as any).run('@cf/facebook/detr-resnet-50', { image: request.prompt }); // Assuming prompt is base64 for now or needs conversion
+            return { content: JSON.stringify(rmRes), model: '@cf/facebook/detr-resnet-50' };
+        case 'translation':
+            const transRes = await (env.AI as any).run(MODELS.TRANSLATION, { text: request.prompt, target_lang: request.language || 'en' });
+            return { content: transRes.translated_text, model: MODELS.TRANSLATION };
+        case 'summarization':
+            const sumRes = await (env.AI as any).run(MODELS.SUMMARIZATION, { input_text: request.prompt });
+            return { content: sumRes.summary_text, model: MODELS.SUMMARIZATION };
+        case 'sentiment':
+            const sentRes = await (env.AI as any).run(MODELS.SENTIMENT, { text: request.prompt });
+            return { content: JSON.stringify(sentRes), model: MODELS.SENTIMENT };
+        case 'stt':
+            const sttRes = await (env.AI as any).run(MODELS.STT, { audio: request.prompt }); // Binary/Base64
+            return { content: sttRes.text, model: MODELS.STT };
         default:
             throw new Error(`Unsupported CF type: ${request.type}`);
     }

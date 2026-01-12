@@ -7,7 +7,7 @@
  * - Uses Cloudflare Workers for server-side isolation
  */
 
-import { localBridgeClient } from '../bridge/LocalBridgeService';
+// localBridgeClient import removed for Sovereignty (Dynamically loaded)
 
 export interface ExecutionResult {
     success: boolean;
@@ -23,29 +23,35 @@ export class CodeRunner {
     async execute(code: string, runtime: 'node' | 'browser' | 'cloud-worker' = 'node'): Promise<ExecutionResult> {
         console.log(`[CodeRunner] Requesting execution in ${runtime}`);
 
-        // 1. Local Node Execution (via Bridge)
+        // 1. Local Node Execution (via Bridge - Optional Extension)
         if (runtime === 'node') {
-            if (localBridgeClient.getStatus().isConnected) {
-                // We use a temporary file approach or direct eval command
-                // For safety, we'll try to write a temp file
-                const timestamp = Date.now();
-                const tempPath = `C:\\Temp\\ag_exec_${timestamp}.js`;
+            try {
+                const { localBridgeClient } = await import('../bridge/LocalBridgeService');
+                if (localBridgeClient.getStatus().isConnected) {
+                    // We use a temporary file approach or direct eval command
+                    // For safety, we'll try to write a temp file
+                    const timestamp = Date.now();
+                    const tempPath = `C:\\Temp\\ag_exec_${timestamp}.js`;
 
-                try {
-                    // Write Code
-                    await localBridgeClient.writeLocalFile(tempPath, code);
-                    // Execute
-                    const result = await localBridgeClient.runTerminalCommand(`node ${tempPath}`);
-                    return {
-                        success: result.success,
-                        output: result.output || result.error,
-                        runtime: 'node'
-                    };
-                } catch (e: any) {
-                    return { success: false, error: e.message, runtime: 'node' };
+                    try {
+                        // Write Code
+                        await localBridgeClient.writeLocalFile(tempPath, code);
+                        // Execute
+                        const result = await localBridgeClient.runTerminalCommand(`node ${tempPath}`);
+                        return {
+                            success: result.success,
+                            output: result.output || result.error,
+                            runtime: 'node'
+                        };
+                    } catch (e: any) {
+                        return { success: false, error: e.message, runtime: 'node' };
+                    }
+                } else {
+                    console.warn('[CodeRunner] Bridge disconnected, falling back to Mock Cloud');
+                    runtime = 'cloud-worker';
                 }
-            } else {
-                console.warn('[CodeRunner] Bridge disconnected, falling back to Mock Cloud');
+            } catch (e) {
+                console.warn('[CodeRunner] Bridge unavailable in this environment, falling back to Mock Cloud');
                 runtime = 'cloud-worker';
             }
         }

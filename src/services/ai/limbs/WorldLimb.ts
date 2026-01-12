@@ -125,9 +125,8 @@ export class WorldLimb extends NeuralLimb {
         // 2. Persist to Innovation Layer
         if (isMuseumSector) {
             await this.persistAsset('world_patch', `staged://${targetDir}/patch_${sectorId}.json`, {
-                operation: 'add_object',
-                entity
-            });
+                operation: 'add_object'
+            }, JSON.stringify(entity, null, 2));
         }
 
         await this.logActivity('place_object', 'success', { objectId, coords, forked: isMuseumSector });

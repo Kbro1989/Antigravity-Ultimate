@@ -23,6 +23,7 @@ export interface RSMVServiceConfig {
     glbBaseUrl?: string;
     useGlbFirst?: boolean;
     stagedPath?: string;
+    env?: any; // Cloudflare Environment
 }
 
 export interface IRSMVService {

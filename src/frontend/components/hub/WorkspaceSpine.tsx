@@ -199,6 +199,19 @@ export function WorkspaceSpine({ workspace, onToolSelect }: WorkspaceSpineProps)
             { id: 'view', icon: '👁️', label: 'Viewer', hotkey: 'V', color: '#00ffff', capability: 'explore_museum', defaultParams: {} },
             { id: 'convert', icon: '♻️', label: 'Transcode', hotkey: 'T', color: '#00ff80', capability: 'salvage_relic', defaultParams: { relicType: 'gltf' } },
         ],
+        landscape: [
+            { id: 'generate', icon: '🌄', label: 'Genesis', hotkey: 'G', color: '#00ff80', capability: 'generate', defaultParams: { name: 'New Land', baseVersion: 'relic', width: 64, height: 64, biomes: ['tropical'] } },
+            { id: 'audit', icon: '🔍', label: 'Forensics', hotkey: 'A', color: '#00ffff', capability: 'audit', defaultParams: {} },
+        ],
+        idauditor: [
+            { id: 'npc', icon: '👤', label: 'NPC Audit', hotkey: 'N', color: '#ff00ff', capability: 'audit_npc_database', defaultParams: {} },
+            { id: 'item', icon: '🗡️', label: 'Item Audit', hotkey: 'I', color: '#00ffff', capability: 'audit_item_database', defaultParams: {} },
+            { id: 'stats', icon: '📊', label: 'Stats', hotkey: 'S', color: '#00ff80', capability: 'get_innovation_stats', defaultParams: {} },
+        ],
+        versioncontrol: [
+            { id: 'commit', icon: '💾', label: 'Persist', hotkey: 'C', color: '#00ff80', capability: 'commit_cache', defaultParams: {} },
+            { id: 'diff', icon: '🌗', label: 'Diff', hotkey: 'D', color: '#00ffff', capability: 'get_logs', defaultParams: {} },
+        ]
     }), []);
 
     const currentTools = tools[workspace] || tools.code;

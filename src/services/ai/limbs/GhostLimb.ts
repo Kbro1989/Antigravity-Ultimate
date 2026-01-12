@@ -70,73 +70,42 @@ export class GhostLimb extends NeuralLimb {
         };
     }
 
-    async self_correct(params: any) {
-        this.enforceCapability(AgentCapability.MODIFY_CODE);
-        // Only works in Bridge mode
-        try {
-            const { CLIBridge } = await import('../../cli/CLIBridge');
-            const bridge = CLIBridge.getInstance();
-            await bridge.execute('npm run prebuild');
-            return {
-                status: 'success',
-                correction: 'Executed prebuild sequence. Structural anchors realigned.',
-                confidence: 0.99
-            };
-        } catch (e) {
-            return { status: 'skipped', reason: 'CLIBridge not available in worker env' };
-        }
-    }
 
-    async reanimate(params: any) {
-        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
-        try {
-            const { CLIBridge } = await import('../../cli/CLIBridge');
-            const bridge = CLIBridge.getInstance();
-            await bridge.execute('npm run bridge:dev');
-            return {
-                status: 'success',
-                action: 'bridge_reanimated',
-                protocol: 'OXYGEN_VALVE_OPEN',
-                timestamp: Date.now()
-            };
-        } catch (e) {
-            return { status: 'skipped', reason: 'CLIBridge not available' };
-        }
-    }
 
     async stabilize(params: any) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
         this.enforceCapability(AgentCapability.READ_FILES);
 
-        // 1. Verify Local Assets (Trauma Armor)
-        let hasModels = false;
-        let activeModel = 'none';
-        let status = 'dormant';
+        // --- CLOUD SOVEREIGN STABILIZATION ---
+        let status = 'cloud_stable';
+        let aiHealth = 'nominal';
 
         try {
-            const { CLIBridge } = await import('../../cli/CLIBridge');
-            const bridge = CLIBridge.getInstance();
-            const assetsCheck = await bridge.listDirectory('reference/.ollama');
-            hasModels = assetsCheck && assetsCheck.length > 0;
+            // Verify Workers AI presence via simple check if possible
+            if (!this.env?.AI) {
+                status = 'degraded_reasoning';
+                aiHealth = 'binding_missing';
+            }
 
-            this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
-            const ping = await bridge.execute('curl -s http://localhost:11434/api/tags');
-            if (ping && ping.includes('models')) {
-                status = 'stabilized_local';
-                const knownModels = ['llama3.2', 'mistral', 'gemma'];
-                activeModel = knownModels.find(m => ping.includes(m)) || 'unknown_local';
+            // --- Hop-Aware Stabilization ---
+            const hopsHeader = (this.env as any).request?.headers?.get('cf-ew-via');
+            const hops = hopsHeader ? hopsHeader.split(',').length : 0;
+
+            if (hops > 20) {
+                status = 'stabilized_trauma_armor';
             }
         } catch (e) {
-            status = 'cloud_only';
+            status = 'unstable';
         }
 
         return {
             status,
-            system: 'stabilized',
-            anchor: `stable_${Date.now()}`,
+            system: 'sovereign',
+            ai_health: aiHealth,
+            anchor: `cloud_${Date.now()}`,
             armor: {
-                hasLocalAssets: hasModels,
-                activeModel
+                cloudPrimacy: true,
+                isolated: true
             }
         };
     }

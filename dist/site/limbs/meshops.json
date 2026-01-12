@@ -1,8 +1,0 @@
-{
-  "id": "meshops",
-  "version": "6.5.0-CORE",
-  "status": "READY",
-  "endpoint": "/limbs/meshops",
-  "payload": "/dist/meshops.bin",
-  "capabilities": []
-}

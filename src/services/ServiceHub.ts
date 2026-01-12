@@ -24,9 +24,7 @@ import type { RealityAnchorService } from './ai/RealityAnchorService';
 import { circuitBreaker, securityService } from './core';
 import { tokenLedger } from './core/TokenLedger';
 
-// Bridge Services
-import { localBridgeClient } from './bridge';
-import { cliBridge } from './cli/CLIBridge';
+// Bridge Services (Dynamically loaded for Sovereignty)
 
 // FlowEngine handled via getter
 
@@ -141,20 +139,49 @@ export class ServiceHubClass {
     public infra = {
         circuitBreaker,
         security: securityService,
-        bridge: cliBridge,
+        bridge: {
+            get instance() {
+                // Warning: Accessing this statically in cloud mode will fail or return a stub
+                console.warn('[Sovereignty Shield] Direct access to infra.bridge is deprecated. Use async bridge operations.');
+                return null;
+            }
+        },
         ledger: tokenLedger
     };
 
-    // Bridge Operations
+    // Bridge Operations (Sovereign & Dynamic)
     public bridge = {
-        client: localBridgeClient,
-        readFile: (path: string) => cliBridge.readFile(path),
-        writeFile: (path: string, content: string) => cliBridge.writeFile(path, content),
-        listDir: (path: string) => cliBridge.listDirectory(path),
-        runCommand: (cmd: string) => cliBridge.runCommand(cmd),
-        execute: (cmd: string) => cliBridge.execute(cmd),
-        getStatus: () => localBridgeClient.getStatus(),
-        setSyncMode: (mode: any) => localBridgeClient.setSyncMode(mode)
+        get client() {
+            throw new Error("[Sovereignty Alert] Static access to bridge.client is prohibited. Use async methods.");
+        },
+        readFile: async (path: string) => {
+            const { cliBridge } = await import('./cli/CLIBridge');
+            return cliBridge.readFile(path);
+        },
+        writeFile: async (path: string, content: string) => {
+            const { cliBridge } = await import('./cli/CLIBridge');
+            return cliBridge.writeFile(path, content);
+        },
+        listDir: async (path: string) => {
+            const { cliBridge } = await import('./cli/CLIBridge');
+            return cliBridge.listDirectory(path);
+        },
+        runCommand: async (cmd: string) => {
+            const { cliBridge } = await import('./cli/CLIBridge');
+            return cliBridge.runCommand(cmd);
+        },
+        execute: async (cmd: string) => {
+            const { cliBridge } = await import('./cli/CLIBridge');
+            return cliBridge.execute(cmd);
+        },
+        getStatus: async () => {
+            const { localBridgeClient } = await import('./bridge/LocalBridgeService');
+            return localBridgeClient.getStatus();
+        },
+        setSyncMode: async (mode: any) => {
+            const { localBridgeClient } = await import('./bridge/LocalBridgeService');
+            return localBridgeClient.setSyncMode(mode);
+        }
     };
 
     // Neural Limbs

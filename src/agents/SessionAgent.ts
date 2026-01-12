@@ -38,7 +38,7 @@ export class SessionAgent extends DurableObject<Env> {
             return c.json({ error: err.message, stack: err.stack, path: c.req.path }, 500);
         });
 
-        this.services = new ServiceContainer(env, state.storage);
+        this.services = new ServiceContainer(env, state);
 
         // OKComputer-inspired AI orchestration
         this.negotiation = new AINegotiationProtocol(env);
@@ -54,6 +54,11 @@ export class SessionAgent extends DurableObject<Env> {
                     await this.memory.initialize();
                     console.log('[SessionAgent] Services Initialized Successfully');
                 }
+
+                // --- STATE REHYDRATION ---
+                await this.hydrateState();
+                console.log('[SessionAgent] State Rehydrated');
+
             } catch (e: any) {
                 console.error('[SessionAgent] Critical Init Error:', e);
                 // Attach error to state so we can see it in health check
@@ -80,6 +85,33 @@ export class SessionAgent extends DurableObject<Env> {
         this.setupRoutes();
     }
 
+    /**
+     * Rehydrates the agent's state from Durable Object storage.
+     */
+    private async hydrateState() {
+        const savedNecromancy = await this.state.storage.get<any>('state:necromancy');
+        if (savedNecromancy) {
+            const { NecromancyService } = await import('../services/game/NecromancyService');
+            const necromancy = NecromancyService.getInstance();
+            necromancy.hydrate(savedNecromancy);
+            console.log('[Rehydration] Found saved Necromancy state.');
+        }
+    }
+
+    /**
+     * Persists the agent's current state to Durable Object storage.
+     */
+    private async persistState() {
+        try {
+            const { NecromancyService } = await import('../services/game/NecromancyService');
+            const necromancy = NecromancyService.getInstance();
+            await this.state.storage.put('state:necromancy', necromancy.getState());
+            console.log('[Persistence] Session state saved to DO Storage.');
+        } catch (e) {
+            console.warn('[Persistence] Failed to save state:', e);
+        }
+    }
+
     setupRoutes() {
         this.app.get('/health', async (c) => {
             const initError = await this.state.storage.get('init_error');
@@ -88,6 +120,22 @@ export class SessionAgent extends DurableObject<Env> {
                 id: this.state.id.toString(),
                 initError
             });
+        });
+
+        this.app.get('/api/health', async (c) => {
+            try {
+                const limbHealth = await this.services.limbs.getHealthReport();
+                const initError = await this.state.storage.get('init_error');
+
+                return c.json({
+                    status: initError ? 'degraded' : 'active',
+                    session: this.state.id.toString(),
+                    limbs: limbHealth,
+                    timestamp: Date.now()
+                });
+            } catch (e: any) {
+                return c.json({ error: e.message }, 500);
+            }
         });
 
         // --- PUBLIC AI API ENDPOINTS ---
@@ -163,14 +211,17 @@ export class SessionAgent extends DurableObject<Env> {
                 if (limbId === 'vault') {
                     if (action === 'generate_upload_url') {
                         const { fileName, contentType } = payload;
-                        const objectKey = `vault/${this.state.id}/${Date.now()}-${fileName}`;
+                        // Use the innovations/ innovation layer path standard from NeuralLimb
+                        const objectKey = `innovations/uploads/${Date.now()}_${fileName}`;
 
-                        const simulatedUrl = `https://vault.pog.network/${objectKey}?token=pog_${Math.random().toString(36).substring(7)}`;
+                        // In the powerhouse architecture, we use internal routing
+                        const uploadUrl = `/api/vault/upload/${objectKey}`;
 
                         return c.json({
-                            uploadUrl: simulatedUrl,
+                            uploadUrl,
                             objectKey,
-                            method: 'PUT'
+                            method: 'PUT',
+                            headers: { 'Content-Type': contentType || 'application/octet-stream' }
                         });
                     }
 
@@ -186,6 +237,9 @@ export class SessionAgent extends DurableObject<Env> {
                         await this.state.storage.put(`asset:${id}`, {
                             id, type, url, timestamp: Date.now(), metadata
                         });
+
+                        // Trigger auto-persistence on save
+                        await this.persistState();
 
                         return c.json({ success: true, id });
                     }
@@ -236,6 +290,92 @@ export class SessionAgent extends DurableObject<Env> {
             } catch (e: any) {
                 return c.json({ error: e.message }, 500);
             }
+        });
+
+        // 7b. Manual Session Save (Checkpointed to D1 if available)
+        this.app.post('/api/save', async (c) => {
+            try {
+                await this.persistState();
+
+                // D1 Sync: Register character if online
+                const { NecromancyService } = await import('../services/game/NecromancyService');
+                const necromancy = NecromancyService.getInstance();
+                const state = necromancy.getState();
+
+                if (c.env.DB && state.isUnlocked) {
+                    await c.env.DB.prepare(
+                        "INSERT OR REPLACE INTO characters (id, user_id, name, class, level, is_online, created_at, game_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                    ).bind(
+                        this.state.id.toString(),
+                        'default_user', // Replace with real user ID if available
+                        'POG_ARCHER',
+                        'Necromancer',
+                        1,
+                        true,
+                        Date.now(),
+                        'classic'
+                    ).run();
+                    console.log('[D1_SYNC] Character profile updated in Global Registry.');
+                }
+
+                return c.json({ success: true, message: 'Session checkpointed' });
+            } catch (e: any) {
+                return c.json({ error: e.message }, 500);
+            }
+        });
+
+        // --- R2 ASSET ROUTING ---
+
+        // 8. PUT /api/vault/upload/:key (Internal Upload)
+        this.app.put('/api/vault/upload/:key{.+}', async (c) => {
+            const key = c.req.param('key');
+            if (!c.env.ASSETS_BUCKET) return c.json({ error: 'R2 Not Bound' }, 500);
+
+            try {
+                const body = await c.req.arrayBuffer();
+                await c.env.ASSETS_BUCKET.put(key, body, {
+                    httpMetadata: { contentType: c.req.header('Content-Type') || 'application/octet-stream' }
+                });
+                return c.json({ success: true, key });
+            } catch (e: any) {
+                return c.json({ error: e.message }, 500);
+            }
+        });
+
+        // 9. GET /ai/assets/:key (Tiered Stream: KV -> R2)
+        this.app.get('/ai/assets/:key{.+}', async (c) => {
+            const key = c.req.param('key');
+            if (!c.env.ASSETS_BUCKET) return c.json({ error: 'R2 Not Bound' }, 500);
+
+            // Tier 1: KV Content Cache (Sub-second retrieval for small assets)
+            if (c.env.CACHE) {
+                const cached = await c.env.CACHE.get(`asset_cache:${key}`, 'arrayBuffer');
+                if (cached) {
+                    return c.body(cached, 200, {
+                        headers: { 'Content-Type': 'application/octet-stream', 'X-Cache': 'HIT_KV' }
+                    } as any);
+                }
+            }
+
+            // Tier 2: R2 Bucket
+            const object = await c.env.ASSETS_BUCKET.get(key);
+            if (!object) return c.json({ error: 'Asset Not Found' }, 404);
+
+            const headers = new Headers();
+            object.writeHttpMetadata(headers);
+            headers.set('etag', object.httpEtag);
+            headers.set('X-Cache', 'MISS_KV');
+
+            const body = await object.arrayBuffer();
+
+            // Background Buffering: Populate KV Tier for next request if size < 1MB
+            if (c.env.CACHE && body.byteLength < 1024 * 1024) {
+                c.executionCtx.waitUntil(c.env.CACHE.put(`asset_cache:${key}`, body, { expirationTtl: 3600 }));
+            }
+
+            return c.body(body, 200, {
+                headers: Object.fromEntries(headers.entries()) as any
+            });
         });
 
         // 8. AI Completion Alignment (ServiceHub compatibility)
@@ -445,28 +585,18 @@ export class SessionAgent extends DurableObject<Env> {
         const url = new URL(request.url);
         console.log(`[SessionAgent] Fetch: ${request.method} ${url.pathname} | Search: ${url.search}`);
 
-        // Handle both Bridge and specialized WebSocket endpoints
-        if (url.pathname.startsWith('/bridge/') || url.pathname === '/ws/observability') {
+        // Handle specialized WebSocket endpoints (Cloud-Native Only)
+        if (url.pathname === '/ws/observability') {
             const upgradeHeader = (request.headers.get('Upgrade') || '').toLowerCase();
-            console.log(`[SessionAgent] WebSocket request: ${url.pathname} | Upgrade: ${upgradeHeader}`);
-
             if (upgradeHeader !== 'websocket') {
                 return new Response('Expected Upgrade: websocket', { status: 426 });
             }
 
-            let tags: string[] = [];
-            if (url.pathname === '/ws/observability') {
-                tags = ['system', 'observatory'];
-            } else {
-                const bridgeId = url.pathname.split('/')[2];
-                const role = url.searchParams.get('role') || 'client';
-                tags = [bridgeId, role];
-            }
-
+            const tags = ['system', 'observatory'];
             const pair = new WebSocketPair();
             const [client, server] = Object.values(pair);
 
-            console.log(`[SessionAgent] Accepting WebSocket - Path: ${url.pathname}, Tags: ${tags.join(',')}`);
+            console.log(`[SessionAgent] Accepting Cloud-Native WebSocket - Path: ${url.pathname}, Tags: ${tags.join(',')}`);
             this.state.acceptWebSocket(server, tags);
 
             return new Response(null, { status: 101, webSocket: client });
@@ -483,7 +613,6 @@ export class SessionAgent extends DurableObject<Env> {
 
             const msgData = typeof message === 'string' ? JSON.parse(message) : JSON.parse(new TextDecoder().decode(message));
 
-            // Specialized Handler: Token Bank (Observability)
             if (bridgeId === 'system' && role === 'observatory') {
                 if (msgData.type === 'REQUEST_TOKENS') {
                     const count = msgData.count || 20;
@@ -499,53 +628,15 @@ export class SessionAgent extends DurableObject<Env> {
                 return;
             }
 
-            if (role === 'client') {
-                const hosts = this.state.getWebSockets(bridgeId);
-                let hostFound = false;
-                for (const host of hosts) {
-                    const hostTags = this.state.getTags(host);
-                    if (hostTags.includes('host') && host.readyState === 1) {
-                        host.send(JSON.stringify(msgData));
-                        hostFound = true;
-                    }
-                }
-
-                if (!hostFound) {
-                    ws.send(JSON.stringify({
-                        type: `${msgData.type}_response`,
-                        messageId: msgData.messageId,
-                        success: false,
-                        error: 'Host not connected'
-                    }));
-                }
-
-            } else if (role === 'host') {
-                const peers = this.state.getWebSockets(bridgeId);
-                for (const peer of peers) {
-                    const peerTags = this.state.getTags(peer);
-                    if (peerTags.includes('client') && peer !== ws && peer.readyState === 1) {
-                        peer.send(JSON.stringify(msgData));
-                    }
-                }
-            }
+            // [Sovereignty Shield] Legacy client/host relay logic removed.
+            // Core Cloud Agent no longer acts as a relay for local tools.
         } catch (e) {
             console.error('[Relay] Error processing message:', e);
         }
     }
 
     async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
-        const tags = this.state.getTags(ws);
-        const bridgeId = tags[0];
-        const role = tags[1];
-
-        if (role === 'host') {
-            const peers = this.state.getWebSockets(bridgeId);
-            for (const peer of peers) {
-                if (this.state.getTags(peer).includes('client')) {
-                    peer.send(JSON.stringify({ type: 'system', status: 'host_disconnected' }));
-                }
-            }
-        }
+        // [Sovereignty Shield] Legacy bridge disconnection logic removed.
     }
 
     async webSocketError(ws: WebSocket, error: any) {

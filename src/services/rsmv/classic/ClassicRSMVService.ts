@@ -7,6 +7,7 @@ import { ClassicFileSource } from "../cache/classicloader";
 import { classicConfig, ClassicConfig } from "../cache/classicloader";
 import { IRSMVService, RSMVAvatar, RSMVModel, RSMVServiceConfig } from "../types";
 import { localBridgeClient } from "../../bridge/LocalBridgeService";
+import { CloudScriptFS } from "../CloudScriptFS";
 
 export class ClassicRSMVService implements IRSMVService {
     private engineCache: EngineCache | null = null;
@@ -31,35 +32,44 @@ export class ClassicRSMVService implements IRSMVService {
      * Links a directory containing .jag and .mem files
      */
     async linkClassicDir(path: string): Promise<boolean> {
-        // Custom ScriptFS implementation that uses LocalBridge
-        const bridgeFS: any = {
-            readFileBuffer: async (name: string) => {
-                const res = await localBridgeClient.readLocalFile(`${path}\\${name}`, true);
-                if (!res.success || !res.content) throw new Error(`Failed to read ${name}`);
-                const binaryString = atob(res.content);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-                return Buffer.from(bytes);
-            },
-            readFileText: async (name: string) => {
-                const res = await localBridgeClient.readLocalFile(`${path}\\${name}`, false);
-                if (!res.success || !res.content) throw new Error(`Failed to read ${name}`);
-                return res.content;
-            },
-            readDir: async (dir: string) => {
-                const res = await localBridgeClient.listDirectory(`${path}\\${dir}`);
-                if (!res.success || !res.files) return [];
-                return res.files.map(f => ({ name: f.name, kind: (f.isDirectory ? "directory" : "file") as "file" | "directory", isDir: f.isDirectory, size: 0 }));
-            },
-            copyFile: async (from: string, to: string) => {
-                const data = await localBridgeClient.readLocalFile(`${path}\\from`, true);
-                if (!data.success || !data.content) throw new Error(`Failed to copy from ${from}`);
-                return;
-            },
-            writeFile: async () => { throw new Error("Write not supported"); },
-            mkDir: async () => { throw new Error("Mkdir not supported"); },
-            unlink: async () => { throw new Error("Unlink not supported"); }
-        };
+        let bridgeFS: any;
+
+        if (this.serviceConfig.env) {
+            // --- CLOUD-NATIVE FILE SYSTEM ---
+            bridgeFS = new CloudScriptFS(this.serviceConfig.env, path);
+            console.log(`[ClassicRSMV] Using CloudScriptFS for ${path}`);
+        } else {
+            // --- OPTIONAL LOCAL BRIDGE FALLBACK ---
+            bridgeFS = {
+                readFileBuffer: async (name: string) => {
+                    const res = await localBridgeClient.readLocalFile(`${path}\\${name}`, true);
+                    if (!res.success || !res.content) throw new Error(`Failed to read ${name}`);
+                    const binaryString = atob(res.content);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                    return Buffer.from(bytes);
+                },
+                readFileText: async (name: string) => {
+                    const res = await localBridgeClient.readLocalFile(`${path}\\${name}`, false);
+                    if (!res.success || !res.content) throw new Error(`Failed to read ${name}`);
+                    return res.content;
+                },
+                readDir: async (dir: string) => {
+                    const res = await localBridgeClient.listDirectory(`${path}\\${dir}`);
+                    if (!res.success || !res.files) return [];
+                    return res.files.map(f => ({ name: f.name, kind: (f.isDirectory ? "directory" : "file") as "file" | "directory", isDir: f.isDirectory, size: 0 }));
+                },
+                copyFile: async (from: string, to: string) => {
+                    const data = await localBridgeClient.readLocalFile(`${path}\\from`, true);
+                    if (!data.success || !data.content) throw new Error(`Failed to copy from ${from}`);
+                    return;
+                },
+                writeFile: async () => { throw new Error("Write not supported"); },
+                mkDir: async () => { throw new Error("Mkdir not supported"); },
+                unlink: async () => { throw new Error("Unlink not supported"); }
+            };
+            console.log(`[ClassicRSMV] Using LocalBridge for ${path}`);
+        }
 
         this.classicSource = await ClassicFileSource.create(bridgeFS);
         this.engineCache = await ModelConverter.create(this.classicSource);

@@ -5,8 +5,8 @@
  */
 
 export interface QuotaStatus {
-    cloudflare: { tokens: number; limit: number; resetAt: Date };
-    gemini: { budget: number; limit: number; resetAt: Date };
+    cloudflare: { tokens: number; limit: number; resetAt: number };
+    gemini: { budget: number; limit: number; resetAt: number };
     ollama: { available: boolean };
 }
 
@@ -57,8 +57,11 @@ const MODEL_MAP: Record<string, Record<string, string>> = {
     }
 };
 
+import { MetabolismService } from '../core/MetabolismService';
+
 export class CostOptimizer {
     private quotaCache: Map<string, QuotaStatus> = new Map();
+    private metabolism: MetabolismService | null = null;
 
     // Default limits
     private readonly TIERS = {
@@ -71,6 +74,13 @@ export class CostOptimizer {
             gemini: { budgetPerMonth: 25.00 }
         }
     };
+
+    private getMetabolism(env: Env): MetabolismService {
+        if (!this.metabolism) {
+            this.metabolism = new MetabolismService(env);
+        }
+        return this.metabolism;
+    }
 
     /**
      * Get optimal route for an AI request
@@ -122,23 +132,24 @@ export class CostOptimizer {
         usage: { provider: string; tokens: number; cost: number },
         env: any
     ): Promise<void> {
-        const id = env.METABOLISM_DO.idFromName(userId);
-        const stub = env.METABOLISM_DO.get(id);
+        const metab = this.getMetabolism(env);
+        await metab.deductUsage(userId, usage.provider, usage.tokens, usage.cost);
 
-        await stub.deductUsage(userId, usage.provider, usage.tokens, usage.cost);
-
-        console.log(`[CostOptimizer] Deducted ${usage.tokens} tokens from ${usage.provider} for ${userId} (RPC)`);
+        console.log(`[CostOptimizer] Deducted ${usage.tokens} tokens from ${usage.provider} for ${userId} (InstantDB)`);
     }
 
     /**
-     * Get current quota status for a user from MetabolismDO
+     * Get current quota status for a user from MetabolismService (InstantDB)
      */
     async getQuota(userId: string, env: any): Promise<QuotaStatus> {
-        const id = env.METABOLISM_DO.idFromName(userId);
-        const stub = env.METABOLISM_DO.get(id);
+        const metab = this.getMetabolism(env);
+        const data = await metab.getQuota(userId);
 
-        const data = await stub.getQuota(userId) as QuotaStatus;
-        return { ...data, ollama: { available: true } }; // Client-side mixin
+        return {
+            cloudflare: data.cloudflare,
+            gemini: data.gemini,
+            ollama: { available: true }
+        };
     }
 
     /**

@@ -1,0 +1,8 @@
+{
+  "id": "signature",
+  "version": "6.5.0-CORE",
+  "status": "READY",
+  "endpoint": "/limbs/signature",
+  "payload": "/dist/signature.bin",
+  "capabilities": []
+}

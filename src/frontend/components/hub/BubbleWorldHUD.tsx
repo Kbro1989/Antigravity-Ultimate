@@ -16,28 +16,14 @@ interface BubbleWorldHUDProps {
 }
 
 export function BubbleWorldHUD({ onSelectWorkspace, activeWorkspace }: BubbleWorldHUDProps) {
-    const { limbs } = useServiceHub();
-    const [limbStatus, setLimbStatus] = useState<Record<string, boolean>>({});
+    // Live health data from the Service Mesh via useServiceHub
+    const { limbHealth } = useServiceHub();
 
-    useEffect(() => {
-        const checkHealth = async () => {
-            const status: Record<string, boolean> = {};
-            // Parallel check for core limbs to populate the HUD health
-            const coreLimbs = ['relic', 'orchestrator', 'code', 'mesh', 'reality', 'security', 'system'];
-            await Promise.all(coreLimbs.map(async (id) => {
-                try {
-                    const res = await limbs.call(id, 'ping', {});
-                    status[id] = res?.status === 'success' || !!res;
-                } catch (e) {
-                    status[id] = false;
-                }
-            }));
-            setLimbStatus(status);
-        };
-        checkHealth();
-        const interval = setInterval(checkHealth, 30000); // Check every 30s
-        return () => clearInterval(interval);
-    }, [limbs]);
+    // Helper to determine if a specific limb is online
+    const isLimbOnline = (limbId: string): boolean => {
+        const status = limbHealth[limbId];
+        return status?.status === 'online';
+    };
 
     const workspaces = useMemo(() => [
 
@@ -72,12 +58,9 @@ export function BubbleWorldHUD({ onSelectWorkspace, activeWorkspace }: BubbleWor
 
     return (
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
-            {/* Background Layers */}
-            <div className="stars-background" />
-            <div className="fractured-overlay" />
-            <div className="constellations-layer" />
+            {/* Background is now globally handled by ParticleSystem */}
 
-            <div className="relative w-[900px] h-[900px] pointer-events-auto z-50">
+            <div className="relative w-[900px] h-[900px] pointer-events-none z-50">
                 {/* Center Core */}
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
                     <button
@@ -89,13 +72,13 @@ export function BubbleWorldHUD({ onSelectWorkspace, activeWorkspace }: BubbleWor
                         aria-label="Access Divine Core"
                     >
                         {/* Rotating POG Bubble */}
-                        <div className="w-64 h-64 rounded-full glass-divine flex items-center justify-center relative shadow-[0_0_150px_rgba(255,215,0,0.15)] border-white/20 group-hover:border-neon-gold/50 animate-logo-flip-continuous transition-all duration-500">
+                        <div className="w-64 h-64 rounded-full glass-divine flex items-center justify-center relative shadow-[0_0_150px_rgba(255,215,0,0.15)] border-white/20 group-hover:border-neon-gold/50 animate-logo-flip-continuous transition-all duration-500 pointer-events-auto">
                             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-neon-gold/25 to-neon-purple/25 animate-pulse group-hover:scale-110 transition-transform duration-1000"></div>
-                            <div className="text-[10rem] font-black glitch-text-enhanced neon-glow-ultra" data-text="POG" style={{ color: 'var(--neon-gold)', textShadow: 'rgba(255, 215, 0, 0.4) 0px 0px 60px' }}>POG</div>
+                            <div className="text-[10rem] font-black glitch-text-enhanced neon-glow-ultra transform -rotate-12" data-text="POG" style={{ color: 'var(--neon-gold)', textShadow: 'rgba(255, 215, 0, 0.4) 0px 0px 60px' }}>POG</div>
                         </div>
 
                         {/* AI Suffix (Suspended next to it) */}
-                        <div className="absolute left-full ml-8 flex flex-col whitespace-nowrap group-hover:translate-x-4 transition-transform duration-500">
+                        <div className="absolute left-full ml-8 flex flex-col whitespace-nowrap group-hover:translate-x-4 transition-transform duration-500 pointer-events-none">
                             <div className="text-8xl font-black italic tracking-tighter text-white/90 filter drop-shadow-[0_0_40px_rgba(0,255,255,0.4)]">
                                 <span className="text-neon-cyan">AI</span>
                             </div>
@@ -114,8 +97,8 @@ export function BubbleWorldHUD({ onSelectWorkspace, activeWorkspace }: BubbleWor
                     return (
                         <button
                             key={workspace.id}
-                            className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 group/bubble bubble-node cursor-pointer transition-all duration-700
-                                ${activeWorkspace === workspace.id ? 'scale-150 z-[2000]' : 'hover:scale-125 z-[1000] hover:z-[5000]'}`}
+                            className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 group/bubble bubble-node cursor-pointer transition-all duration-700 pointer-events-auto
+                            ${activeWorkspace === workspace.id ? 'scale-150 z-[2000]' : 'hover:scale-125 z-[1000] hover:z-[5000]'}`}
                             style={{
                                 transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
                                 animationDelay: `${index * 0.05}s`
@@ -141,7 +124,7 @@ group-hover/bubble:border-white/40 animate-shimmer pointer-events-auto`}
                                 <div className="absolute -inset-full bg-gradient-to-br from-white/10 via-transparent to-transparent rotate-45 group-hover/bubble:translate-x-full transition-transform duration-1000"></div>
 
                                 {/* Live Indicator Hook */}
-                                {limbStatus[workspace.id] && (
+                                {isLimbOnline(workspace.id) && (
                                     <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-neon-cyan shadow-[0_0_8px_cyan] animate-ping"></div>
                                 )}
                             </div>
@@ -166,45 +149,6 @@ group-hover/bubble:border-white/40 animate-shimmer pointer-events-auto`}
                     );
                 })}
 
-                {/* Neural Mesh Surface (Divine Edition) - Constellations Layer */}
-                <svg className="absolute inset-0 pointer-events-none opacity-40 group-hover:opacity-70 transition-opacity duration-1000 z-10" viewBox="0 0 900 900">
-                    <defs>
-                        <radialGradient id="divineGlow" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%" stopColor="var(--neon-gold)" stopOpacity="0.4"></stop>
-                            <stop offset="70%" stopColor="var(--neon-gold)" stopOpacity="0.1"></stop>
-                            <stop offset="100%" stopColor="var(--neon-gold)" stopOpacity="0"></stop>
-                        </radialGradient>
-                    </defs>
-                    <circle cx="450" cy="450" r="380" fill="none" stroke="url(#divineGlow)" strokeWidth="2" strokeDasharray="10 10" className="animate-spin-slow"></circle>
-
-                    {workspaces.map((workspace, index) => {
-                        const angle = (index / workspaces.length) * Math.PI * 2 - Math.PI / 2;
-                        const radius = 380;
-                        const x = Math.cos(angle) * radius + 450;
-                        const y = Math.sin(angle) * radius + 450;
-
-                        // Find a neighbor for constellation line
-                        const nextIndex = (index + 7) % workspaces.length;
-                        const nextAngle = (nextIndex / workspaces.length) * Math.PI * 2 - Math.PI / 2;
-                        const nextX = Math.cos(nextAngle) * radius + 450;
-                        const nextY = Math.sin(nextAngle) * radius + 450;
-
-                        // Density line
-                        const sideIndex = (index + 3) % workspaces.length;
-                        const sideAngle = (sideIndex / workspaces.length) * Math.PI * 2 - Math.PI / 2;
-                        const sideX = Math.cos(sideAngle) * radius + 450;
-                        const sideY = Math.sin(sideAngle) * radius + 450;
-
-                        return (
-                            <g key={index}>
-                                <line x1="450" y1="450" x2={x} y2={y} stroke="white" strokeWidth="0.5" strokeOpacity="0.1"></line>
-                                <line x1={x} y1={y} x2={nextX} y2={nextY} stroke={workspace.color} strokeWidth="1.2" strokeOpacity="0.4" strokeDasharray="8 4"></line>
-                                <line x1={x} y1={y} x2={sideX} y2={sideY} stroke={workspace.color} strokeWidth="0.8" strokeOpacity="0.2"></line>
-                                <circle cx={x} cy={y} r="3.5" fill={workspace.color} fillOpacity="0.6" className="animate-pulse"></circle>
-                            </g>
-                        );
-                    })}
-                </svg>
 
                 {/* Orbit Rings */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-5">
@@ -215,7 +159,6 @@ group-hover/bubble:border-white/40 animate-shimmer pointer-events-auto`}
                 {/* Outer Orbit Line connection point */}
                 <div className="absolute top-1/2 right-full w-20 h-[1px] bg-gradient-to-r from-transparent to-neon-gold/20 -translate-y-1/2 pointer-events-none"></div>
             </div>
-
-        </div >
+        </div>
     );
 }

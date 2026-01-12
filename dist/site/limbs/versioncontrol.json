@@ -1,8 +1,0 @@
-{
-  "id": "versioncontrol",
-  "version": "6.5.0-CORE",
-  "status": "READY",
-  "endpoint": "/limbs/versioncontrol",
-  "payload": "/dist/versioncontrol.bin",
-  "capabilities": []
-}

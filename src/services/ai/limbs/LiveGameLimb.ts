@@ -67,6 +67,16 @@ export class LiveGameLimb extends NeuralLimb {
         }
     }
 
+    private flushQueue() {
+        if (!this.isConnected || !this.ws) return;
+        while (this.messageQueue.length > 0) {
+            const packet = this.messageQueue.shift();
+            if (packet) {
+                this.ws.send(JSON.stringify(packet));
+            }
+        }
+    }
+
     private handlePacket(packet: GamePacket) {
         if (this.listeners[packet.type]) {
             this.listeners[packet.type].forEach(cb => cb(packet.data));
@@ -78,34 +88,51 @@ export class LiveGameLimb extends NeuralLimb {
         this.listeners[eventType].push(callback);
     }
 
-    public send(type: string, data: any) {
-        const packet: GamePacket = { type, data, timestamp: Date.now() };
+    async send(paramsOrType: any, data?: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
 
+        let packet: GamePacket;
+        let broadcast = true;
+
+        if (typeof paramsOrType === 'string') {
+            packet = { type: paramsOrType, data, timestamp: Date.now() };
+        } else {
+            const { type, data: payload, broadcast: shouldBroadcast = true } = paramsOrType;
+            packet = { type, data: payload, timestamp: Date.now() };
+            broadcast = shouldBroadcast;
+        }
+
+        // 1. Browser Environment (WebSocket Client)
         if (this.isConnected && this.ws) {
             this.ws.send(JSON.stringify(packet));
-        } else {
-            this.messageQueue.push(packet);
+            return { status: 'transmitted', type: packet.type };
         }
-    }
 
-    private flushQueue() {
-        while (this.messageQueue.length > 0 && this.isConnected && this.ws) {
-            const packet = this.messageQueue.shift();
-            if (packet) this.ws.send(JSON.stringify(packet));
+        // 2. Worker Environment (Durable Object Router)
+        if (this.state && typeof this.state.getWebSockets === 'function' && broadcast) {
+            const sockets = this.state.getWebSockets();
+            let count = 0;
+            for (const ws of sockets) {
+                if (ws.readyState === 1) { // OPEN
+                    ws.send(JSON.stringify(packet));
+                    count++;
+                }
+            }
+            return { status: 'broadcasted', type: packet.type, recipientCount: count };
         }
+
+        // 3. Falling back to Queue
+        this.messageQueue.push(packet);
+        return { status: 'queued', type: packet.type };
     }
 
     async send_event(params: any) {
-        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
-        const { type, data } = params;
-        this.send(type, data);
-        return { status: 'Sent', type };
+        return this.send(params);
     }
 
     async get_state(params: any) {
         this.enforceCapability(AgentCapability.MEMORY_QUERY);
-        this.send('request_state', {});
-        return { status: 'Request Sent' };
+        return await this.send('request_state', {});
     }
 
     async load_stage(params: any) {

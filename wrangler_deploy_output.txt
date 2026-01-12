@@ -1,0 +1,119 @@
+﻿
+ Γ¢à∩╕Å wrangler 4.54.0 (update available 4.58.0)
+ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+npx : [31mX [41;31m[[41;97mERROR[41;31m][0m 
+[1mBuild failed with 8 errors:[0m
+At line:1 char:1
++ npx wrangler deploy --config wrangler.test.toml 
+2>&1 | Out-File -Enco ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo          : NotSpecified: ([31 
+   mX [41;31m...h 8 errors:[0m:String) [], Rem  
+  oteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+  [31mX [41;31m[[41;97mERROR[41;31m][0m 
+[1mNo loader is configured for ".c" files: src/se
+rvices/rsmv/rs3shaders/minimap-loc-vert.glsl.c[0m
+  
+      src/services/rsmv/rs3shaders/index.ts:77:31:
+  [37m      77 Γöé     let vert: string = 
+require([32m"./minimap-loc-vert.glsl.c"[37m);
+           Γò╡                                
+[32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+  
+  
+  [31mX [41;31m[[41;97mERROR[41;31m][0m 
+[1mNo loader is configured for ".c" files: src/se
+rvices/rsmv/rs3shaders/minimap-loc-frag.glsl.c[0m
+  
+      src/services/rsmv/rs3shaders/index.ts:82:31:
+  [37m      82 Γöé     let frag: string = 
+require([32m"./minimap-loc-frag.glsl.c"[37m);
+           Γò╡                                
+[32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+  
+  
+  [31mX [41;31m[[41;97mERROR[41;31m][0m 
+[1mNo loader is configured for ".c" files: src/se
+rvices/rsmv/rs3shaders/minimap-floor-vert.glsl.c[
+0m
+  
+      
+src/services/rsmv/rs3shaders/index.ts:161:31:
+  [37m      161 Γöé     let vert: string = 
+require([32m"./minimap-floor-vert.glsl.c"[37m);
+            Γò╡                                
+[32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+  
+  
+  [31mX [41;31m[[41;97mERROR[41;31m][0m 
+[1mNo loader is configured for ".c" files: src/se
+rvices/rsmv/rs3shaders/minimap-floor-frag.glsl.c[
+0m
+  
+      
+src/services/rsmv/rs3shaders/index.ts:166:31:
+  [37m      166 Γöé     let frag: string = 
+require([32m"./minimap-floor-frag.glsl.c"[37m);
+            Γò╡                                
+[32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+  
+  
+  [31mX [41;31m[[41;97mERROR[41;31m][0m 
+[1mNo loader is configured for ".c" files: src/se
+rvices/rsmv/rs3shaders/minimap-water-vert.glsl.c[
+0m
+  
+      
+src/services/rsmv/rs3shaders/index.ts:260:31:
+  [37m      260 Γöé     let vert: string = 
+require([32m"./minimap-water-vert.glsl.c"[37m);
+            Γò╡                                
+[32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+  
+  
+  [31mX [41;31m[[41;97mERROR[41;31m][0m 
+[1mNo loader is configured for ".c" files: src/se
+rvices/rsmv/rs3shaders/minimap-water-frag.glsl.c[
+0m
+  
+      
+src/services/rsmv/rs3shaders/index.ts:265:31:
+  [37m      265 Γöé     let frag: string = 
+require([32m"./minimap-water-frag.glsl.c"[37m);
+            Γò╡                                
+[32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+  
+  
+  [31mX [41;31m[[41;97mERROR[41;31m][0m 
+[1mNo loader is configured for ".glsl" files: 
+src/services/rsmv/shaders/RunescapeVertex.glsl[0m
+  
+      
+src/services/rsmv/shaders/shaderfactory.ts:3:28:
+  [37m      3 Γöé import vertexShaderRaw from 
+[32m'./RunescapeVertex.glsl'[37m;
+          Γò╡                             
+[32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+  
+  
+  [31mX [41;31m[[41;97mERROR[41;31m][0m 
+[1mNo loader is configured for ".glsl" files: src
+/services/rsmv/shaders/RunescapeFragment.glsl[0m
+  
+      
+src/services/rsmv/shaders/shaderfactory.ts:4:30:
+  [37m      4 Γöé import fragmentShaderRaw from 
+[32m'./RunescapeFragment.glsl'[37m;
+          Γò╡                               
+[32m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+  
+  
+
+
+≡ƒ¬╡  Logs were written to "C:\Users\Destiny\.wran
+gler\logs\wrangler-2026-01-09_13-48-03_625.log"

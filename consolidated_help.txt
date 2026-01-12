@@ -1,0 +1,247 @@
+﻿wrangler dev [script]
+
+≡ƒæé Start a local server for developing your Worker
+
+POSITIONALS
+  script  The path to an entry point for your Worker  [string]
+
+GLOBAL FLAGS
+  -c, --config    Path to Wrangler configuration file  [string]
+      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+  -h, --help      Show help  [boolean]
+  -v, --version   Show version number  [boolean]
+
+OPTIONS
+      --name                                       Name of the Worker  [string]
+      --compatibility-date                         Date to use for compatibility checks  [string]
+      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
+      --latest                                     Use the latest version of the Workers runtime  [boolean] [default: true]
+      --assets                                     Static assets to be served. Replaces Workers Sites.  [string]
+      --no-bundle                                  Skip internal build steps and directly deploy script  [boolean] [default: false]
+      --ip                                         IP address to listen on  [string]
+      --port                                       Port to listen on  [number]
+      --inspector-port                             Port for devtools to connect to  [number]
+      --routes, --route                            Routes to upload  [array]
+      --host                                       Host to forward requests to, defaults to the zone of project  [string]
+      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: "http", "https"]
+      --https-key-path                             Path to a custom certificate key  [string]
+      --https-cert-path                            Path to a custom certificate  [string]
+      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
+      --upstream-protocol                          Protocol to forward requests to host on, defaults to https.  [choices: "http", "https"]
+      --var                                        A key-value pair to be injected into the script as a variable  [array]
+      --define                                     A key-value pair to be substituted in the script  [array]
+      --alias                                      A module pair to be substituted in the script  [array]
+      --jsx-factory                                The function that is called for each JSX element  [string]
+      --jsx-fragment                               The function that is called for each JSX fragment  [string]
+      --tsconfig                                   Path to a custom tsconfig.json file  [string]
+  -r, --remote                                     Run on the global Cloudflare network with access to production resources  [boolean] [default: false]
+  -l, --local                                      Run locally with remote bindings disabled  [boolean]
+      --minify                                     Minify the script  [boolean]
+      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
+      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
+      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
+      --log-level                                  Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"]
+      --show-interactive-dev-session               Show interactive dev session (defaults to true if the terminal supports interactivity)  [boolean]
+
+Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+wrangler deploy [script]
+
+≡ƒåÖ Deploy a Worker to Cloudflare
+
+POSITIONALS
+  script  The path to an entry point for your Worker  [string]
+
+GLOBAL FLAGS
+  -c, --config    Path to Wrangler configuration file  [string]
+      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+  -h, --help      Show help  [boolean]
+  -v, --version   Show version number  [boolean]
+
+OPTIONS
+      --name                                       Name of the Worker  [string]
+      --no-bundle                                  Skip internal build steps and directly deploy Worker  [boolean] [default: false]
+      --outdir                                     Output directory for the bundled Worker  [string]
+      --outfile                                    Output file for the bundled worker  [string]
+      --compatibility-date                         Date to use for compatibility checks  [string]
+      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
+      --latest                                     Use the latest version of the Workers runtime  [boolean] [default: false]
+      --assets                                     Static assets to be served. Replaces Workers Sites.  [string]
+      --var                                        A key-value pair to be injected into the script as a variable  [array]
+      --define                                     A key-value pair to be substituted in the script  [array]
+      --alias                                      A module pair to be substituted in the script  [array]
+      --triggers, --schedule, --schedules          cron schedules to attach  [array]
+      --routes, --route                            Routes to upload  [array]
+      --domains, --domain                          Custom domains to deploy to  [array]
+      --jsx-factory                                The function that is called for each JSX element  [string]
+      --jsx-fragment                               The function that is called for each JSX fragment  [string]
+      --tsconfig                                   Path to a custom tsconfig.json file  [string]
+      --minify                                     Minify the Worker  [boolean]
+      --dry-run                                    Don't actually deploy  [boolean]
+      --metafile                                   Path to output build metadata from esbuild. If flag is used without a path, defaults to 'bundle-meta.json' inside the directory specified by --outdir.  [string]
+      --keep-vars                                  When not used (or set to false), Wrangler will delete all vars before setting those found in the Wrangler configuration.
+                                                   When used (and set to true), the environment variables are not deleted before the deployment.
+                                                   If you set variables via the dashboard you probably want to use this flag.
+                                                   Note that secrets are never deleted by deployments.  [boolean] [default: false]
+      --logpush                                    Send Trace Events from this Worker to Workers Logpush.
+                                                   This will not configure a corresponding Logpush job automatically.  [boolean]
+      --upload-source-maps                         Include source maps when uploading this Worker.  [boolean]
+      --old-asset-ttl                              Expire old assets in given seconds rather than immediate deletion.  [number]
+      --dispatch-namespace                         Name of a dispatch namespace to deploy the Worker to (Workers for Platforms)  [string]
+      --containers-rollout                         Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step.  [choices: "immediate", "gradual"]
+      --strict                                     Enables strict mode for the deploy command, this prevents deployments to occur when there are even small potential risks.  [boolean] [default: false]
+      --experimental-autoconfig, --x-autoconfig    Experimental: Enables framework detection and automatic configuration when deploying  [boolean] [default: false]
+wrangler tail [worker]
+
+≡ƒªÜ Start a log tailing session for a Worker
+
+POSITIONALS
+  worker  Name or route of the worker to tail  [string]
+
+GLOBAL FLAGS
+  -c, --config    Path to Wrangler configuration file  [string]
+      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+  -h, --help      Show help  [boolean]
+  -v, --version   Show version number  [boolean]
+
+OPTIONS
+      --format         The format of log entries  [choices: "json", "pretty"]
+      --status         Filter by invocation status  [array] [choices: "ok", "error", "canceled"]
+      --header         Filter by HTTP header  [string]
+      --method         Filter by HTTP method  [array]
+      --sampling-rate  Adds a percentage of requests to log sampling rate  [number]
+      --search         Filter by a text match in console.log messages  [string]
+      --ip             Filter by the IP address the request originates from. Use "self" to filter for your own IP  [array]
+      --version-id     Filter by Worker version  [string]
+wrangler secret
+
+≡ƒñ½ Generate a secret that can be referenced in a Worker
+
+COMMANDS
+  wrangler secret put <key>     Create or update a secret variable for a Worker
+  wrangler secret delete <key>  Delete a secret variable from a Worker
+  wrangler secret list          List all secrets for a Worker
+  wrangler secret bulk [file]   Bulk upload secrets for a Worker
+
+GLOBAL FLAGS
+  -c, --config    Path to Wrangler configuration file  [string]
+      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+  -h, --help      Show help  [boolean]
+  -v, --version   Show version number  [boolean]
+wrangler kv
+
+≡ƒùé∩╕Å  Manage Workers KV Namespaces
+
+COMMANDS
+  wrangler kv namespace  Interact with your Workers KV Namespaces
+  wrangler kv key        Individually manage Workers KV key-value pairs
+  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
+
+GLOBAL FLAGS
+  -c, --config    Path to Wrangler configuration file  [string]
+      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+  -h, --help      Show help  [boolean]
+  -v, --version   Show version number  [boolean]
+wrangler r2
+
+≡ƒôª Manage R2 buckets & objects
+
+COMMANDS
+  wrangler r2 object  Manage R2 objects
+  wrangler r2 bucket  Manage R2 buckets
+  wrangler r2 sql     Send queries and manage R2 SQL [open-beta]
+
+GLOBAL FLAGS
+  -c, --config    Path to Wrangler configuration file  [string]
+      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+  -h, --help      Show help  [boolean]
+  -v, --version   Show version number  [boolean]
+wrangler d1
+
+≡ƒùä  Manage Workers D1 databases
+
+COMMANDS
+  wrangler d1 create <name>       Creates a new D1 database, and provides the binding and UUID that you will put in your config file
+  wrangler d1 info <name>         Get information about a D1 database, including the current database size and state
+  wrangler d1 list                List all D1 databases in your account
+  wrangler d1 delete <name>       Delete a D1 database
+  wrangler d1 execute <database>  Execute a command or SQL file
+  wrangler d1 export <name>       Export the contents or schema of your database as a .sql file
+  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time
+  wrangler d1 migrations          Interact with D1 migrations
+  wrangler d1 insights <name>     Get information about the queries run on a D1 database [experimental]
+
+GLOBAL FLAGS
+  -c, --config    Path to Wrangler configuration file  [string]
+      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+  -h, --help      Show help  [boolean]
+  -v, --version   Show version number  [boolean]
+wrangler ai models
+
+List catalog models
+
+GLOBAL FLAGS
+  -c, --config    Path to Wrangler configuration file  [string]
+      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+  -h, --help      Show help  [boolean]
+  -v, --version   Show version number  [boolean]
+
+OPTIONS
+      --json  Return output as clean JSON  [boolean] [default: false]
+wrangler ai finetune
+
+Interact with finetune files
+
+COMMANDS
+  wrangler ai finetune list                                               List your finetune files
+  wrangler ai finetune create <model_name> <finetune_name> <folder_path>  Create finetune and upload assets
+
+GLOBAL FLAGS
+  -c, --config    Path to Wrangler configuration file  [string]
+      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+  -h, --help      Show help  [boolean]
+  -v, --version   Show version number  [boolean]
+wrangler vectorize
+
+≡ƒº« Manage Vectorize indexes
+
+COMMANDS
+  wrangler vectorize create <name>                 Create a Vectorize index
+  wrangler vectorize delete <name>                 Delete a Vectorize index
+  wrangler vectorize get <name>                    Get a Vectorize index by name
+  wrangler vectorize list                          List your Vectorize indexes
+  wrangler vectorize list-vectors <name>           List vector identifiers in a Vectorize index
+  wrangler vectorize query <name>                  Query a Vectorize index
+  wrangler vectorize insert <name>                 Insert vectors into a Vectorize index
+  wrangler vectorize upsert <name>                 Upsert vectors into a Vectorize index
+  wrangler vectorize get-vectors <name>            Get vectors from a Vectorize index
+  wrangler vectorize delete-vectors <name>         Delete vectors in a Vectorize index
+  wrangler vectorize info <name>                   Get additional details about the index
+  wrangler vectorize create-metadata-index <name>  Enable metadata filtering on the specified property
+  wrangler vectorize list-metadata-index <name>    List metadata properties on which metadata filtering is enabled
+  wrangler vectorize delete-metadata-index <name>  Delete metadata indexes
+
+GLOBAL FLAGS
+  -c, --config    Path to Wrangler configuration file  [string]
+      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+  -h, --help      Show help  [boolean]
+  -v, --version   Show version number  [boolean]

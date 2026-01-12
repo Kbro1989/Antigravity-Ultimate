@@ -1,0 +1,54 @@
+﻿[36mvite v7.3.0 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 968 modules transformed.
+npx : [31mΓ£ù[39m Build failed 
+in 28.75s
+At line:1 char:1
++ npx vite build > build_log.txt 
+2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo              
+: NotSpecified: ([31mΓ£    
+ù[39m Build failed in 2    
+8.75s:String) [], Remote    
+Exception
+    + FullyQualifiedErrorId     
+: NativeCommandError
+ 
+[31merror during build:
+[31m[commonjs--resolver] Could 
+not load vite-plugin-node-polyfil
+ls/shims/buffer: ENOENT: no such 
+file or directory, open 
+'C:\Users\Destiny\Desktop\New fol
+der\POG-Ultimate\vite-plugin-node
+-polyfills\shims\buffer'[31m
+file: [36mC:/Users/Destiny/node_
+modules/comment-json/src/parse.js
+[31m
+    at async open (node:internal/
+fs/promises:639:25)
+    at async Object.readFile (nod
+e:internal/fs/promises:1246:14)
+    at async Object.handler (file
+:///C:/Users/Destiny/Desktop/New%
+20folder/POG-Ultimate/node_module
+s/vite/dist/node/chunks/config.js
+:33168:21)
+    at async PluginDriver.hookFir
+stAndGetPlugin (file:///C:/Users/
+Destiny/Desktop/New%20folder/POG-
+Ultimate/node_modules/rollup/dist
+/es/shared/node-entry.js:22404:28
+)
+    at async file:///C:/Users/Des
+tiny/Desktop/New%20folder/POG-Ult
+imate/node_modules/rollup/dist/es
+/shared/node-entry.js:21404:33
+    at async Queue.work (file:///
+C:/Users/Destiny/Desktop/New%20fo
+lder/POG-Ultimate/node_modules/ro
+llup/dist/es/shared/node-entry.js
+:22632:32)[39m
+

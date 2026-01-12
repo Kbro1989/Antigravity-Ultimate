@@ -1,0 +1,8 @@
+{
+  "id": "vision",
+  "version": "6.5.0-CORE",
+  "status": "READY",
+  "endpoint": "/limbs/vision",
+  "payload": "/dist/vision.bin",
+  "capabilities": []
+}

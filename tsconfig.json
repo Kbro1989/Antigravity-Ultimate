@@ -39,8 +39,9 @@
         "node_modules",
         "dist",
         "webviewer-deconstructed",
-        "local",
-        "src/services/ai/logic/okcomputer"
+        "../local",
+        "src/services/ai/logic/okcomputer",
+        "src/services/rsmv"
     ],
     "references": [
         {

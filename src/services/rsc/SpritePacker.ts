@@ -1,4 +1,4 @@
-import { JagArchive } from './JagArchive';
+import { JagArchive, hashFilename } from './JagArchive';
 import { JagBuffer } from './JagBuffer';
 import * as THREE from 'three';
 
@@ -114,9 +114,17 @@ export class SpritePacker {
         return frames;
     }
 
-    compressSprites(sprites: Map<string, any>) {
-        console.log('Packing sprites not fully implemented in shim');
-        return this.archive.toArchive(true);
+    compressSprites() {
+        // High-Fidelity Binary Reconstruction
+        console.log(`[SpritePacker] Reconstructing Archive with ${this.sprites.size} sprites...`);
+
+        for (const [name, sprite] of this.sprites.entries()) {
+            if (sprite.raw) {
+                this.archive.entries.set(hashFilename(`${name}.dat`), sprite.raw);
+            }
+        }
+
+        return this.archive.toArchive(true); // Return Bzip2 compressed bytes
     }
 
     getSprite(name: string): any {

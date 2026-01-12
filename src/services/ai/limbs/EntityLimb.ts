@@ -150,11 +150,50 @@ export class EntityLimb extends NeuralLimb {
      */
     async inventory_roles(params?: any) {
         this.enforceCapability(AgentCapability.MEMORY_QUERY);
-        const { localBridgeClient } = await import('../../bridge/LocalBridgeService');
-        const root = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/public/assets/generated/npcs';
 
+        const root = 'npcs/generated'; // Normalized R2 prefix
+
+        // 1. Try Cloud R2 (Primacy)
+        if (this.env?.ASSETS_BUCKET) {
+            try {
+                const list = await this.env.ASSETS_BUCKET.list({ prefix: root + '/' });
+                const roles = await Promise.all(
+                    list.objects
+                        .filter((o: any) => o.key.endsWith('.json') && !o.key.endsWith('.manifest.json'))
+                        .map(async (o: any) => {
+                            let roleData: any = { name: o.key.split('/').pop().replace('.json', '') };
+                            try {
+                                const res = await this.env.ASSETS_BUCKET.get(o.key);
+                                if (res) roleData = await res.json();
+                            } catch { }
+
+                            return {
+                                id: o.key.split('/').pop(),
+                                name: roleData.name || o.key.split('/').pop().replace('.json', ''),
+                                type: roleData.type || 'npc_role',
+                                stats: roleData.stats || null,
+                                behavior: roleData.behavior || null,
+                                lineage: roleData.lineage || 'custom',
+                                url: `/ai/assets/${o.key}`,
+                                source: 'cloud'
+                            };
+                        })
+                );
+                return { status: 'success', count: roles.length, roles };
+            } catch (e: any) {
+                console.warn(`[EntityLimb] R2 role sweep failed: ${e.message}`);
+            }
+        }
+
+        // 2. Legacy Bridge Fallback (Optional Extension)
+        const bridge = await this.getBridge();
+        if (!bridge) {
+            return { status: 'success', count: 0, roles: [], note: '[Sovereignty Alert] Local Bridge unavailable. Cloud roles only.' };
+        }
+
+        const localRoot = 'public/assets/generated/npcs';
         try {
-            const list = await localBridgeClient.listDirectory(root);
+            const list = await bridge.listDirectory(localRoot);
             if (!list.success || !list.files) {
                 return { status: 'success', count: 0, roles: [], note: 'NPC roles directory empty.' };
             }
@@ -163,10 +202,9 @@ export class EntityLimb extends NeuralLimb {
                 list.files
                     .filter((f: any) => !f.isDirectory && f.name.endsWith('.json'))
                     .map(async (f: any) => {
-                        // Attempt to load role metadata
                         let roleData: any = { name: f.name.replace('.json', '') };
                         try {
-                            const content = await localBridgeClient.readLocalFile(`${root}/${f.name}`);
+                            const content = await bridge.readLocalFile(`${localRoot}/${f.name}`);
                             if (content.success && content.content) {
                                 roleData = JSON.parse(content.content);
                             }
@@ -179,18 +217,24 @@ export class EntityLimb extends NeuralLimb {
                             stats: roleData.stats || null,
                             behavior: roleData.behavior || null,
                             lineage: roleData.lineage || 'custom',
-                            url: `/assets/generated/npcs/${f.name}`
+                            url: `/assets/generated/npcs/${f.name}`,
+                            source: 'bridge'
                         };
                     })
             );
 
-            return {
-                status: 'success',
-                count: roles.length,
-                roles
-            };
+            return { status: 'success', count: roles.length, roles };
         } catch (e: any) {
             return { status: 'success', count: 0, roles: [], note: 'NPC roles scan failed.' };
+        }
+    }
+
+    private async getBridge() {
+        try {
+            const { localBridgeClient } = await import('../../bridge/LocalBridgeService');
+            return localBridgeClient;
+        } catch (e) {
+            return null;
         }
     }
 

@@ -48,18 +48,27 @@ bucket_name = "antigravity-assets"
 
 [[kv_namespaces]]
 binding = "CACHE"
-id = "4a452d73838945b5a3065ef63c68d951"
-preview_id = "4a452d73838945b5a3065ef63c68d951"
+id = "3015b76d2d1b408a99066d1e793d8435"
+preview_id = "3015b76d2d1b408a99066d1e793d8435"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "4a452d73838945b5a3065ef63c68d951"
-preview_id = "4a452d73838945b5a3065ef63c68d951"
+id = "3015b76d2d1b408a99066d1e793d8435"
+preview_id = "3015b76d2d1b408a99066d1e793d8435"
 
 [[kv_namespaces]]
 binding = "BRAIN"
-id = "4c5b0b6debf347828647fdcc76824a60"
-preview_id = "4c5b0b6debf347828647fdcc76824a60"
+id = "624458956eec4dbb9c927e29385cf667"
+preview_id = "624458956eec4dbb9c927e29385cf667"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rsc-d1"
+database_id = "d021ab5b-ab13-47b8-9287-1aabebfe51df"
+
+[[vectorize_indexes]]
+binding = "VECTOR_INDEX"
+index_name = "pog-memory"
 
 [observability]
 enabled = true

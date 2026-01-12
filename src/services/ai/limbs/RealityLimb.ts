@@ -3,6 +3,7 @@ import { AgentCapability } from '../AgentConstitution';
 import { RealityAnchorService } from '../RealityAnchorService';
 import { BaseIntent } from '../AITypes';
 import { QuantumProvenance } from '../security/QuantumProvenance';
+import { modelRouter } from '../ModelRouter';
 
 export class RealityLimb extends NeuralLimb {
     name = 'RealityLimb';
@@ -99,5 +100,26 @@ export class RealityLimb extends NeuralLimb {
             message: `Reality restoration manifest generated for anchor ${anchorId}`,
             timestamp: Date.now()
         };
+    }
+
+    async summarize(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        const { text } = params;
+        await this.logActivity('logic_summarize', 'pending', { length: text?.length });
+        return await modelRouter.route({ type: 'summarization', prompt: text, ...intent }, this.env);
+    }
+
+    async translate_text(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        const { text, targetLang } = params;
+        await this.logActivity('logic_translate', 'pending', { targetLang });
+        return await modelRouter.route({ type: 'translation', prompt: text, language: targetLang, ...intent }, this.env);
+    }
+
+    async sentiment_audit(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.SECURITY_AUDIT);
+        const { text } = params;
+        await this.logActivity('logic_sentiment', 'pending');
+        return await modelRouter.route({ type: 'sentiment', prompt: text, ...intent }, this.env);
     }
 }

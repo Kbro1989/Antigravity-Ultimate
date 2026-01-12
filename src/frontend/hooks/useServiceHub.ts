@@ -17,6 +17,7 @@ interface ServiceHubState {
         savingsEstimate: number;
     } | null;
     circuitStates: Record<string, { state: string; failures: number }>;
+    limbHealth: Record<string, { status: 'online' | 'offline' | 'unknown'; workload: number; uptime: number }>;
     isLoading: boolean;
 }
 
@@ -25,6 +26,7 @@ export function useServiceHub(userId: string = 'default-user') {
         bridgeStatus: { isConnected: false, isCloudMode: true, syncMode: 'dual' as any },
         quotaMetrics: null,
         circuitStates: {},
+        limbHealth: {},
         isLoading: true
     });
 
@@ -32,8 +34,14 @@ export function useServiceHub(userId: string = 'default-user') {
     useEffect(() => {
         const updateStatus = async () => {
             try {
-                const bridgeStatus = ServiceHub.bridge.getStatus();
+                const bridgeStatus = await ServiceHub.bridge.getStatus();
                 const stats = await ServiceHub.stats.get() as any;
+
+                // New: Live Health Probe
+                const healthRes = await fetch('/api/session/default/api/health', {
+                    headers: { 'X-Session-ID': 'default' }
+                });
+                const healthData = healthRes.ok ? await healthRes.json() : { limbs: {} };
 
                 const quotaMetrics = stats ? {
                     cloudflareUsed: stats.quota?.used || 0,
@@ -49,6 +57,7 @@ export function useServiceHub(userId: string = 'default-user') {
                     bridgeStatus,
                     quotaMetrics,
                     circuitStates,
+                    limbHealth: (healthData as any).limbs || {},
                     isLoading: false
                 });
             } catch (e) {

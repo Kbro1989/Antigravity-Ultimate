@@ -15,7 +15,26 @@ export class ImageLimb extends NeuralLimb {
     async upscale(params: any, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.IMAGE_OPERATIONS);
         await this.logActivity('image_upscale', 'pending', params);
-        return await this.callAI({ type: 'image', prompt: `Upscale: ${params.prompt}`, options: { upscale: true }, ...intent });
+        // Use Flux-Dev for High-Res refinement
+        return await this.callAI({
+            type: 'image',
+            prompt: `High-resolution, ultra-detailed textures, 4k, photographic: ${params.prompt}`,
+            modelId: 'FLUX_DEV',
+            ...intent
+        });
+    }
+
+    async remove_background(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.IMAGE_OPERATIONS);
+        await this.logActivity('image_remove_bg', 'pending', { source: params.image ? 'provided' : 'prompt' });
+        // This uses the modelRouter translation to DETR masking
+        return await this.callAI({ type: 'remove_background', prompt: params.image || params.prompt, ...intent });
+    }
+
+    async segment(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.IMAGE_OPERATIONS);
+        await this.logActivity('image_segment', 'pending', params);
+        return await this.callAI({ type: 'remove_background', prompt: params.image || params.prompt, options: { mode: 'segment' }, ...intent });
     }
 
     async variation(params: any, intent: BaseIntent) {
@@ -71,31 +90,13 @@ export class ImageLimb extends NeuralLimb {
         const result = await this.callAI({ type: 'image', prompt, options: { style }, ...intent });
 
         if (result.imageUrl) {
-            const creationId = `img_${Date.now()}`;
-            const stagedPath = `image/visuals/${creationId}.png`;
-
-            // If the result gives us a URL, we should fetch it to get the buffer for reliable persistence
-            // If it gives us base64 (often case with some providers), we pass that directly
-            let contentToPersist: any = undefined;
-            if (result.imageUrl.startsWith('data:')) {
-                // It's base64, persistAsset handles this if passed as URL, but let's be explicit if possible
-                // Actually `persistAsset` logic I wrote handles data URI in the URL field. 
-                // So passing the URL is enough there.
-            } else if (result.imageUrl.startsWith('http')) {
-                // Fetch valid buffer so we don't rely on 'staged' mock logic
-                try {
-                    const resp = await fetch(result.imageUrl);
-                    contentToPersist = await resp.arrayBuffer();
-                } catch (e) {
-                    console.warn("Failed to fetch image for persistence, falling back to URL reference", e);
-                }
-            }
-
-            const finalUrl = await this.persistAsset('image', `staged://${stagedPath}`, {
+            // Delegate fully to the hardened persistAsset in NeuralLimb
+            // which handles http buffering and R2 hoisting natively.
+            const finalUrl = await this.persistAsset('image', result.imageUrl, {
                 parentRelic: sourceRelic?.id || 'genesis',
-                originalSource: result.imageUrl,
+                style,
                 ...result.metadata
-            }, contentToPersist);
+            });
 
             result.imageUrl = finalUrl;
         }

@@ -1,0 +1,459 @@
+--- boots ---
+[17] Boots: Comfortable leather boots
+[966] Boots: They're soft and silky
+[967] Boots: They're soft and silky
+[968] Boots: They're soft and silky
+[969] Boots: They're soft and silky
+[970] Boots: They're soft and silky
+--- cabbage ---
+[18] Cabbage: Yuck I don't like cabbage
+[228] Cabbage: Yuck I don't like cabbage
+--- flour ---
+[23] Flour: A little heap of flour
+[136] flour: There is flour in this pot
+--- skull ---
+[27] skull: A spooky looking skull
+[412] skull: A spooky looking skull
+--- book ---
+[30] Book: 
+[768] Book: Turnip growing for beginners
+--- thread ---
+[43] Thread: Used with a needle to make clothes
+[1200] Thread: A piece of red thread discovered at the scene of the crime
+[1201] Thread: A piece of green thread discovered at the scene of the crime
+[1202] Thread: A piece of blue thread discovered at the scene of the crime
+--- holy symbol of saradomin ---
+[44] Holy Symbol of saradomin: This needs a string putting on it
+[385] Holy Symbol of saradomin: This improves my prayer
+--- key ---
+[47] key: The key to get into the phoenix gang
+[48] key: The key to the phoenix gang's weapons store
+[1047] Key: A key for a chest
+--- scroll ---
+[49] scroll: An intelligence Report
+[1173] Scroll: A letter written by the expert
+--- water ---
+[50] Water: It's a bucket of water
+[141] water: It's full of water
+--- broken shield ---
+[53] Broken shield: Half of the shield of Arrav
+[54] Broken shield: Half of the shield of Arrav
+--- gold ---
+[152] gold: this needs refining
+[690] gold: this needs refining
+--- herb ---
+[165] Herb: I need a closer look to identify this
+[435] Herb: I need a closer look to identify this
+[436] Herb: I need a closer look to identify this
+[437] Herb: I need a closer look to identify this
+[438] Herb: I need a closer look to identify this
+[439] Herb: I need a closer look to identify this
+[440] Herb: I need a closer look to identify this
+[441] Herb: I need a closer look to identify this
+[442] Herb: I need a closer look to identify this
+[443] Herb: I need a closer look to identify this
+[815] Herb: I need a closer look to identify this
+[817] Herb: I need a closer look to identify this
+[819] Herb: I need a closer look to identify this
+[821] Herb: I need a closer look to identify this
+[823] Herb: I need a closer look to identify this
+[933] Herb: I need a closer look to identify this
+--- gold bar ---
+[172] gold bar: this looks valuable
+[691] gold bar: this looks valuable
+--- apron ---
+[182] Apron: A mostly clean apron
+[191] Apron: this will help keep my clothes clean
+--- cape ---
+[183] Cape: A bright red cape
+[209] Cape: A warm black cape
+[229] Cape: A thick blue cape
+[511] Cape: A thick Green cape
+[512] Cape: A thick yellow cape
+[513] Cape: A thick Orange cape
+[514] Cape: A thick purple cape
+--- wizardshat ---
+[185] wizardshat: A silly pointed hat
+[199] wizardshat: A silly pointed hat
+--- skirt ---
+[187] skirt: A ladies skirt
+[194] skirt: A ladies skirt
+[195] skirt: A ladies skirt
+--- strength potion ---
+[221] Strength Potion: 4 doses of strength potion
+[222] Strength Potion: 3 doses of strength potion
+[223] Strength Potion: 2 doses of strength potion
+[224] Strength Potion: 1 dose of strength potion
+--- bronze key ---
+[242] Bronze key: A heavy key
+[803] Bronze key: A heavy key
+--- wig ---
+[244] wig: A blonde wig
+[245] wig: A wig made from wool
+--- goblin armour ---
+[273] Goblin Armour: Armour Designed to fit Goblins
+[274] Goblin Armour: Armour Designed to fit Goblins
+[275] Goblin Armour: Armour Designed to fit Goblins
+--- ruby ring ---
+[286] Ruby ring: A valuable ring
+[692] Ruby ring: A valuable ring
+--- ruby necklace ---
+[291] Ruby necklace: I wonder if this is valuable
+[693] Ruby necklace: I wonder if this is valuable
+--- gold amulet ---
+[296] Gold Amulet: It needs a string so I can wear it
+[301] Gold Amulet: I wonder if I can get this enchanted
+--- sapphire amulet ---
+[297] Sapphire Amulet: It needs a string so I can wear it
+[302] Sapphire Amulet: I wonder if I can get this enchanted
+--- emerald amulet ---
+[298] Emerald Amulet: It needs a string so I can wear it
+[303] Emerald Amulet: I wonder if I can get this enchanted
+--- ruby amulet ---
+[299] Ruby Amulet: It needs a string so I can make wear it
+[304] Ruby Amulet: I wonder if I can get this enchanted
+--- diamond amulet ---
+[300] Diamond Amulet: It needs a string so I can wear it
+[305] Diamond Amulet: I wonder if I can get this enchanted
+--- incomplete stew ---
+[343] Incomplete stew: I need to add some meat too
+[344] Incomplete stew: I need to add some potato too
+--- burnt fish ---
+[353] Burnt fish: Oops!
+[360] Burnt fish: Oops!
+[365] Burnt fish: Oops!
+[368] Burnt fish: Oops!
+--- chest key ---
+[382] Chest key: A key to One eyed Hector's chest
+[1164] chest key: A small key for a chest
+--- monks robe ---
+[388] Monks robe: I feel closer to the God's when I am wearing this
+[389] Monks robe: Keeps a monk's legs nice and warm
+--- plank ---
+[410] Plank: This doesn't look very useful
+[1283] Plank: Damaged remains of the ship
+--- map piece ---
+[416] Map Piece: I need some more of the map for this to be useful
+[417] Map Piece: I need some more of the map for this to be useful
+[418] Map Piece: I need some more of the map for this to be useful
+--- unfinished potion ---
+[454] Unfinished potion: I need another ingredient to finish this Guam potion
+[455] Unfinished potion: I need another ingredient to finish this Marrentill potion
+[456] Unfinished potion: I need another ingredient to finish this Tarromin potion
+[457] Unfinished potion: I need another ingredient to finish this Harralander potion
+[458] Unfinished potion: I need another ingredient to finish this Ranarr potion
+[459] Unfinished potion: I need another ingredient to finish this Irit potion
+[460] Unfinished potion: I need another ingredient to finish this Avantoe potion
+[461] Unfinished potion: I need another ingredient to finish this Kwuarm potion
+[462] Unfinished potion: I need another ingredient to finish this Cadantine potion
+[463] Unfinished potion: I need another ingredient to finish this Dwarfweed potion
+[935] Unfinished potion: I need Jangerberries to finish this Torstol potion
+[1052] Unfinished potion: I need another ingredient to finish the shaman potion
+[1074] Unfinished potion: I need another ingredient to finish this potion
+--- vial ---
+[464] Vial: It's full of water
+[465] Vial: This vial is empty
+--- unicorn horn ---
+[466] Unicorn horn: Poor unicorn
+[997] Unicorn horn: Poor unicorn went splat!
+--- attack potion ---
+[474] attack Potion: 3 doses of attack potion
+[475] attack Potion: 2 doses of attack potion
+[476] attack Potion: 1 dose of attack potion
+--- stat restoration potion ---
+[477] stat restoration Potion: 3 doses of stat restoration potion
+[478] stat restoration Potion: 2 doses of stat restoration potion
+[479] stat restoration Potion: 1 dose of stat restoration potion
+--- defense potion ---
+[480] defense Potion: 3 doses of defense potion
+[481] defense Potion: 2 doses of defense potion
+[482] defense Potion: 1 dose of defense potion
+--- restore prayer potion ---
+[483] restore prayer Potion: 3 doses of restore prayer potion
+[484] restore prayer Potion: 2 doses of restore prayer potion
+[485] restore prayer Potion: 1 dose of restore prayer potion
+--- super attack potion ---
+[486] Super attack Potion: 3 doses of attack potion
+[487] Super attack Potion: 2 doses of attack potion
+[488] Super attack Potion: 1 dose of attack potion
+--- fishing potion ---
+[489] fishing Potion: 3 doses of fishing potion
+[490] fishing Potion: 2 doses of fishing potion
+[491] fishing Potion: 1 dose of fishing potion
+--- super strength potion ---
+[492] Super strength Potion: 3 doses of strength potion
+[493] Super strength Potion: 2 doses of strength potion
+[494] Super strength Potion: 1 dose of strength potion
+--- super defense potion ---
+[495] Super defense Potion: 3 doses of defense potion
+[496] Super defense Potion: 2 doses of defense potion
+[497] Super defense Potion: 1 dose of defense potion
+--- ranging potion ---
+[498] ranging Potion: 3 doses of ranging potion
+[499] ranging Potion: 2 doses of ranging potion
+[500] ranging Potion: 1 dose of ranging potion
+--- dragonstone amulet ---
+[522] Dragonstone Amulet: A very powerful amulet
+[524] Dragonstone Amulet: It needs a string so I can wear it
+--- half of a key ---
+[526] Half of a key: A very shiny key
+[527] Half of a key: A very shiny key
+--- firebird feather ---
+[557] Firebird Feather: A red hot feather
+[558] Firebird Feather: This is cool enough to hold now
+--- cure poison potion ---
+[566] Cure poison Potion: 3 doses of cure poison potion
+[567] Cure poison Potion: 2 doses of cure poison potion
+[568] Cure poison Potion: 1 dose of cure poison potion
+--- poison antidote ---
+[569] Poison antidote: 3 doses of anti poison potion
+[570] Poison antidote: 2 doses of anti poison potion
+[571] Poison antidote: 1 dose of anti poison potion
+--- party hat ---
+[576] Party Hat: Party!!!
+[577] Party Hat: Party!!!
+[578] Party Hat: Party!!!
+[579] Party Hat: Party!!!
+[580] Party Hat: Party!!!
+[581] Party Hat: Party!!!
+--- whisky ---
+[584] Whisky: A bottle of Draynor Malt
+[868] Whisky: A locally brewed Malt
+--- candle ---
+[599] Candle: An unlit candle
+[601] Candle: A small slowly burning candle
+--- black candle ---
+[600] black Candle: A spooky but unlit candle
+[602] black Candle: A spooky candle
+--- druids robe ---
+[607] Druids robe: I feel closer to the Gods when I am wearing this
+[608] Druids robe: Keeps a druids's knees nice and warm
+--- eye patch ---
+[609] Eye patch: It makes me look very piratical
+[1237] eye patch: It makes me look very piratical
+--- scorpion cage ---
+[678] scorpion cage: I need to catch some scorpions in this
+[679] scorpion cage: It has 1 scorpion in it
+[680] scorpion cage: It has 2 scorpions in it
+[681] scorpion cage: It has 3 scorpions in it
+[686] scorpion cage: It has 1 scorpion in it
+[687] scorpion cage: It has 1 scorpion in it
+[688] scorpion cage: It has 2 scorpions in it
+[689] scorpion cage: It has 2 scorpions in it
+--- crest fragment ---
+[695] Crest fragment: Part of the Fitzharmon family crest
+[696] Crest fragment: Part of the Fitzharmon family crest
+[697] Crest fragment: Part of the Fitzharmon family crest
+--- robe of zamorak ---
+[702] robe of Zamorak: A robe worn by worshippers of Zamorak
+[703] robe of Zamorak: A robe worn by worshippers of Zamorak
+--- large cog ---
+[727] Large cog:  A large old cog
+[728] Large cog:  A large old cog
+[729] Large cog:  A large old cog
+[730] Large cog:  A large old cog
+--- plagued sheep remains ---
+[758] Plagued sheep remains: These sheep remains are infected
+[762] Plagued sheep remains: These sheep remains are infected
+[763] Plagued sheep remains: These sheep remains are infected
+[764] Plagued sheep remains: These sheep remains are infected
+--- torch ---
+[773] Torch: A unlit home made torch
+[774] Torch: A lit home made torch
+--- broken glass ---
+[778] Broken glass: Glass from a broken window pane
+[1170] Broken glass: smashed glass
+--- oyster pearls ---
+[779] oyster pearls: I could work wonders with these and a chisel
+[792] oyster pearls: I could work wonders with these and a chisel
+--- oyster ---
+[791] oyster: It's empty
+[793] oyster: It's a rare oyster
+--- glarial's urn ---
+[805] Glarial's urn: An urn containing glarials ashes
+[806] Glarial's urn: An empty metal urn
+--- halloween mask ---
+[828] halloween mask: aaaarrrghhh ... i'm a monster
+[831] halloween mask: aaaarrrghhh ... i'm a monster
+[832] halloween mask: aaaarrrghhh ... i'm a monster
+--- cocktail glass ---
+[833] cocktail glass: For sipping cocktails
+[853] cocktail glass: For sipping cocktails
+[854] cocktail glass: For sipping cocktails
+--- gnome robe ---
+[836] gnome robe: A high fashion robe
+[837] gnome robe: A high fashion robe
+[838] gnome robe: A high fashion robe
+[839] gnome robe: A high fashion robe
+[840] gnome robe: A high fashion robe
+--- gnomeshat ---
+[841] gnomeshat: A silly pointed hat
+[842] gnomeshat: A silly pointed hat
+[843] gnomeshat: A silly pointed hat
+[844] gnomeshat: A silly pointed hat
+[845] gnomeshat: A silly pointed hat
+--- gnome top ---
+[846] gnome top: rometti - the ultimate in gnome design
+[847] gnome top: rometti - the only name in gnome fashion!
+[848] gnome top: rometti - the only name in gnome fashion!
+[849] gnome top: rometti - the only name in gnome fashion!
+[850] gnome top: rometti - the only name in gnome fashion!
+--- fruit blast ---
+[866] fruit blast: A cool refreshing fruit mix
+[937] fruit blast: A cool refreshing fruit mix
+--- drunk dragon ---
+[872] Drunk dragon: A warm creamy alcoholic beverage
+[943] Drunk dragon: A warm creamy alcoholic beverage
+--- sgg ---
+[874] SGG: A short green guy..looks good
+[941] SGG: A short green guy..looks good
+--- chocolate saturday ---
+[875] Chocolate saturday: A warm creamy alcoholic beverage
+[942] Chocolate saturday: A warm creamy alcoholic beverage
+--- blurberry special ---
+[877] blurberry special: Looks good..smells strong
+[938] blurberry special: Looks good..smells strong
+--- wizard blizzard ---
+[878] wizard blizzard: Looks like a strange mix
+[939] wizard blizzard: Looks like a strange mix
+--- pineapple punch ---
+[879] pineapple punch: A fresh healthy fruit mix
+[940] pineapple punch: A fresh healthy fruit mix
+--- gnomebatta ---
+[884] gnomebatta: A baked dough base
+[886] gnomebatta: It's burnt to a sinder
+--- gnomebowl ---
+[885] gnomebowl: A baked dough bowl
+[888] gnomebowl: It's burnt to a sinder
+--- gnomecrunchie ---
+[887] gnomecrunchie: They're burnt to a sinder
+[900] gnomecrunchie: yum ... smells good
+--- cheese and tomato batta ---
+[901] cheese and tomato batta: Smells really good
+[944] cheese and tomato batta: Smells really good
+--- toad batta ---
+[902] toad batta: actually smells quite good
+[945] toad batta: actually smells quite good
+--- gnome batta ---
+[903] gnome batta: smells like pants
+[946] gnome batta: smells like pants
+--- worm batta ---
+[904] worm batta: actually smells quite good
+[947] worm batta: actually smells quite good
+--- fruit batta ---
+[905] fruit batta: actually smells quite good
+[948] fruit batta: actually smells quite good
+--- veg batta ---
+[906] Veg batta: well..it looks healthy
+[949] Veg batta: well..it looks healthy
+--- chocolate bomb ---
+[907] Chocolate bomb: Looks great
+[950] Chocolate bomb: Looks great
+--- vegball ---
+[908] Vegball: Looks pretty healthy
+[951] Vegball: Looks pretty healthy
+--- worm hole ---
+[909] worm hole: actually smells quite good
+[952] worm hole: actually smells quite good
+--- tangled toads legs ---
+[910] Tangled toads legs: actually smells quite good
+[953] Tangled toads legs: actually smells quite good
+--- choc crunchies ---
+[911] Choc crunchies: yum ... smells good
+[954] Choc crunchies: yum ... smells good
+--- worm crunchies ---
+[912] Worm crunchies: actually smells quite good
+[955] Worm crunchies: actually smells quite good
+--- toad crunchies ---
+[913] Toad crunchies: actually smells quite good
+[956] Toad crunchies: actually smells quite good
+--- spice crunchies ---
+[914] Spice crunchies: yum ... smells good
+[957] Spice crunchies: yum ... smells good
+--- pebble ---
+[927] Pebble: The pebble has an inscription
+[928] Pebble: The pebble has an inscription
+[929] Pebble: The pebble has an inscription
+[930] Pebble: The pebble has an inscription
+--- potion of zamorak ---
+[963] Potion of Zamorak: It looks scary
+[964] Potion of Zamorak: It looks scary
+[965] Potion of Zamorak: It looks scary
+--- orb of light ---
+[991] Orb of light: The orb gives you a safe peaceful feeling
+[992] Orb of light: The orb gives you a safe peaceful feeling
+[993] Orb of light: The orb gives you a safe peaceful feeling
+[994] Orb of light: The orb gives you a safe peaceful feeling
+--- railing ---
+[995] Railing: A broken metal rod
+[1042] Railing: A metal railing replacement
+--- coat of arms ---
+[998] Coat of Arms: A symbol of truth and all that is good
+[999] Coat of Arms: A symbol of truth and all that is good
+--- staff of iban ---
+[1000] Staff of Iban: It's a slightly magical stick
+[1031] Staff of Iban: The staff is damaged
+--- cat ---
+[1003] Cat: She's sleeping..i think!
+[1093] Cat: it's fluffs
+[1119] cat: looks like a healthy one
+--- unholy symbol of zamorak ---
+[1027] Unholy Symbol of Zamorak: this needs stringing
+[1029] Unholy Symbol of Zamorak: a symbol indicating allegiance to Zamorak
+--- dwarf cannon base ---
+[1032] Dwarf cannon base: bang
+[1184] Dwarf cannon base: bang
+--- dwarf cannon stand ---
+[1033] Dwarf cannon stand: bang
+[1185] Dwarf cannon stand: bang
+--- dwarf cannon barrels ---
+[1034] Dwarf cannon barrels: bang
+[1186] Dwarf cannon barrels: bang
+--- dwarf cannon furnace ---
+[1035] Dwarf cannon furnace: bang
+[1187] Dwarf cannon furnace: bang
+--- ogre relic part ---
+[1048] Ogre relic part: A piece of a statue
+[1049] Ogre relic part: A piece of a statue
+[1050] Ogre relic part: A piece of a statue
+--- panning tray ---
+[1111] Panning tray: used for panning gold
+[1112] Panning tray: this tray contains gold nuggets
+[1113] Panning tray: this tray contains mud
+--- rock sample ---
+[1117] Rock Sample: A rock sample
+[1148] Rock Sample: A rock sample
+[1149] Rock Sample: A rock sample
+--- damaged armour ---
+[1157] Damaged armour: that's been here some time
+[1158] Damaged armour: that's been here some time
+--- radimus scrolls ---
+[1163] Radimus Scrolls: Scrolls that Radimus gave you
+[1233] Radimus Scrolls: Mission briefing and the completed map of Karamja - Sir Radimus will be pleased...
+--- mixed chemicals ---
+[1178] Mixed chemicals: A pungent mix of 2 chemicals
+[1180] Mixed chemicals: A pungent mix of 3 chemicals
+--- annas silver necklace ---
+[1194] Annas Silver Necklace: A necklace coated with silver
+[1224] Annas Silver Necklace: A silver necklace coated with flour
+--- bobs silver teacup ---
+[1195] Bobs Silver Teacup: A tea cup coated with silver
+[1225] Bobs Silver Teacup: A silver tea cup coated with flour
+--- carols silver bottle ---
+[1196] Carols Silver Bottle: A little bottle coated with silver
+[1226] Carols Silver Bottle: A little silver bottle coated with flour
+--- davids silver book ---
+[1197] Davids Silver Book: An ornamental book coated with silver
+[1227] Davids Silver Book: An ornamental silver book coated with flour
+--- elizabeths silver needle ---
+[1198] Elizabeths Silver Needle: An ornamental needle coated with silver
+[1228] Elizabeths Silver Needle: An ornamental silver needle coated with flour
+--- franks silver pot ---
+[1199] Franks Silver Pot: A small pot coated with silver
+[1229] Franks Silver Pot: A small silver pot coated with flour
+--- a silver dagger ---
+[1205] A Silver Dagger: Dagger Found at crime scene
+[1230] A Silver Dagger: Dagger Found at crime scene coated with flour
+--- half dragon square shield ---
+[1276] Half Dragon Square Shield: The Right Half of an ancient and powerful looking Dragon Square shield.
+[1277] Half Dragon Square Shield: Left Half of an ancient and powerful looking Dragon Square shield.

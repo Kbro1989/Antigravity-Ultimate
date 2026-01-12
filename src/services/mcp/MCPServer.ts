@@ -1,6 +1,6 @@
 
 import { ToolRegistry } from './ToolRegistry';
-import { localBridgeClient } from '../bridge/LocalBridgeService';
+// localBridgeClient import removed for Sovereignty (Dynamically loaded)
 
 export class MCPServer {
     private registry: ToolRegistry;
@@ -25,9 +25,14 @@ export class MCPServer {
                 }
             },
             async (args: { path: string }) => {
-                const res = await localBridgeClient.readLocalFile(args.path);
-                if (!res.success) throw new Error(res.error || 'Unknown error reading file');
-                return { content: res.content };
+                try {
+                    const { localBridgeClient } = await import('../bridge/LocalBridgeService');
+                    const res = await localBridgeClient.readLocalFile(args.path);
+                    if (!res.success) throw new Error(res.error || 'Unknown error reading file');
+                    return { content: res.content };
+                } catch (e: any) {
+                    throw new Error(`[Sovereignty Alert] Local Bridge unavailable or operation failed: ${e.message}`);
+                }
             }
         );
 
@@ -45,9 +50,14 @@ export class MCPServer {
                 }
             },
             async (args: { path: string }) => {
-                const res = await localBridgeClient.listDirectory(args.path);
-                if (!res.success) throw new Error(res.error || 'Unknown error listing directory');
-                return { files: res.files };
+                try {
+                    const { localBridgeClient } = await import('../bridge/LocalBridgeService');
+                    const res = await localBridgeClient.listDirectory(args.path);
+                    if (!res.success) throw new Error(res.error || 'Unknown error listing directory');
+                    return { files: res.files };
+                } catch (e: any) {
+                    throw new Error(`[Sovereignty Alert] Local Bridge unavailable or operation failed: ${e.message}`);
+                }
             }
         );
 

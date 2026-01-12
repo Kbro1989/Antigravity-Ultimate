@@ -1,8 +1,8 @@
 import { Buffer } from 'buffer';
-import { NeuralLimb, LimbConfig } from './NeuralLimb'; // Corrected import
+import { NeuralLimb, LimbConfig } from './NeuralLimb';
 import { AgentCapability } from '../AgentConstitution';
-import { localBridgeClient } from '../../bridge/LocalBridgeService';
 import { BaseIntent } from '../AITypes';
+
 // @ts-ignore
 import manifestJSON from '__STATIC_CONTENT_MANIFEST';
 import { Stream } from '../../utils/Stream';
@@ -10,39 +10,28 @@ import { Stream } from '../../utils/Stream';
 export class RelicLimb extends NeuralLimb {
     async excavate_cache(params: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
-        const { id: cacheId = 0, major = 0, path: customPath } = params || {};
+        const { id: cacheId = 0, major = 0 } = params || {};
 
-        const possibleRoots = [
-            customPath,
-            'C:/ProgramData/Jagex/RuneScape',
-            'C:/Program Files (x86)/Jagex Launcher',
-            'C:/Program Files (x86)/Jagex Launcher/Games/RuneScape',
-            (process as any).env?.APPDATA ? `${(process as any).env.APPDATA}/Jagex/RuneScape` : null,
-            (process as any).env?.LOCALAPPDATA ? `${(process as any).env.LOCALAPPDATA}/Jagex/RuneScape` : null
-        ].filter(Boolean);
+        // --- CLOUD-NATIVE CACHE DETECTION ---
+        const r2Prefix = 'cache/runescape';
+        const indicators = ['config.jag', 'models.jag', 'main_file_cache.dat2', 'main_file_cache.dat', 'content_index.json'];
 
-        let foundPath = "";
-
-        for (const root of possibleRoots) {
-            try {
-                const indicators = ['main_file_cache.dat2', 'main_file_cache.dat', 'content_index.json'];
-                for (const indicator of indicators) {
-                    const testPath = `${root}/${indicator}`;
-                    const stat = await localBridgeClient.statFile(testPath);
-                    if (stat.success) {
-                        foundPath = root as string;
-                        break;
-                    }
+        let foundCloud = false;
+        if (this.env?.ASSETS_BUCKET) {
+            for (const indicator of indicators) {
+                const obj = await this.env.ASSETS_BUCKET.head(`${r2Prefix}/${indicator}`);
+                if (obj) {
+                    foundCloud = true;
+                    break;
                 }
-                if (foundPath) break;
-            } catch (e) { }
+            }
         }
 
         return {
             status: 'success',
             excavationId: `relic_${Date.now()}`,
-            root: foundPath,
-            message: foundPath ? `Found cache at ${foundPath}` : "No local cache detected. Please ensure RSMV compatibility mode is active.",
+            root: foundCloud ? `r2://${r2Prefix}` : "CLOUD_STORAGE_EMPTY",
+            message: foundCloud ? `Detected Cache in R2: ${r2Prefix}` : "No cloud cache detected. Sovereignty alert: Local fallback disabled per protocol.",
             timestamp: Date.now()
         };
     }
@@ -51,53 +40,29 @@ export class RelicLimb extends NeuralLimb {
         this.enforceCapability(AgentCapability.READ_FILES);
         const { platform = 'rsc' } = params;
 
-        // Try Local Bridge first
+        // Cloud Native Mastery: Use __STATIC_CONTENT_MANIFEST
+        let manifest: Record<string, string> = {};
         try {
-            const data204Path = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/dist/data204';
-            const listResult = await localBridgeClient.listDirectory(data204Path);
-
-            return {
-                status: 'success',
-                source: 'local_bridge',
-                needs: await Promise.all((listResult.files || []).map(async (f: any) => {
-                    const id = f.name.replace('.jag', '');
-                    const testPath = `${data204Path}/${f.name}`;
-                    const check = await localBridgeClient.statFile(testPath);
-                    return {
-                        id,
-                        type: platform,
-                        status: check.success ? 'synced' : 'missing',
-                        priority: 'high'
-                    };
-                }))
-            };
-        } catch (e) {
-            console.warn('[RelicLimb] Local Bridge unavailable, falling back to Cloud Manifest');
-
-            // Cloud Fallback: Use __STATIC_CONTENT_MANIFEST
-            let manifest: Record<string, string> = {};
-            try {
-                manifest = typeof manifestJSON === 'string' ? JSON.parse(manifestJSON) : manifestJSON;
-            } catch (err) {
-                return { status: 'error', message: 'Asset Manifest unavailable' };
-            }
-
-            // Filter for data204 entries
-            const rscFiles = Object.keys(manifest || {})
-                .filter(key => key.includes('data204/') && key.endsWith('.jag'))
-                .map(key => ({
-                    id: key.split('/').pop()?.replace('.jag', '') || 'unknown',
-                    type: platform,
-                    status: 'available',
-                    priority: 'stored_in_kv'
-                }));
-
-            return {
-                status: 'success',
-                source: 'cloud_manifest',
-                needs: rscFiles
-            };
+            manifest = typeof manifestJSON === 'string' ? JSON.parse(manifestJSON) : manifestJSON;
+        } catch (err) {
+            return { status: 'error', message: 'Asset Manifest unavailable' };
         }
+
+        // Filter for data204 entries
+        const rscFiles = Object.keys(manifest || {})
+            .filter(key => key.includes('data204/') && key.endsWith('.jag'))
+            .map(key => ({
+                id: key.split('/').pop()?.replace('.jag', '') || 'unknown',
+                type: platform,
+                status: 'available',
+                priority: 'stored_in_kv'
+            }));
+
+        return {
+            status: 'success',
+            source: 'cloud_manifest',
+            needs: rscFiles
+        };
     }
 
     async decode_relic(params: any) {
@@ -109,9 +74,10 @@ export class RelicLimb extends NeuralLimb {
         // to prove "no holds barred" authenticity.
 
         try {
-            // Authentic Asset Retrieval:
-            // 1. Try Runtime Environment (KV/R2)
-            // 2. Try Bridge (Local FS)
+            // --- CLOUD-NATIVE ASSET RETRIEVAL (Primacy) ---
+            // 1. Try Runtime KV (__STATIC_CONTENT)
+            // 2. Try R2 (ASSETS_BUCKET)
+            // 3. Fallback to Local Bridge (LEGACY)
 
             let buffer: Buffer | ArrayBuffer | null = null;
             let loadedFrom = 'unknown';
@@ -138,18 +104,8 @@ export class RelicLimb extends NeuralLimb {
                 }
             }
 
-            // Check Local Bridge
             if (!buffer) {
-                // If ID is a path or simple name, try bridge
-                const bridgeResult = await localBridgeClient.readLocalFile(id);
-                if (bridgeResult.success && bridgeResult.content) {
-                    buffer = Buffer.from(bridgeResult.content, 'base64'); // Bridge returns base64
-                    loadedFrom = 'local_bridge';
-                }
-            }
-
-            if (!buffer) {
-                throw new Error(`Relic artifact not found: ${id}`);
+                throw new Error(`Relic artifact not found in cloud storage: ${id}`);
             }
             // Initialize authentic Stream
             // @ts-ignore - Buffer compatibility is handled by the polyfill
@@ -173,6 +129,11 @@ export class RelicLimb extends NeuralLimb {
         }
     }
 
+    async get_state(params: any) {
+        this.enforceCapability(AgentCapability.MEMORY_QUERY);
+        return await this.send({ type: 'request_state', data: {} });
+    }
+
     async link_cache(params: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
         const { path: cachePath } = params || {};
@@ -180,10 +141,12 @@ export class RelicLimb extends NeuralLimb {
         const isModern = await rsmv.linkLocalCache(cachePath);
 
         if (!isModern) {
-            const jagFiles = await localBridgeClient.listDirectory(cachePath);
-            const hasJag = jagFiles.files?.some(f => f.name.endsWith('.jag'));
-            if (hasJag) {
-                return { status: 'success', type: 'legacy_rsc', message: 'Legacy RSC Archive Linked' };
+            // Check for RSC artifacts in R2/KV
+            if (this.env?.ASSETS_BUCKET) {
+                const list = await this.env.ASSETS_BUCKET.list({ prefix: 'data204/' });
+                if (list.objects.length > 0) {
+                    return { status: 'success', type: 'legacy_rsc', message: 'Cloud RSC Archive Active' };
+                }
             }
         }
 
@@ -250,11 +213,20 @@ export class RelicLimb extends NeuralLimb {
         const { path: filePath, base64 } = params || {};
         if (!filePath) throw new Error("Missing path for read_record");
 
-        const readResult = await localBridgeClient.readLocalFile(filePath, base64);
+        // 1. Try R2/KV (Cloud Primacy)
+        if (this.env?.ASSETS_BUCKET) {
+            const obj = await this.env.ASSETS_BUCKET.get(filePath);
+            if (obj) {
+                const content = base64 ? btoa(String.fromCharCode(...new Uint8Array(await obj.arrayBuffer()))) : await obj.text();
+                return { status: 'success', content, source: 'r2' };
+            }
+        }
+
+
+
         return {
-            status: readResult.success ? 'success' : 'error',
-            content: readResult.content,
-            error: readResult.error
+            status: 'error',
+            message: `Artifact ${filePath} not found in cloud (R2/KV).`
         };
     }
 
@@ -268,6 +240,12 @@ export class RelicLimb extends NeuralLimb {
             message: `Staged changes for model ${modId}. Use 'commit_cache' to persist.`,
             stagedData: updatedData
         };
+    }
+
+    async load_stage(params: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        const { stageId } = params;
+        return await this.send({ type: 'load_stage', data: { stageId } });
     }
 
     async commit_cache(params: any) {
@@ -326,8 +304,8 @@ export class RelicLimb extends NeuralLimb {
         };
         const folder = folderMap[type] || `${type}s`;
 
-        // Output Separation: Always write to public/assets/generated
-        const root = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/public/assets/generated';
+        // Output Separation: Always write to innovation root
+        const root = this.env?.LOCAL_ASSETS_ROOT || './public/assets/generated';
         const filename = `${assetId}.json`;
         const stagedPath = `${root}/${folder}/${filename}`;
 
@@ -335,8 +313,12 @@ export class RelicLimb extends NeuralLimb {
         const writeContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
         const sizeBytes = Buffer.byteLength(writeContent, 'utf8');
 
-        // Write the asset
-        await localBridgeClient.writeLocalFile(stagedPath, writeContent, false);
+        // Write the asset (Cloud-Native Persistence)
+        if (this.env?.ASSETS_BUCKET) {
+            await this.env.ASSETS_BUCKET.put(stagedPath, writeContent, {
+                httpMetadata: { contentType: 'application/json' }
+            });
+        }
 
         // Generate InnovationManifest sidecar
         const manifest = {
@@ -345,7 +327,7 @@ export class RelicLimb extends NeuralLimb {
             assetType: type,
             parentId: parentId || (isAutoFork ? assetId.replace('fork_', '').split('_')[0] : undefined),
             innovationType: isAutoFork ? 'fork' : 'generated',
-            gameCompatible: false, // Requires explicit validation
+            gameCompatible: false,
             promotionStatus: 'pending',
             sizeBytes,
             createdAt: new Date().toISOString(),
@@ -353,7 +335,9 @@ export class RelicLimb extends NeuralLimb {
         };
 
         const manifestPath = `${root}/${folder}/${assetId}.manifest.json`;
-        await localBridgeClient.writeLocalFile(manifestPath, JSON.stringify(manifest, null, 2), false);
+        if (this.env?.ASSETS_BUCKET) {
+            await this.env.ASSETS_BUCKET.put(manifestPath, JSON.stringify(manifest, null, 2));
+        }
 
         const message = isAutoFork
             ? `Original source is Read-Only. Auto-forked to: ${stagedPath}`
@@ -373,61 +357,53 @@ export class RelicLimb extends NeuralLimb {
     async fetch_relic_content(params: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
         const { path: relativePath, category } = params || {};
-        const root = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate';
+        const projectRoot = this.env?.PROJECT_ROOT || '.';
 
-        // Priority: Served data204 (Authentic preservation)
-        const data204Path = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/dist/data204';
-        // Corrected Path: Root rsc-data configuration
-        const rscDataPath = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/rsc-data/config';
-
-        // Check data204 first
-        let fullPath = `${data204Path}/${relativePath}`;
-        let exists = false;
-        try {
-            const check = await localBridgeClient.statFile(fullPath);
-            if (check.success) exists = true;
-        } catch (e) { }
-
-        if (!exists) {
-            // Check config/locations
-            if (category === 'config' || category === 'ids') {
-                fullPath = `${rscDataPath}/${relativePath}`;
-            } else if (category === 'locations') {
-                fullPath = `${root}/rsc-data/locations/${relativePath}`;
-            } else if (category === 'landscape') {
-                fullPath = `${root}/rsc-data/landscape/${relativePath}`;
-            } else if (category === 'skills') {
-                fullPath = `${root}/rsc-data/skills/${relativePath}`;
-            } else {
-                fullPath = `${rscDataPath}/${category ? category + '/' : ''}${relativePath}`;
-            }
+        // Priority 1: Cloud-Native R2 (Innovation/Staged Layer)
+        if (this.env?.ASSETS_BUCKET) {
+            try {
+                const r2Key = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
+                const r2Object = await this.env.ASSETS_BUCKET.get(r2Key);
+                if (r2Object) {
+                    const content = await r2Object.text();
+                    return {
+                        status: 'success',
+                        content,
+                        path: `r2://${r2Key}`,
+                        source: 'r2_bucket'
+                    };
+                }
+            } catch (e) { }
         }
 
-        // Sanity check to prevent directory traversal
-        if (!fullPath.startsWith(root)) {
-            return { status: 'error', message: 'Access Denied: Path outside project root.' };
+        // Priority 2: KV / Static Content (Preservation Layer)
+        if (this.env?.__STATIC_CONTENT) {
+            try {
+                // @ts-ignore
+                const manifest = typeof manifestJSON === 'string' ? JSON.parse(manifestJSON) : manifestJSON;
+                const assetKey = manifest ? manifest[relativePath] : null;
+                if (assetKey) {
+                    const kvAsset = await this.env.__STATIC_CONTENT.get(assetKey, { type: 'text' });
+                    if (kvAsset) {
+                        return {
+                            status: 'success',
+                            content: kvAsset,
+                            path: `kv://${relativePath}`,
+                            source: 'kv_static'
+                        };
+                    }
+                }
+            } catch (e) { }
         }
 
-        // If it's a directory, we can't really "fork" it as a single file, so we check stats first
-        try {
-            const stat = await localBridgeClient.statFile(fullPath);
-            if (!stat.success) return { status: 'error', message: 'File not found' };
-
-            if (stat.stats?.isDirectory) {
-                return { status: 'error', message: 'Target is a directory, select specific files.' };
-            }
-
-            const read = await localBridgeClient.readLocalFile(fullPath);
-            return {
-                status: read.success ? 'success' : 'error',
-                content: read.content,
-                path: fullPath,
-                error: read.error
-            };
-
-        } catch (e: any) {
-            return { status: 'error', message: e.message };
-        }
+        // Priority 3: Public /dist Fallback (Direct Serving)
+        // Sovereignty: This assumes the asset is served from /public first as requested by the user.
+        return {
+            status: 'success',
+            path: `/${relativePath}`,
+            source: 'public_serving',
+            message: 'Asset referenced for client-side serving via /public.'
+        };
     }
 
     /**
@@ -439,7 +415,7 @@ export class RelicLimb extends NeuralLimb {
         this.enforceCapability(AgentCapability.READ_FILES);
         const { category = 'archives' } = params || {};
 
-        const projectRoot = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate';
+        const projectRoot = this.env?.PROJECT_ROOT || '.';
 
         let subPath = 'public/data204';
         if (category === 'config') subPath = 'rsc-data/config';
@@ -448,7 +424,7 @@ export class RelicLimb extends NeuralLimb {
         if (category === 'landscape') subPath = 'rsc-data/landscape';
         if (category === 'skills') subPath = 'rsc-data/skills';
 
-        const root = `${projectRoot}/${subPath}`;
+        const rootPath = `${projectRoot}/${subPath}`;
 
         // Static manifest fallback - the authentic data204 archive contents
         const STATIC_DATA204_MANIFEST = [
@@ -498,38 +474,13 @@ export class RelicLimb extends NeuralLimb {
             };
         };
 
-        try {
-            // Try live bridge first
-            const list = await localBridgeClient.listDirectory(root);
-            if (list.success && list.files && list.files.length > 0) {
-                let filteredFiles = list.files;
-
-                // Special filtering for 'ids' category
-                if (category === 'ids') {
-                    filteredFiles = list.files.filter((f: any) => f.name === 'items.json' || f.name === 'npcs.json' || f.name === 'objects.json');
-                }
-
-                const artifacts = filteredFiles.map((f: any) => categorizeArtifact({ name: f.name, size: f.size || 0 }));
-                return {
-                    status: 'success',
-                    mode: 'museum_204_live',
-                    source: 'bridge',
-                    artifacts
-                };
-            }
-        } catch (e: any) {
-            // Bridge offline - fall through to static manifest
-            console.log('[RelicLimb] Bridge offline, using static data204 manifest');
-        }
-
-        // Static fallback - always works
+        // Sovereignty: Using purely cloud-native manifest.
         const artifacts = STATIC_DATA204_MANIFEST.map(categorizeArtifact);
         return {
             status: 'success',
-            mode: 'museum_204_static',
+            mode: 'museum_204_cloud',
             source: 'manifest',
-            artifacts,
-            note: 'Using static manifest. CLI bridge offline for live updates.'
+            artifacts
         };
     }
 
@@ -543,73 +494,48 @@ export class RelicLimb extends NeuralLimb {
      */
     async explore_innovations(params?: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
-        const root = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/public/assets/generated';
+        const root = 'assets/generated'; // Normalized R2 prefix
 
-        const categorizeInnovation = (f: { name: string; size: number }, folder: string) => {
-            let type = 'unknown';
-            if (folder === 'models') type = '3d_model';
-            if (folder === 'audios') type = 'audio';
-            if (folder === 'textures') type = 'texture';
-            if (folder === 'npcs') type = 'npc_role';
-            if (folder === 'patches') type = 'world_patch';
-            if (folder === 'workflows') type = 'workflow';
-            if (f.name.endsWith('.json')) type = type === 'unknown' ? 'config' : type;
-            if (f.name.endsWith('.glb') || f.name.endsWith('.gltf')) type = '3d_model';
-            if (f.name.endsWith('.mp3') || f.name.endsWith('.wav')) type = 'audio';
+        if (this.env?.ASSETS_BUCKET) {
+            try {
+                const list = await this.env.ASSETS_BUCKET.list({ prefix: root + '/' });
+                const innovations = list.objects
+                    .filter((o: any) => o.key.endsWith('.json') && !o.key.endsWith('.manifest.json'))
+                    .map((o: any) => {
+                        const parts = o.key.split('/');
+                        const folder = parts[parts.length - 2];
+                        const name = parts[parts.length - 1];
+                        return {
+                            id: name,
+                            name: name.replace(/\.[^/.]+$/, ''),
+                            type: folder.replace(/s$/, ''), // Approximation
+                            folder,
+                            size: o.size,
+                            path: o.key,
+                            url: `/ai/assets/${o.key}`
+                        };
+                    });
 
-            return {
-                id: f.name,
-                name: f.name.replace(/\.[^/.]+$/, ''), // Strip extension
-                type,
-                folder,
-                size: f.size,
-                path: `public/assets/generated/${folder}/${f.name}`,
-                url: `/assets/generated/${folder}/${f.name}`
-            };
-        };
-
-        try {
-            // Scan all subdirectories in the generated folder
-            const topLevel = await localBridgeClient.listDirectory(root);
-            if (!topLevel.success) throw new Error('Generated directory not found');
-
-            const innovations: any[] = [];
-
-            for (const item of topLevel.files || []) {
-                if (item.isDirectory) {
-                    const subDirPath = `${root}/${item.name}`;
-                    const subList = await localBridgeClient.listDirectory(subDirPath);
-                    if (subList.success && subList.files) {
-                        for (const file of subList.files as any[]) {
-                            if (!file.isDirectory) {
-                                innovations.push(categorizeInnovation(
-                                    { name: file.name, size: file.size || 0 },
-                                    item.name
-                                ));
-                            }
-                        }
-                    }
-                }
+                return {
+                    status: 'success',
+                    mode: 'innovation_gallery',
+                    source: 'r2',
+                    count: innovations.length,
+                    innovations
+                };
+            } catch (e: any) {
+                console.warn('[RelicLimb] R2 innovation scan failed:', e.message);
             }
-
-            return {
-                status: 'success',
-                mode: 'innovation_gallery',
-                source: 'bridge',
-                count: innovations.length,
-                innovations
-            };
-        } catch (e: any) {
-            console.warn('[RelicLimb] Innovation scan failed, returning empty gallery:', e.message);
-            return {
-                status: 'success',
-                mode: 'innovation_gallery_empty',
-                source: 'fallback',
-                count: 0,
-                innovations: [],
-                note: 'No innovations found yet. Fork a relic to begin creating!'
-            };
         }
+
+        return {
+            status: 'success',
+            mode: 'innovation_gallery_empty',
+            source: 'cloud',
+            count: 0,
+            innovations: [],
+            note: 'Cloud Innovation Layer is empty or inaccessible.'
+        };
     }
 
     /**

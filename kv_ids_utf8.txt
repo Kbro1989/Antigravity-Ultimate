@@ -1,0 +1,127 @@
+﻿[
+  {
+    "id": "d2115d86d630412a92875739f813eeea",
+    "title": "ASSET_NAMESPACE",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "4e0486384e414f548dc71a41ed629b97",
+    "title": "ASSETS",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "4a452d73838945b5a3065ef63c68d951",
+    "title": "ASSETS_PREVIEW_preview",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "092915c7c5544bbab25f6179db8ab9bd",
+    "title": "auth-kv",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "328b510e11f94357b76bf7affa50830b",
+    "title": "CACHE_KV",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "19ed43640eb04f69b98289b998ef971f",
+    "title": "cloudflare-code-agent-MY_KV",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "45b66378f5774ce78787331834db0496",
+    "title": "elderscape",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "7945478cbdf84ef0b67218a434d10398",
+    "title": "ELDERSCAPE_KV",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "a87c591492784e11b34900fe48b0aecf",
+    "title": "__elderscape-modelviewer-production-workers_sites_assets",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "d0afcaf70f864013abe36a06773d2930",
+    "title": "__elderscape-workers_sites_assets",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "d1310b8a08a249939a8b3e7a0352bf44",
+    "title": "HELLO_AI_ASSETS",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "680a9ac999de400880895c61008bbaf9",
+    "title": "__hello-ai-production-workers_sites_assets",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "834353bbd99a444bb56f4fa431c2b642",
+    "title": "hello-ai-rsmv-data",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "9b6cce9e90644ff28a2cff2c113811ca",
+    "title": "__hello-ai-workers_sites_assets",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "53e7b59de4764464bed75a677bf9805c",
+    "title": "hybrid-ide-production-CACHE",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "f13368114b6a4d8e9ca2919481f33fdd",
+    "title": "hybrid-ide-production-MEMORY",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "8c5a2eb8be934b078487ae615c0de92e",
+    "title": "KV_NAMESPACE",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "1a65228f378a4121a3ef500704b158be",
+    "title": "OpenAuth Server",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "883369c71eea44ac934ae1e5f0f366af",
+    "title": "PLAYERS",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "624458956eec4dbb9c927e29385cf667",
+    "title": "pog-ultimate-BRAIN",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "3015b76d2d1b408a99066d1e793d8435",
+    "title": "pog-ultimate-CACHE",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "f2881801ac59415a86236d0841f27103",
+    "title": "RSC_PLAYERS_v2",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "6b8ebd5a1a134b67b6e12a5a5675e884",
+    "title": "SESSION_KV",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "b6da4d0c89f843409c799eb8b9005e6b",
+    "title": "To-Do List App",
+    "supports_url_encoding": true
+  },
+  {
+    "id": "58fba013729b43cc9024c7ee86e2b82b",
+    "title": "VARIABLES",
+    "supports_url_encoding": true
+  }
+]

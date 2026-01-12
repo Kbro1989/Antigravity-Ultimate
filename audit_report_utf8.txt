@@ -1,0 +1,21 @@
+﻿--- Auditing Items ---
+Prod Count: 1290
+Ref Distinct IDs: 1330
+Missing in Prod: 40 items (Max Ref ID in list: 1329)
+First 5 missing: [
+  { id: 1290, name: 'attack Potion' },
+  { id: 1291, name: 'attack Potion' },
+  { id: 1292, name: 'attack Potion' },
+  { id: 1293, name: 'Cure poison Potion' },
+  { id: 1294, name: 'Cure poison Potion' }
+]
+
+--- Auditing NPCs ---
+Prod Count: 794
+Ref Distinct NPCs: 797
+Missing in Prod: 3 NPCs
+First 5 missing: [
+  { id: 794, name: 'Charlie' },
+  { id: 795, name: 'Mosol Rei' },
+  { id: 796, name: 'Watchtower Wizard' }
+]

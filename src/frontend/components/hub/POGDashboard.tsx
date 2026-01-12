@@ -40,6 +40,7 @@ const LiveWorkspace = React.lazy(() => import('../workspaces/LiveWorkspace').the
 const RelicWorkspace = React.lazy(() => import('../workspaces/RelicWorkspace').then(m => ({ default: m.RelicWorkspace })));
 const DivineWorkspace = React.lazy(() => import('../workspaces/DivineWorkspace').then(m => ({ default: m.DivineWorkspace })));
 const ClassicWorkspace = React.lazy(() => import('../workspaces/ClassicWorkspace').then(m => ({ default: m.ClassicWorkspace })));
+const ArchitectInterface = React.lazy(() => import('../workspaces/ArchitectInterface').then(m => ({ default: m.ArchitectInterface })));
 
 import { OrchestratorPanel } from '../orchestrator/OrchestratorPanel';
 import { SettingsPanel } from './SettingsPanel';
@@ -183,7 +184,10 @@ export function POGDashboard() {
         rig: MeshWorkspace,
         vfx: CreativeWorkspace,
         environment: WorldWorkspace,
-        file: FileWorkspace
+        file: FileWorkspace,
+        landscape: WorldWorkspace,
+        idauditor: ArchitectInterface,
+        versioncontrol: CodeWorkspace
     };
 
     const WorkspaceComponent = activeWorkspace ? WorkspaceComponents[activeWorkspace as WorkspaceMode] : null;
@@ -191,6 +195,7 @@ export function POGDashboard() {
     if (view === 'hub') {
         return (
             <div className="h-screen w-screen overflow-hidden bg-void relative">
+                <div className="scanner-sweep" />
                 <ParticleSystem layer="background" />
                 <BubbleWorldHUD onSelectWorkspace={handleSelectWorkspace} activeWorkspace={activeWorkspace as WorkspaceMode} />
 

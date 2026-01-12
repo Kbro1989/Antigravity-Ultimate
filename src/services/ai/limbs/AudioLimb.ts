@@ -44,6 +44,27 @@ export class AudioLimb extends NeuralLimb {
         return await this.generateSynthManifest(prompt, { ...options, type: 'fx' }, intent);
     }
 
+    async transcribe(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        const { audio } = params;
+        await this.logActivity('audio_transcribe', 'pending', { hasAudio: !!audio });
+        return await modelRouter.route({ type: 'stt', prompt: audio, ...intent }, this.env);
+    }
+
+    async analyze(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        const { prompt, audioUrl } = params;
+        await this.logActivity('audio_analyze', 'pending', { audioUrl });
+
+        // Use reasoning model to analyze manifest or transcribed text
+        return await modelRouter.route({
+            type: 'text',
+            prompt: `Analyze this audio request: "${prompt}". Provide BPM, Mood, and Genre in JSON.`,
+            modelId: 'REASONING',
+            ...intent
+        }, this.env);
+    }
+
     async inspire_audio(params: any, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
         const { sourceRelic, mood } = params;
@@ -56,17 +77,34 @@ export class AudioLimb extends NeuralLimb {
      * Generates a "Speech" asset using Melotts via Cloudflare AI
      */
     private async generateSpeech(prompt: string, options: any, intent: BaseIntent) {
-        const result = await modelRouter.orchestrateMedia('audio', prompt, this.env, { ...options, ...intent }) as any;
+        try {
+            const result = await modelRouter.orchestrateMedia('audio', prompt, this.env, { ...options, ...intent }) as any;
 
-        if (result.audioUrl) {
-            const finalUrl = await this.persistAsset('audio', result.audioUrl, {
+            if (result.audioUrl) {
+                const finalUrl = await this.persistAsset('audio', result.audioUrl, {
+                    type: 'speech',
+                    model: '@cf/myshell/melotts',
+                    prompt
+                });
+                result.audioUrl = finalUrl;
+            }
+            return { ...result, type: 'speech' };
+        } catch (error) {
+            console.warn('[AudioLimb] Speech generation failed. Activating Wasm survival mode.', error);
+            const { WasmEmergencyService } = await import('../emergency/WasmEmergencyService');
+            const emergencyUrl = WasmEmergencyService.generateEmergencyAudio(prompt);
+
+            return {
+                status: 'emergency_fallback',
+                audioUrl: emergencyUrl,
                 type: 'speech',
-                model: '@cf/myshell/melotts',
-                prompt
-            });
-            result.audioUrl = finalUrl;
+                metadata: {
+                    model: 'ghost-limb-wasm',
+                    provider: 'emergency',
+                    prompt
+                }
+            };
         }
-        return { ...result, type: 'speech' };
     }
 
     /**
@@ -86,20 +124,39 @@ export class AudioLimb extends NeuralLimb {
             "description": "Short description"
         }`;
 
-        const design = await modelRouter.route({
-            type: 'text',
-            prompt: designPrompt,
-            modelId: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
-            options: { json: true }
-        }, this.env);
-
-        let manifest = { name: 'Unknown', tracks: [] };
+        let manifest: any = { name: 'Unknown', tracks: [] };
         try {
-            // @ts-ignore
-            const content = design.content || design;
-            manifest = JSON.parse(content.substring(content.indexOf('{'), content.lastIndexOf('}') + 1));
+            const design = await modelRouter.route({
+                type: 'text',
+                prompt: designPrompt,
+                modelId: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+                options: { json: true }
+            }, this.env);
+
+            // Robust JSON extraction from LLM response
+            const content = (design as any).content || design;
+            const jsonMatch = typeof content === 'string' ? content.match(/\{[\s\S]*\}/) : null;
+            if (jsonMatch) {
+                manifest = JSON.parse(jsonMatch[0]);
+            } else if (typeof content === 'object') {
+                manifest = content;
+            } else {
+                throw new Error("No valid design data found in LLM response");
+            }
         } catch (e) {
-            manifest = { name: 'Parse Error', tracks: [] };
+            console.warn("[AudioLimb] Synth Manifest design failed. Falling back to deterministic procedural audio.", e);
+            const { WasmEmergencyService } = await import('../emergency/WasmEmergencyService');
+            const emergencyUrl = WasmEmergencyService.generateEmergencyAudio(prompt);
+
+            return {
+                status: 'emergency_fallback',
+                audioUrl: emergencyUrl,
+                metadata: {
+                    model: 'ghost-limb-wasm',
+                    isSynth: false,
+                    prompt
+                }
+            };
         }
 
         const creationId = `synth_${Date.now()}`;
@@ -126,11 +183,41 @@ export class AudioLimb extends NeuralLimb {
 
     async inventory_sounds(params?: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
-        const { localBridgeClient } = await import('../../bridge/LocalBridgeService');
-        const root = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/public/assets/generated/audios';
+
+        const root = 'audio/generated'; // Normalized R2 prefix
+
+        // 1. Try Cloud R2 (Primacy)
+        if (this.env?.ASSETS_BUCKET) {
+            try {
+                const list = await this.env.ASSETS_BUCKET.list({ prefix: root + '/' });
+                const sounds = list.objects
+                    .filter((f: any) => f.key.endsWith('.mp3') || f.key.endsWith('.wav') || f.key.endsWith('.json'))
+                    .map((f: any) => ({
+                        id: f.key.split('/').pop(),
+                        name: f.key.split('/').pop().replace(/\.[^/.]+$/, ''),
+                        format: f.key.split('.').pop(),
+                        size: f.size || 0,
+                        url: `/ai/assets/${f.key}`,
+                        playable: true,
+                        source: 'cloud'
+                    }));
+                return { status: 'success', count: sounds.length, sounds };
+            } catch (e: any) {
+                console.warn(`[AudioLimb] R2 sweep failed: ${e.message}`);
+            }
+        }
+
+        // 2. Legacy Bridge Fallback (Optional Extension)
+        const bridge = await this.getBridge();
+        if (!bridge) {
+            return { status: 'success', count: 0, sounds: [], note: '[Sovereignty Alert] Local Bridge unavailable.' };
+        }
+
+        const localRoot = this.env?.LOCAL_ASSETS_ROOT || './public/assets/generated';
+        const searchRoot = `${localRoot}/audios`;
 
         try {
-            const list = await localBridgeClient.listDirectory(root);
+            const list = await bridge.listDirectory(searchRoot);
             if (!list.success || !list.files) return { status: 'success', count: 0, sounds: [] };
 
             const sounds = list.files
@@ -141,12 +228,22 @@ export class AudioLimb extends NeuralLimb {
                     format: f.name.split('.').pop(),
                     size: f.size || 0,
                     url: `/assets/generated/audios/${f.name}`,
-                    playable: true
+                    playable: true,
+                    source: 'bridge'
                 }));
 
             return { status: 'success', count: sounds.length, sounds };
         } catch (e: any) {
             return { status: 'success', count: 0, sounds: [], error: e.message };
+        }
+    }
+
+    private async getBridge() {
+        try {
+            const { localBridgeClient } = await import('../../bridge/LocalBridgeService');
+            return localBridgeClient;
+        } catch (e) {
+            return null;
         }
     }
 }

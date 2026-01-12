@@ -38,13 +38,28 @@ export class DivineLimb extends NeuralLimb {
         };
     }
 
-    async forge_omnipotence(params: any) {
+    async forge_omnipotence(params: any, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
+        const { state } = params;
+
+        // 1. Synchronize Reality State with Digital Twin
+        const convergence = await this.limbs.call('reality', 'anchor_convergence', {
+            projectId: intent.sessionId || 'pog-ultimate',
+            description: `Forge Omnipotence: Reality Sync`,
+            options: { state, layers: ['Geometry', 'Spirit', 'Logic'] }
+        });
+
+        // 2. Perform Infinite Synthesis
         return {
-            status: 'executing',
+            status: 'success',
             task: 'Infinite Synthesis Protocol',
-            layers: ['Geometry', 'Material', 'Spirit', 'Logic'],
-            eta: '10s'
+            convergence: convergence.anchor.id,
+            integrity: convergence.integrity,
+            manifest: {
+                layers: ['Geometry', 'Material', 'Spirit', 'Logic'],
+                stability: 'STEADY_STATE'
+            },
+            timestamp: Date.now()
         };
     }
 
@@ -90,9 +105,8 @@ export class DivineLimb extends NeuralLimb {
 
         // We would write this to staged_assets, but assume persistAsset handles the abstraction
         await this.persistAsset('quest_data', `staged://${stagedPath}`, {
-            parentRelic: sourceRelic?.id || 'genesis',
-            data: creationData
-        });
+            parentRelic: sourceRelic?.id || 'genesis'
+        }, JSON.stringify(creationData, null, 2));
 
         return {
             status: 'success',

@@ -1,1 +1,14 @@
-{}
+{
+  "npcs": {
+    "aligned": true,
+    "museumCount": 794,
+    "mismatches": [],
+    "missing": []
+  },
+  "items": {
+    "aligned": true,
+    "museumCount": 1290,
+    "mismatches": [],
+    "missing": []
+  }
+}

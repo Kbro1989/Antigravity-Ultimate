@@ -4,7 +4,7 @@ import { AgentCapability, assertCapability, AgentLaw } from '../AgentConstitutio
 import { chronoshell, Chronoshell } from '../../core/Chronoshell';
 import { BaseIntent } from '../AITypes';
 import { Env } from '../../../types/env';
-import { localBridgeClient } from '../../bridge/LocalBridgeService';
+
 
 export interface LimbConfig {
     id: string;
@@ -12,6 +12,7 @@ export interface LimbConfig {
     capabilities: string[];
     onAssetGenerated?: (asset: { type: string; url: string; metadata: any }) => void;
     env?: Env;
+    state?: any;
     limbs?: any;
 }
 
@@ -21,6 +22,7 @@ export abstract class NeuralLimb {
     protected capabilities: string[];
     protected chronos: Chronoshell;
     protected env: Env;
+    protected state: any;
     protected limbs: any;
 
     protected config: LimbConfig;
@@ -33,6 +35,7 @@ export abstract class NeuralLimb {
         this.capabilities = config.capabilities;
         this.chronos = chronoshell;
         this.env = config.env as Env;
+        this.state = config.state;
         this.limbs = config.limbs;
     }
 
@@ -125,63 +128,17 @@ export abstract class NeuralLimb {
         // 3. Persist
         try {
             if (body) {
+                // --- CLOUD PRIMACY: R2 STORAGE ---
                 if (this.env?.ASSETS_BUCKET) {
-                    // --- R2 STORAGE ---
                     await this.env.ASSETS_BUCKET.put(key, body, {
                         httpMetadata: { contentType }
                     });
                     finalUrl = `/ai/assets/${key}`;
-                    console.log(`[NeuralLimb] Hoisted asset to R2: ${key}`);
+                    console.log(`[NeuralLimb] Persisted to Cloud R2: ${key}`);
                 } else {
-                    // --- LOCAL DISK FALLBACK (Verify "No Mocks" rule) ---
-                    const root = 'C:/Users/Destiny/Desktop/New folder/POG-Ultimate/public/assets/generated';
-                    // Map type to folder (matches RelicLimb logic)
-                    const folderMap: Record<string, string> = {
-                        'npc': 'npcs', 'item': 'items',
-                        'model': 'models', 'audio': 'audios',
-                        'texture': 'textures', 'video': 'videos',
-                        'script': 'scripts'
-                    };
-                    const folder = folderMap[type] || `${type}s`;
-
-                    // Use Suggested Path name if available (e.g. video/sprites/XYZ.png), otherwise generate random
-                    let localPath = '';
-                    if (metadata && metadata.suggestedPath) {
-                        // suggestedPath might be relative like 'video/sprites/anim_123.png'
-                        // Ensure it is rooted correctly or just append to root if it is just a filename
-                        if (metadata.suggestedPath.includes('/')) {
-                            localPath = `${root}/${metadata.suggestedPath}`;
-                        } else {
-                            localPath = `${root}/${folder}/${metadata.suggestedPath}`;
-                        }
-                    } else {
-                        localPath = `${root}/${folder}/${timestamp}_${randomId}.${fileExt}`;
-                    }
-
-                    // Convert body to string if needed for LocalBridge (it handles strings well, or base64)
-                    let writeContent = body;
-                    let isBase64 = false;
-
-                    if (body instanceof Uint8Array || body instanceof ArrayBuffer) {
-                        // Convert buffer to binary string -> base64 for bridge transport
-                        // @ts-ignore
-                        const bytes = new Uint8Array(body);
-                        let binary = '';
-
-                        // Chunked processing to avoid stack overflow with spread operator on large files
-                        const chunkSize = 8192;
-                        for (let i = 0; i < bytes.byteLength; i += chunkSize) {
-                            const chunk = bytes.subarray(i, i + chunkSize);
-                            binary += String.fromCharCode(...chunk);
-                        }
-
-                        writeContent = btoa(binary);
-                        isBase64 = true;
-                    }
-
-                    await localBridgeClient.writeLocalFile(localPath, writeContent as string, isBase64);
-                    finalUrl = `/assets/generated/${folder}/${timestamp}_${randomId}.${fileExt}`;
-                    console.log(`[NeuralLimb] Persisted asset to Local Disk: ${localPath}`);
+                    // --- SOVEREIGNTY ALERT: LOCAL FALLBACK DISABLED ---
+                    console.error(`[NeuralLimb] Cloud Storage unavailable. Local persistence blocked per protocol.`);
+                    throw new Error("Persistence failed: No cloud storage available and local fallback is prohibited.");
                 }
             } else if (url.startsWith('staged://')) {
                 // If no body was resolved and it was 'staged', we assume the caller FAILED to provide content.
@@ -222,5 +179,46 @@ export abstract class NeuralLimb {
      */
     protected enforceCapability(capability: AgentCapability, law?: AgentLaw) {
         assertCapability(this.constructor.name, capability, law);
+    }
+
+    /**
+     * Standardized Health Probe for the Service Mesh.
+     * Returns the current operational status and workload of the limb.
+     */
+    public async status() {
+        // --- EDGE COMPATIBILITY: Protective process check ---
+        const proc = (typeof process !== 'undefined') ? process : null;
+        const memoryUsage = (proc && proc.memoryUsage) ? proc.memoryUsage().heapUsed : 0;
+        const uptime = (proc && proc.uptime) ? Math.floor(proc.uptime()) : 0;
+
+        return {
+            id: this.id,
+            status: 'online',
+            capabilities: this.capabilities,
+            uptime: uptime,
+            workload: 0, // Should be overridden by specific limbs if tracking active jobs
+            memoryUsage,
+            version: '1.2.0' // Mesh Protocol Version
+        };
+    }
+
+    /**
+     * Mesh Signaling Proxy: Allows any limb to broadcast signals to the game world.
+     * Automatically routes via 'live_game' limb if available in the registry.
+     */
+    protected async send(paramsOrType: any, data?: any) {
+        let packet = typeof paramsOrType === 'string' ? { type: paramsOrType, data } : paramsOrType;
+
+        // Route via LiveGameLimb if available in the limb registry
+        if (this.limbs && typeof this.limbs.getLimb === 'function') {
+            const liveGame = this.limbs.getLimb('live_game');
+            if (liveGame && typeof liveGame.send === 'function') {
+                return await liveGame.send(packet);
+            }
+        }
+
+        // Fallback: If this IS the LiveGameLimb (handled by override) or no mesh available
+        console.warn(`[NeuralLimb] Mesh 'send' failed for ${this.id}: 'live_game' limb not reachable.`);
+        return { status: 'error', reason: 'mesh_unreachable' };
     }
 }

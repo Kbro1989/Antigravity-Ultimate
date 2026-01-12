@@ -5,7 +5,7 @@ import { LimbRegistry } from '../ai/LimbRegistry';
 import { IntelRegistry } from '../ai/IntelRegistry';
 import { GoldContextService } from '../ai/GoldContextService';
 import { RealityAnchorService } from '../ai/RealityAnchorService';
-import { CLIBridge } from '../cli/CLIBridge';
+// import { CLIBridge } from '../cli/CLIBridge'; // Decoupled
 import { SpatialPipelineService } from '../ai/SpatialPipelineService';
 import { KnowledgeIngestor } from '../rsc/KnowledgeIngestor';
 import { VectorMemory } from '../ai/VectorMemory';
@@ -23,8 +23,9 @@ export class ServiceContainer {
     public ingestor: KnowledgeIngestor;
     public costOptimizer = costOptimizer;
 
-    constructor(env: Env, storage: DurableObjectStorage) {
+    constructor(env: Env, state: any) {
         this.env = env;
+        const storage = state.storage;
         this.router = new ModelRouter(env);
         this.intel = new IntelRegistry(env);
         this.snapshots = new GoldContextService(env);
@@ -35,9 +36,8 @@ export class ServiceContainer {
         const vectorMemory = new VectorMemory(env);
         this.ingestor = new KnowledgeIngestor(vectorMemory);
 
-        // In worker env, bridge is remote. In local DO it might be direct.
-        const bridge = CLIBridge.getInstance();
-        this.limbs = new LimbRegistry('default_user', bridge, env);
+        // Sovereignty: Bridge is strictly an optional extension. Core is zero-dependency.
+        this.limbs = new LimbRegistry('default_user', env, state);
     }
 
     private async initializeLimbs() {
@@ -82,6 +82,8 @@ export class ServiceContainer {
         await l.safeRegisterAsync('landscape', () => import('../ai/limbs/LandscapeGenerationLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.WORLD_STATE_WRITE]);
         await l.safeRegisterAsync('version_control', () => import('../ai/limbs/VersionControlLimb'), [AgentCapability.COMMIT_CHANGES]);
         await l.safeRegisterAsync('behavior', () => import('../ai/limbs/BehaviorLimb'), [AgentCapability.AI_INFERENCE, AgentCapability.WRITE_FILES]);
+        await l.safeRegisterAsync('signature', () => import('../ai/limbs/SignatureLimb'), [AgentCapability.SECURITY_AUDIT]);
+        await l.safeRegisterAsync('vision', () => import('../ai/limbs/VisionLimb'), [AgentCapability.AI_INFERENCE]);
     }
 
     async initialize() {
