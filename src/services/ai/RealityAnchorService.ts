@@ -19,9 +19,11 @@ export interface RealityAnchor {
  */
 export class RealityAnchorService {
     private db?: D1Database;
+    private env?: any;
 
     constructor(env?: any) {
         this.db = env?.DB;
+        this.env = env;
     }
 
     async initialize() {
@@ -57,12 +59,30 @@ export class RealityAnchorService {
         // HYBRID MODE: If no D1 binding, proxy to agent
         if (!this.db) {
             console.log('[RealityAnchor] Proxying dropAnchor to agent...');
-            const response = await fetch('/api/session/default/anchor/drop', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectId, description, ...options })
-            });
-            return response.json();
+            const workerUrl = (this.env as any)?.WORKER_URL || 'https://pog-ultimate.kristain33rs.workers.dev';
+            const url = `${workerUrl}/api/session/default/anchor/drop`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId, description, ...options })
+                });
+                return response.json();
+            } catch (e: any) {
+                console.warn(`[RealityAnchor] Proxy failed for ${url}:`, e);
+                // Return a dummy anchor to prevent crashing flow
+                return {
+                    id: 'anchor_fallback',
+                    projectId,
+                    description,
+                    timestamp: Date.now(),
+                    agentState: {},
+                    workspaceState: {},
+                    checksum: 'fallback',
+                    provenanceType: 'INTENT'
+                };
+            }
         }
 
         console.log(`[RealityAnchor] Dropping anchor [${options.provenanceType || 'CORE'}] for project: ${projectId}`);

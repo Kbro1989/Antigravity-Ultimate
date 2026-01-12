@@ -19,18 +19,38 @@ export class MetabolismService {
     constructor(env: any) {
         if (!env.INSTANT_APP_ID || !env.INSTANT_ADMIN_TOKEN) {
             console.warn("[MetabolismService] Missing InstantDB credentials. Economy tracking disabled.");
+            this.db = null;
+            return;
         }
-        this.db = init({
-            appId: env.INSTANT_APP_ID,
-            adminToken: env.INSTANT_ADMIN_TOKEN
-        });
+        try {
+            this.db = init({
+                appId: env.INSTANT_APP_ID,
+                adminToken: env.INSTANT_ADMIN_TOKEN
+            });
+        } catch (e) {
+            console.warn("[MetabolismService] Failed to initialize InstantDB client:", e);
+            this.db = null;
+        }
     }
 
     /**
      * Get or Initialize user quota from InstantDB
      */
     async getQuota(userId: string): Promise<MetabolismQuota> {
+        // Fallback if DB is not initialized (e.g. missing credentials)
+        if (!this.db) {
+            return this.getDefaultQuota();
+        }
+
         try {
+            // Use 'asUser' if possible or ensure admin token was provided.
+            // If we are in a context where we might not have admin rights, we should use `db.asUser(userId)` logic if supported 
+            // but the error suggests we need admin token for root queries or use asUser.
+            // Since this is a server-side service, we might want to impersonate or just use admin.
+
+            // For now, we wrap in try/catch and return default if it fails, which is what the current catch block does,
+            // BUT the init() call itself might have failed or created a limited client.
+
             const query = { metabolism: { $: { where: { userId } } } };
             const result = await this.db.query(query);
             const entry = result.metabolism[0];
