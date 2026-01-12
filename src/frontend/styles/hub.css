@@ -26,7 +26,8 @@
     background: #000000;
     position: absolute;
     inset: 0;
-    z-index: -1;
+    z-index: 0;
+    /* Changed from -1 to avoid dropping below root context */
 }
 
 .glass-divine {
@@ -124,7 +125,7 @@
             transparent 100%);
     box-shadow: 0 0 20px #00ffff, 0 0 40px #ff00ff;
     animation: scanner-move 5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    z-index: 100;
+    z-index: 9999;
     pointer-events: none;
 }
 
@@ -166,6 +167,7 @@
         radial-gradient(circle at 50% 50%, rgba(0, 242, 255, 0.05) 0%, transparent 70%);
     opacity: 0.4;
     pointer-events: none;
+    z-index: 5;
 }
 
 /* ==================== GLASSMORPHISM ==================== */

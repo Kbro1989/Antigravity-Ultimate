@@ -57,7 +57,7 @@ export function BubbleWorldHUD({ onSelectWorkspace, activeWorkspace }: BubbleWor
     ], []);
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-10">
             {/* Background is now globally handled by ParticleSystem */}
 
             <div className="relative w-[900px] h-[900px] pointer-events-none z-50">

@@ -85,8 +85,15 @@ export function POGDashboard() {
             document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
             document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
         };
+        const handleDebugClick = (e: MouseEvent) => {
+            console.log('[POGDashboard] Global Click Detected at:', e.clientX, e.clientY, 'Target:', e.target);
+        };
         window.addEventListener('mousemove', handleMouseMove);
-        return () => window.removeEventListener('mousemove', handleMouseMove);
+        window.addEventListener('click', handleDebugClick);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('click', handleDebugClick);
+        };
     }, []);
 
     // Poll for Security Alerts
@@ -194,7 +201,7 @@ export function POGDashboard() {
 
     if (view === 'hub') {
         return (
-            <div className="h-screen w-screen overflow-hidden bg-void relative">
+            <div className="h-screen w-screen overflow-hidden bg-void relative z-0">
                 <div className="scanner-sweep" />
                 <ParticleSystem layer="background" />
                 <BubbleWorldHUD onSelectWorkspace={handleSelectWorkspace} activeWorkspace={activeWorkspace as WorkspaceMode} />
