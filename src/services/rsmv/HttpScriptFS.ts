@@ -55,7 +55,7 @@ export class HttpScriptFS implements ScriptFS {
                 console.warn(`[HttpScriptFS] List failed for ${fullPath}: ${res.status}`);
                 return [];
             }
-            const data = await res.json();
+            const data = await res.json() as { success: boolean, files?: any[] };
             if (data.success && Array.isArray(data.files)) {
                 return data.files.map((f: any) => ({
                     name: f.name,

@@ -58,7 +58,7 @@ export class ModernRSMVService implements IRSMVService {
                     // Fetch full content as blob
                     // HttpScriptFS.readFileBuffer returns Buffer, we need Blob
                     const buf = await fs.readFileBuffer(`${path}/${file.name}`);
-                    dbFiles[file.name] = new Blob([buf]);
+                    dbFiles[file.name] = new Blob([new Uint8Array(buf)]);
                 }
             }
         } else {

@@ -12,7 +12,7 @@ export class InstantService {
 
         this.db = init({
             appId,
-            adminToken,
+            adminToken: (adminToken || "") as string,
             schema
         });
         console.log(`[InstantService] Initialized with App ID: ${appId}`);
