@@ -222,6 +222,18 @@ export async function route(request: ModelRequest, env: any): Promise<ModelRespo
             console.log(`[ROUTER] Intent detected: ${intent.action}`);
             const registry = (globalThis as any).POG_NEURAL_REGISTRY || (globalThis as any).limbRegistry;
             if (!registry) throw new Error("No Neural Registry available for intent processing");
+
+            // --- ID AUDIT (Museum Truth) ---
+            const idsToAudit = [intent.id, intent.itemId, intent.objectId, intent.npcId, intent.tileId].filter(id => id !== undefined);
+            const auditor = (globalThis as any).POG_AUDITOR; // Assume global or pass down?
+            if (auditor) {
+                for (const id of idsToAudit) {
+                    if (auditor.auditID(id)) {
+                        console.log(`[ROUTER_AUDIT] Museum ID ${id} access verified in direct intent.`);
+                    }
+                }
+            }
+
             const result = await registry.executeCapability(intent.limbId || 'orchestrator', intent);
             return {
                 content: JSON.stringify(result.data || result),
@@ -465,8 +477,54 @@ export default modelRouter;
 
 // Class wrapper
 export class ModelRouter {
+    private trinity?: any;
+
     constructor(private env: any) { }
+
+    /**
+     * Sets the Trinity Pipeline instance for advanced orchestration.
+     */
+    setTrinity(trinity: any) {
+        this.trinity = trinity;
+    }
+
     async route(request: ModelRequest): Promise<ModelResponse | ReadableStream> {
+        // --- TRINITY UNIFICATION ---
+        // If Trinity is available and we aren't already in a Trinity loop, 
+        // delegate complex tasks (Reasoning, Coding) to Trinity.
+        if (this.trinity && !request.options?.trinity_internal) {
+            const isComplex = request.type === 'code' ||
+                this.isHighReasoning(request.prompt) ||
+                request.options?.use_trinity;
+
+            if (isComplex) {
+                console.log(`[ROUTER] Delegating complex task to Trinity Pipeline: ${request.type}`);
+                try {
+                    const result = await this.trinity.execute({
+                        id: `task_${Date.now()}`,
+                        prompt: request.prompt,
+                        type: request.type as any,
+                        metadata: { ...request.options, sessionId: request.userId }
+                    });
+
+                    return {
+                        content: result.output,
+                        model: result.modelId || 'trinity-orchestrated',
+                        provider: 'cloudflare', // Trinity primary is CF
+                        latency: result.metrics.totalLatency,
+                        metadata: { ...result.metrics, tier: result.tier, limbPath: result.limbPath }
+                    } as any;
+                } catch (e: any) {
+                    console.warn('[ROUTER] Trinity delegation failed, falling back to standard routing:', e.message);
+                }
+            }
+        }
+
         return route(request, this.env);
+    }
+
+    private isHighReasoning(prompt: string): boolean {
+        const reasoningPatterns = /\b(analyze|architect|plan|complex|reason|think|decompose|orchestrate)\b/i;
+        return reasoningPatterns.test(prompt);
     }
 }

@@ -1,6 +1,6 @@
 import type { Env } from '../../types/env';
 import { costOptimizer } from '../ai/CostOptimizer';
-import { BackendModelRouter as ModelRouter } from './ModelRouter';
+import { BackendModelRouter as ModelRouter } from '../ai/ModelRouter';
 import { LimbRegistry } from '../ai/LimbRegistry';
 import { IntelRegistry } from '../ai/IntelRegistry';
 import { GoldContextService } from '../ai/GoldContextService';
@@ -12,6 +12,8 @@ import { VectorMemory } from '../ai/VectorMemory';
 import { chronoshell } from '../core/Chronoshell';
 import { AgentCapability } from '../ai/AgentConstitution';
 import { InstantService } from '../data/InstantService';
+import { CloudflareStreamService } from '../ai/CloudflareStreamService';
+import { CloudflareImagesService } from '../ai/CloudflareImagesService';
 
 export class ServiceContainer {
     public env: Env;
@@ -23,6 +25,9 @@ export class ServiceContainer {
     public spatial: SpatialPipelineService;
     public ingestor: KnowledgeIngestor;
     public costOptimizer = costOptimizer;
+    public stream: CloudflareStreamService;
+    public images: CloudflareImagesService;
+    public chronos = chronoshell;
 
     constructor(env: Env, state: any) {
         this.env = env;
@@ -32,6 +37,8 @@ export class ServiceContainer {
         this.snapshots = new GoldContextService(env);
         this.anchors = new RealityAnchorService(env);
         this.spatial = new SpatialPipelineService(env);
+        this.stream = new CloudflareStreamService(env);
+        this.images = new CloudflareImagesService(env);
 
         // Memory & Ingestion Layer
         const vectorMemory = new VectorMemory(env);
@@ -39,6 +46,9 @@ export class ServiceContainer {
 
         // Sovereignty: Bridge is strictly an optional extension. Core is zero-dependency.
         this.limbs = new LimbRegistry('default_user', env, state);
+
+        // Unify Router (Backend uses universal router now)
+        this.router = new ModelRouter(env);
 
         // Initialize Data Offloading
         InstantService.getInstance(env);

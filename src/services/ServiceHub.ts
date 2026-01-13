@@ -36,6 +36,7 @@ export class ServiceHubClass {
     private _intel?: IntelRegistry;
     private _snapshots?: GoldContextService;
     private _anchors?: RealityAnchorService;
+    public env?: any; // injected via init
 
     public async getIntel() {
         const { IntelRegistry } = await import('./ai/IntelRegistry');
@@ -142,7 +143,10 @@ export class ServiceHubClass {
         bridge: {
             get instance() {
                 // Warning: Accessing this statically in cloud mode will fail or return a stub
-                console.warn('[Sovereignty Shield] Direct access to infra.bridge is deprecated. Use async bridge operations.');
+                const isLocal = typeof window !== 'undefined' && !window.location.hostname.includes('.pages.dev') && !window.location.hostname.includes('.workers.dev');
+                if (!isLocal) {
+                    console.warn('[Sovereignty Shield] CLI Bridge is unavailable in Cloud Mode. Using R2 Virtual Storage.');
+                }
                 return null;
             }
         },
@@ -155,34 +159,59 @@ export class ServiceHubClass {
             throw new Error("[Sovereignty Alert] Static access to bridge.client is prohibited. Use async methods.");
         },
         readFile: async (path: string) => {
+            if (!(await this.isBridgeAvailable())) throw new Error("[Sovereignty Alert] Local file reading disabled. Use R2 browser.");
             const { cliBridge } = await import('./cli/CLIBridge');
             return cliBridge.readFile(path);
         },
         writeFile: async (path: string, content: string) => {
+            if (!(await this.isBridgeAvailable())) throw new Error("[Sovereignty Alert] Local file writing disabled in Cloud Mode.");
             const { cliBridge } = await import('./cli/CLIBridge');
             return cliBridge.writeFile(path, content);
         },
         listDir: async (path: string) => {
+            if (!(await this.isBridgeAvailable())) return [];
             const { cliBridge } = await import('./cli/CLIBridge');
             return cliBridge.listDirectory(path);
         },
         runCommand: async (cmd: string) => {
+            if (!(await this.isBridgeAvailable())) throw new Error("[Sovereignty Alert] Shell commands prohibited in Cloud Mode.");
             const { cliBridge } = await import('./cli/CLIBridge');
             return cliBridge.runCommand(cmd);
         },
         execute: async (cmd: string) => {
+            if (!(await this.isBridgeAvailable())) throw new Error("[Sovereignty Alert] Execution prohibited in Cloud Mode.");
             const { cliBridge } = await import('./cli/CLIBridge');
             return cliBridge.execute(cmd);
         },
         getStatus: async () => {
+            const available = await this.isBridgeAvailable();
+            if (!available) return { success: false, status: 'CLOUD_MODE', message: 'Local Bridge Unreachable' };
             const { localBridgeClient } = await import('./bridge/LocalBridgeService');
             return localBridgeClient.getStatus();
         },
         setSyncMode: async (mode: any) => {
+            if (!(await this.isBridgeAvailable())) return { success: false };
             const { localBridgeClient } = await import('./bridge/LocalBridgeService');
             return localBridgeClient.setSyncMode(mode);
         }
     };
+
+    private async isBridgeAvailable(): Promise<boolean> {
+        // Core Logic: If we are on a worker/page domain, the bridge is NEVER accessible without a tunnel
+        if (typeof window !== 'undefined') {
+            const h = window.location.hostname;
+            if (h.includes('.pages.dev') || h.includes('.workers.dev') || h.includes('pog-ultimate')) return false;
+        }
+
+        // Even on localhost, we check if the bridge is actually responding
+        try {
+            const { localBridgeClient } = await import('./bridge/LocalBridgeService');
+            const status = await localBridgeClient.getStatus();
+            return status.isConnected;
+        } catch (e) {
+            return false;
+        }
+    }
 
     // Neural Limbs
     private eventBus = new Map<string, ((data: any) => void)[]>();
@@ -262,7 +291,8 @@ export class ServiceHubClass {
     public async initClassicPipeline() {
         const { getClassicRSMV } = await import('./rsmv');
         this.rsmv.classic = await getClassicRSMV({
-            stagedPath: 'C:\\Users\\Destiny\\Desktop\\New folder\\POG-Ultimate\\staged_assets'
+            env: (this as any).env, // Inject ServiceHub env if available
+            stagedPath: 'staged_assets/classic' // Use relative path for cloud
         });
         return this.rsmv.classic;
     }
@@ -270,7 +300,8 @@ export class ServiceHubClass {
     public async initModernPipeline() {
         const { getModernRSMV } = await import('./rsmv');
         this.rsmv.modern = await getModernRSMV({
-            stagedPath: 'C:\\Users\\Destiny\\Desktop\\New folder\\POG-Ultimate\\staged_assets'
+            env: (this as any).env,
+            stagedPath: 'staged_assets/modern'
         });
         return this.rsmv.modern;
     }

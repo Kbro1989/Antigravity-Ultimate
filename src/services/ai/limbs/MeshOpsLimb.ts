@@ -72,6 +72,7 @@ export class MeshOpsLimb extends NeuralLimb {
             const subdivisionResult: any = await modelRouter.route({
                 type: 'code',
                 prompt: `Subdivide this mesh geometry to increase vertex count. MeshID: ${params.meshId}. Params: ${JSON.stringify(params)}`,
+                systemPrompt: this.getConstitutionalPrompt(),
                 domain: '3D',
                 modelId: (intent as any).modelId || '@cf/meta/llama-3.3',
                 provider: (intent as any).provider || 'cloudflare'
@@ -217,6 +218,7 @@ export class MeshOpsLimb extends NeuralLimb {
         const pbrResp = await modelRouter.route({
             type: 'image',
             prompt: `High-resolution PBR Material maps for ${prompt}. Top-Left: BaseColor, Top-Right: Normal, Bottom-Left: Roughness, Bottom-Right: Displacement.`,
+            systemPrompt: this.getConstitutionalPrompt() + "\nFocus on building RSC-style materials.",
             modelId: intent.modelId,
             provider: intent.provider
         }, this.env) as any;
@@ -379,6 +381,7 @@ export class MeshOpsLimb extends NeuralLimb {
         const meshProcResp: any = await modelRouter.route({
             type: 'code',
             prompt: `Perform 3D mesh operation: ${operation} with params: ${JSON.stringify(parameters)}`,
+            systemPrompt: this.getConstitutionalPrompt(),
             domain: '3D',
             modelId: (intent as any).modelId,
             provider: (intent as any).provider
@@ -449,6 +452,54 @@ export class MeshOpsLimb extends NeuralLimb {
             count: 0,
             meshes: [],
             note: 'Mesh gallery is empty or cloud storage is unavailable.'
+        };
+    }
+
+    /**
+     * Specialized optimization for 3D meshes.
+     * Integrates with WASM Calibrator and AI planning.
+     */
+    async optimize(params: any, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.OPTIMIZE_SYSTEM);
+        const { target, goal, aggressive } = params;
+
+        await this.logActivity('mesh_optimize', 'pending', { target, goal });
+
+        // Logic: Reconcile with Museum Truth (RSC asset standards)
+        const isLegacy = target.startsWith('relic://');
+        const context = isLegacy ? "Legacy RSC Asset" : "Innovation Layer Model";
+
+        const prompt = `Optimize 3D Mesh: ${target} (${context})
+        Goal: ${goal}
+        Aggressive Mode: ${aggressive ? 'ON' : 'OFF'}
+        
+        System Context: Cloudflare Workers Environment.
+        Knowledge Base: Museum Truth (RSC 204 Standards).
+        
+        Sovereign Rule: THE SOURCE IS IMMUTABLE. 
+        If target is 'relic://', you MUST NOT suggest changes to the original archive. 
+        Instead, provide a technical plan for a DERIVATIVE asset to be stored in the Innovation Layer.
+        
+        Provide specific details for decimation, vertex snapping, and UV optimization consistent with mid-2000s browser-based 3D restrictions.`;
+
+        const result: any = await modelRouter.route({
+            type: 'code',
+            prompt,
+            domain: '3D',
+            ...intent
+        }, this.env);
+
+        await this.logActivity('mesh_optimize', 'success', { target, goal });
+
+        return {
+            status: 'success',
+            target,
+            goal,
+            plan: result.content,
+            metadata: {
+                ...result.metadata,
+                optimizationType: 'mesh_geometric'
+            }
         };
     }
 }

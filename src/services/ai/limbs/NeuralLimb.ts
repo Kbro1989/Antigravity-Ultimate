@@ -1,6 +1,6 @@
 import { nexusBus } from '../../core/NexusCommandBus';
 import { logTask } from '../../core/LoggingService';
-import { AgentCapability, assertCapability, AgentLaw } from '../AgentConstitution';
+import { AgentCapability, assertCapability, AgentLaw, RSC_SOVEREIGN_DIRECTIVE } from '../AgentConstitution';
 import { chronoshell, Chronoshell } from '../../core/Chronoshell';
 import { BaseIntent } from '../AITypes';
 import { Env } from '../../../types/env';
@@ -96,6 +96,41 @@ export abstract class NeuralLimb {
         throw new Error(`Limb ${this.id} does not implement support for action: ${intent.action}`);
     }
 
+    /**
+     * Default optimization handler.
+     * Specific limbs should override this to provide domain-specific logic.
+     */
+    async optimize(params: any, intent: BaseIntent): Promise<any> {
+        this.enforceCapability(AgentCapability.OPTIMIZE_SYSTEM);
+        const { target, goal } = params;
+
+        await this.logActivity('system_optimize', 'pending', { target, goal });
+
+        // Basic delegation to AI for a general optimization plan if not overridden
+        const prompt = `System Optimization Request for Limb ${this.id}:
+        Target: ${target}
+        Goal: ${goal}
+        
+        Using the Museum Truth knowledge base and Cloudflare Worker strengths, provide a detailed optimization plan or execution result.`;
+
+        const response: any = await modelRouter.route({
+            action: 'code_complete', // Using code_complete as a proxy for technical planning
+            payload: { prompt },
+            ...intent
+        }, this.env);
+
+        await this.logActivity('system_optimize', 'success', { target, goal });
+
+        return {
+            status: 'success',
+            plan: response.content || response.imageUrl || response.url,
+            metadata: {
+                model: response.model,
+                provider: response.provider
+            }
+        };
+    }
+
     protected async logActivity(step: string, status: 'success' | 'failure' | 'pending', metadata?: any) {
         // Legacy system log
         await logTask({
@@ -153,17 +188,21 @@ export abstract class NeuralLimb {
         // 3. Persist
         try {
             if (body) {
-                // --- CLOUD PRIMACY: R2 STORAGE ---
-                if (this.env?.ASSETS_BUCKET) {
+                // --- CLOUD PRIMACY: IMAGES & R2 STORAGE ---
+                if (type === 'image' || type === 'texture') {
+                    const imagesService = new (require('../CloudflareImagesService').CloudflareImagesService)(this.env);
+                    const imageResult = await imagesService.uploadFromUrl(url, metadata);
+                    finalUrl = imagesService.getTransformUrl(imageResult.id);
+                    console.log(`[NeuralLimb] Persisted to Cloud Images: ${imageResult.id}`);
+                } else if (this.env?.ASSETS_BUCKET) {
                     await this.env.ASSETS_BUCKET.put(key, body, {
                         httpMetadata: { contentType }
                     });
                     finalUrl = `/ai/assets/${key}`;
                     console.log(`[NeuralLimb] Persisted to Cloud R2: ${key}`);
                 } else {
-                    // --- SOVEREIGNTY ALERT: LOCAL FALLBACK DISABLED ---
-                    console.error(`[NeuralLimb] Cloud Storage unavailable. Local persistence blocked per protocol.`);
-                    throw new Error("Persistence failed: No cloud storage available and local fallback is prohibited.");
+                    console.error(`[NeuralLimb] Cloud Storage unavailable. Local persistence blocked.`);
+                    throw new Error("Persistence failed: No cloud storage available.");
                 }
             } else if (url.startsWith('staged://')) {
                 // If no body was resolved and it was 'staged', we assume the caller FAILED to provide content.
@@ -204,6 +243,13 @@ export abstract class NeuralLimb {
      */
     protected enforceCapability(capability: AgentCapability, law?: AgentLaw) {
         assertCapability(this.constructor.name, capability, law);
+    }
+
+    /**
+     * Returns the base constitutional prompt derived from current directives.
+     */
+    protected getConstitutionalPrompt(): string {
+        return RSC_SOVEREIGN_DIRECTIVE;
     }
 
     /**

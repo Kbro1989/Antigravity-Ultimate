@@ -104,4 +104,25 @@ export class MetacognitiveState {
             }
         };
     }
+
+    /**
+     * Returns the current state for persistence.
+     */
+    getState() {
+        return {
+            history: this.history,
+            totalHaltCount: this.totalHaltCount,
+            startTime: this.startTime
+        };
+    }
+
+    /**
+     * Hydrates the state from a saved snapshot.
+     */
+    hydrate(state: any) {
+        if (!state) return;
+        this.history = state.history || [];
+        this.totalHaltCount = state.totalHaltCount || 0;
+        this.startTime = state.startTime || Date.now();
+    }
 }

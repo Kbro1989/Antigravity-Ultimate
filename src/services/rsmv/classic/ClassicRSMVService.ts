@@ -35,9 +35,14 @@ export class ClassicRSMVService implements IRSMVService {
         let bridgeFS: any;
 
         if (this.serviceConfig.env) {
-            // --- CLOUD-NATIVE FILE SYSTEM ---
+            // --- CLOUD-NATIVE FILE SYSTEM (Server/Worker) ---
             bridgeFS = new CloudScriptFS(this.serviceConfig.env, path);
             console.log(`[ClassicRSMV] Using CloudScriptFS for ${path}`);
+        } else if (typeof window !== 'undefined') {
+            // --- BROWSER HTTP FILE SYSTEM (Client) ---
+            const { HttpScriptFS } = await import('../HttpScriptFS');
+            bridgeFS = new HttpScriptFS(path);
+            console.log(`[ClassicRSMV] Using HttpScriptFS for ${path}`);
         } else {
             // --- OPTIONAL LOCAL BRIDGE FALLBACK ---
             bridgeFS = {

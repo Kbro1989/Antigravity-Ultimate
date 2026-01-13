@@ -96,9 +96,9 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <div className="text-[10px] text-white/40 font-black uppercase tracking-[0.4em]">System Core</div>
+                        <div className="text-[10px] text-white/40 font-black uppercase tracking-[0.4em]">Sovereign Node</div>
                         <div className="text-xl font-black text-white tracking-widest flex items-center gap-3">
-                            {workspace ? workspace.toUpperCase() : 'CENTRAL_VOID'}
+                            {workspace ? workspace.toUpperCase() : 'OPAL_CORE'}
                             <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00ffff]" />
                         </div>
                     </div>
@@ -160,7 +160,7 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
                     </div>
 
                     <div className="flex flex-col items-end gap-1">
-                        <div className="text-[9px] text-white/20 font-black uppercase tracking-[0.2em]">Local Latency</div>
+                        <div className="text-[9px] text-white/20 font-black uppercase tracking-[0.2em]">Opal-Sync Latency</div>
                         <div className="mono text-green-400 text-sm font-bold">{localStats.latency}ms</div>
                     </div>
 

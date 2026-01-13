@@ -26,17 +26,16 @@ export function WorkspaceSpine({ workspace, onToolSelect }: WorkspaceSpineProps)
 
     const tools: Record<WorkspaceMode, Tool[]> = useMemo(() => ({
         code: [
-            { id: 'cascade', icon: '🌊', label: 'Cascade', hotkey: '⌘K', color: '#00ffff', capability: 'cascade', defaultParams: { prompt: 'Cascade edit...' } },
-            { id: 'complete', icon: '✨', label: 'AI Complete', hotkey: '⌘I', color: '#00ffff', capability: 'complete', defaultParams: { prompt: 'Complete code...' } },
-            { id: 'refactor', icon: '🔧', label: 'Refactor', hotkey: '⌘R', color: '#9d00ff', capability: 'refactor', defaultParams: { code: '...' } },
-            { id: 'explain', icon: '💡', label: 'Explain', hotkey: '⌘E', color: '#ff00ff', capability: 'explain', defaultParams: { code: '...' } },
-            { id: 'test', icon: '🧪', label: 'Tests', hotkey: '⌘T', color: '#0080ff', capability: 'test', defaultParams: { path: 'src/' } },
+            { id: 'refactor', icon: '🔧', label: 'Logic Refactor', hotkey: '⌘R', color: '#9d00ff', capability: 'refactor', defaultParams: { code: '...' } },
+            { id: 'explain', icon: '💡', label: 'Explain Script', hotkey: '⌘E', color: '#ff00ff', capability: 'explain', defaultParams: { code: '...' } },
+            { id: 'generate', icon: '✨', label: 'Logic Sync', hotkey: '⌘I', color: '#00ffff', capability: 'generate_code', defaultParams: { prompt: 'Sync game logic...' } },
+            { id: 'audit', icon: '🧪', label: 'ID Audit', hotkey: '⌘A', color: '#0080ff', capability: 'analyze_complexity', defaultParams: {} },
         ],
         creative: [
-            { id: 'generate', icon: '🎨', label: 'Generate', hotkey: 'G', color: '#ff00ff', capability: 'generate', defaultParams: { prompt: 'Creative visual...' } },
-            { id: 'variation', icon: '🔄', label: 'Variations', hotkey: 'V', color: '#9d00ff', capability: 'variation', defaultParams: { prompt: 'Variation...' } },
-            { id: 'upscale', icon: '⬆️', label: 'Upscale', hotkey: 'U', color: '#00ffff', capability: 'upscale', defaultParams: { upscale: true } },
-            { id: 'inpaint', icon: '✏️', label: 'Inpaint', hotkey: 'I', color: '#ff0080', capability: 'restore', defaultParams: { mode: 'inpaint' } },
+            { id: 'generate', icon: '🎨', label: 'Sprite Gen', hotkey: 'G', color: '#ff00ff', capability: 'generate', defaultParams: { prompt: 'RSC Sprite...' } },
+            { id: 'variation', icon: '🔄', label: 'Variants', hotkey: 'V', color: '#9d00ff', capability: 'variation', defaultParams: { prompt: 'Sprite variant...' } },
+            { id: 'upscale', icon: '⬆️', label: 'HD Texture', hotkey: 'U', color: '#00ffff', capability: 'upscale', defaultParams: { upscale: true } },
+            { id: 'restore', icon: '🩹', label: 'Clean Cache', hotkey: 'R', color: '#ff0080', capability: 'restore', defaultParams: { mode: 'cache_repair' } },
         ],
         audio: [
             { id: 'generate', icon: '🎵', label: 'Generate', hotkey: 'G', color: '#9d00ff', capability: 'generate', defaultParams: { type: 'music', prompt: 'New track...' } },
@@ -51,10 +50,10 @@ export function WorkspaceSpine({ workspace, onToolSelect }: WorkspaceSpineProps)
             { id: 'template', icon: '📋', label: 'Library', hotkey: 'L', color: '#ff0080', capability: 'dispatch', defaultParams: { task: 'load_template' } },
         ],
         '3d': [
-            { id: 'sculpt', icon: '🔨', label: 'Sculpt', hotkey: 'S', color: '#0080ff', capability: 'edit_geometry', defaultParams: { operation: 'sculpt' } },
-            { id: 'paint', icon: '🖌️', label: 'PBR Paint', hotkey: 'P', color: '#ff00ff', capability: 'process_mesh', defaultParams: { operation: 'vertex_paint' } },
-            { id: 'render', icon: '🎬', label: 'Raytrace', hotkey: 'F', color: '#ff0080', capability: 'process_mesh', defaultParams: { operation: 'render' } },
-            { id: 'rigger', icon: '🦴', label: 'Rigging', hotkey: 'R', color: '#00ff80', capability: 'auto_rig', defaultParams: {} },
+            { id: 'subdivide', icon: '🔷', label: 'Subdivide', hotkey: 'S', color: '#0080ff', capability: 'subdivide_mesh', defaultParams: { meshId: 'current' } },
+            { id: 'pbr', icon: '🖌️', label: 'PBR Forge', hotkey: 'P', color: '#ff00ff', capability: 'generate_pbr', defaultParams: { prompt: 'RSC Material' } },
+            { id: 'process', icon: '🎬', label: 'Transcode', hotkey: 'T', color: '#ff0080', capability: 'process_mesh', defaultParams: { operation: 'transcode' } },
+            { id: 'rig', icon: '🦴', label: 'Auto-Rig', hotkey: 'R', color: '#00ff80', capability: 'process_mesh', defaultParams: { operation: 'auto_rig' } },
         ],
         world: [
             { id: 'regen', icon: '🌍', label: 'Genesis', hotkey: 'G', color: '#00ff80', capability: 'regen', defaultParams: { seed: Date.now() } },
@@ -156,8 +155,9 @@ export function WorkspaceSpine({ workspace, onToolSelect }: WorkspaceSpineProps)
         ],
         relic: [
             { id: 'scan', icon: '⛏️', label: 'Excavate', hotkey: 'E', color: '#00ffff', capability: 'excavate_cache', defaultParams: { id: 0 } },
-            { id: 'item', icon: '🛡️', label: 'Restoration', hotkey: 'R', color: '#0080ff', capability: 'salvage_relic', defaultParams: { relicType: 'modern' } },
-            { id: 'map', icon: '🗺️', label: 'Archive', hotkey: 'A', color: '#ffffff', capability: 'salvage_relic', defaultParams: { relicType: 'map' } },
+            { id: 'item', icon: '🛡️', label: 'Restore Item', hotkey: 'R', color: '#0080ff', capability: 'salvage_relic', defaultParams: { relicType: 'item' } },
+            { id: 'map', icon: '🗺️', label: 'Decode Map', hotkey: 'M', color: '#ffffff', capability: 'salvage_relic', defaultParams: { relicType: 'map' } },
+            { id: 'spirit', icon: '👻', label: 'Transcode', hotkey: 'T', color: '#9d00ff', capability: 'salvage_relic', defaultParams: { relicType: 'gltf' } },
         ],
         environment: [
             { id: 'weather', icon: '🌦️', label: 'Weather', hotkey: 'W', color: '#ffff00', capability: 'set_weather', defaultParams: { type: 'clear' } },
@@ -204,13 +204,18 @@ export function WorkspaceSpine({ workspace, onToolSelect }: WorkspaceSpineProps)
             { id: 'audit', icon: '🔍', label: 'Forensics', hotkey: 'A', color: '#00ffff', capability: 'audit', defaultParams: {} },
         ],
         idauditor: [
-            { id: 'npc', icon: '👤', label: 'NPC Audit', hotkey: 'N', color: '#ff00ff', capability: 'audit_npc_database', defaultParams: {} },
-            { id: 'item', icon: '🗡️', label: 'Item Audit', hotkey: 'I', color: '#00ffff', capability: 'audit_item_database', defaultParams: {} },
-            { id: 'stats', icon: '📊', label: 'Stats', hotkey: 'S', color: '#00ff80', capability: 'get_innovation_stats', defaultParams: {} },
+            { id: 'npc', icon: '👤', label: 'NPC Database', hotkey: 'N', color: '#ff00ff', capability: 'audit_npc_database', defaultParams: {} },
+            { id: 'item', icon: '🗡️', label: 'Item Database', hotkey: 'I', color: '#00ffff', capability: 'audit_item_database', defaultParams: {} },
+            { id: 'stats', icon: '📊', label: 'Relic Stats', hotkey: 'S', color: '#00ff80', capability: 'get_innovation_stats', defaultParams: {} },
         ],
         versioncontrol: [
             { id: 'commit', icon: '💾', label: 'Persist', hotkey: 'C', color: '#00ff80', capability: 'commit_cache', defaultParams: {} },
             { id: 'diff', icon: '🌗', label: 'Diff', hotkey: 'D', color: '#00ffff', capability: 'get_logs', defaultParams: {} },
+        ],
+        instant: [
+            { id: 'persist', icon: '💾', label: 'User Data', hotkey: 'P', color: '#00ff80', capability: 'persist_user_data', defaultParams: {} },
+            { id: 'admin', icon: '🛠️', label: 'Admin Panel', hotkey: 'A', color: '#ff8000', capability: 'admin_sync', defaultParams: {} },
+            { id: 'sync', icon: '🔄', label: 'Global Sync', hotkey: 'S', color: '#00ffff', capability: 'instant_sync', defaultParams: {} },
         ]
     }), []);
 

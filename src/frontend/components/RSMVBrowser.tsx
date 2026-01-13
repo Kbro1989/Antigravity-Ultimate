@@ -124,23 +124,27 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [models, setModels] = useState<RSMVModelEntry[]>([]);
   const [wireframe, setWireframe] = useState(false);
-  const [isLauncherLinked, setIsLauncherLinked] = useState(false);
   const [analysisText, setAnalysisText] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedReferenceIdx, setSelectedReferenceIdx] = useState(0);
   const [activeActionTab, setActiveActionTab] = useState<'details' | 'nexus' | 'metrics' | 'audio'>('details');
   const controlsRef = useRef<any>(null);
 
-  const [isCacheLinked, setIsCacheLinked] = useState(false);
-  const [isBethesdaLinked, setIsBethesdaLinked] = useState<Record<string, boolean>>({ morrowind: false, fallout: false });
   const [isRemoteModalOpen, setIsRemoteModalOpen] = useState(false);
   const [remoteCacheId, setRemoteCacheId] = useState('1');
   const [remoteModelId, setRemoteModelId] = useState('0');
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
+  const isProd = useMemo(() => {
+    if (typeof window === 'undefined') return true;
+    return window.location.hostname.includes('.workers.dev') ||
+      window.location.hostname.includes('.pages.dev') ||
+      window.location.hostname.includes('pog-ultimate');
+  }, []);
+
   const REFERENCE_MODELS = [
-    { name: 'Primary (High Poly)', path: 'C:\\Users\\Destiny\\Desktop\\Pick of Gods\\3D model\\model.glb' },
-    { name: 'Optimized (Low Poly)', path: 'C:\\Users\\Destiny\\Desktop\\Pick of Gods\\3D model\\model2.stl' }
+    { name: 'Primary (High Poly)', path: 'models/relic_ref_high.glb' },
+    { name: 'Optimized (Low Poly)', path: 'models/relic_ref_low.stl' }
   ];
 
   const handleRemoteImport = async () => {
@@ -173,20 +177,6 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
     }
   };
 
-  const handleLinkCache = async () => {
-    setIsLoading(true);
-    try {
-      const RSMVEngine = await loadRSMV();
-      await RSMVEngine.linkLocalCache();
-      setIsCacheLinked(true);
-      const data = await getRsmvModels(gameSource, category);
-      setModels(data);
-    } catch (err: any) {
-      setError(`Cache Link Failed: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
@@ -220,7 +210,6 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
 
       const RSMVEngine = await loadRSMV();
       await RSMVEngine.linkDroppedCache(blobs);
-      setIsCacheLinked(true);
       const data = await getRsmvModels('runescape', category);
       setModels(data);
       console.log(`[RSMV_BROWSER] Successfully linked ${Object.keys(blobs).length} dropped files.`);
@@ -253,57 +242,6 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
     e.preventDefault();
     e.stopPropagation();
   }, []);
-
-  const handleLinkBethesdaAssets = async (source: GameSource) => {
-    setIsLoading(true);
-    try {
-      const api = (window as any).agentAPI;
-      if (!api || !api.bethesda) {
-        setError("Bridge Error: Local Bethesda Extension not detected.");
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const success = await api.bethesda.linkLocalAssets(source);
-        if (success) {
-          setIsBethesdaLinked(prev => ({ ...prev, [source]: true }));
-          const models = await api.bethesda.getModels(source);
-          if (models && models.length > 0) {
-            setModels(models);
-          }
-        }
-      } catch (err: any) {
-        setError(`Asset Link Failed: ${err.message}`);
-      } finally {
-        setIsLoading(false);
-      }
-    } catch (err: any) {
-      setError(`Asset Link Failed: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => { verifyJagexLauncher().then(setIsLauncherLinked); }, []);
-
-  // Auto-link Local Cache if available
-  useEffect(() => {
-    let mounted = true;
-    const checkAndLink = async () => {
-      if (gameSource === 'runescape' && !isCacheLinked) {
-        const { verifyLocalCache } = await import('../../services/rsmvService');
-        const hasCache = await verifyLocalCache();
-
-        if (mounted && hasCache) {
-          console.log('[RSMV] Local cache detected. Auto-linking...');
-          await handleLinkCache();
-        }
-      }
-    };
-    checkAndLink();
-    return () => { mounted = false; };
-  }, [gameSource]); // Run when game source selects RuneScape (initial default)
 
   const ITEMS_PER_PAGE = 40;
   const filteredModels = useMemo(() => models.filter(m =>
@@ -480,13 +418,12 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
           </div>
           {gameSource === 'runescape' && (
             <div className="flex flex-col gap-2">
-              <button
-                onClick={handleLinkCache}
-                disabled={isCacheLinked}
-                className={`w-full py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${isCacheLinked ? 'bg-[#3e5b6d] border-[#438ab5] text-white' : 'bg-[#232323] border-[#394443] text-[#438ab5] hover:bg-[#394443]'}`}
-              >
-                {isCacheLinked ? '✅ LOCAL CACHE ACTIVE' : '🔗 LINK LOCAL CACHE'}
-              </button>
+              <div className="flex flex-col gap-2">
+                <div className="bg-[#1a1a1a] border border-cyan-900/20 rounded-xl p-3 flex flex-col items-center justify-center gap-1 opacity-60">
+                  <Download className="w-4 h-4 text-cyan-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Drag & Drop Device Cache</span>
+                </div>
+              </div>
               <button
                 onClick={() => setIsRemoteModalOpen(true)}
                 className="w-full py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border bg-[#232323] border-[#394443] text-[#438ab5] hover:bg-[#394443]"
@@ -496,14 +433,11 @@ const RSMVBrowser: React.FC<RSMVBrowserProps> = ({
             </div>
           )}
 
-          {(gameSource === 'morrowind' || gameSource === 'fallout') && (
-            <button
-              onClick={() => handleLinkBethesdaAssets(gameSource)}
-              disabled={isBethesdaLinked[gameSource]}
-              className={`w-full py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${isBethesdaLinked[gameSource] ? 'bg-emerald-600/20 border-emerald-500/30 text-emerald-400' : 'bg-amber-600/10 border-amber-500/30 text-amber-400 animate-pulse'}`}
-            >
-              {isBethesdaLinked[gameSource] ? '✅ Assets Linked' : '🔗 Link Local Assets'}
-            </button>
+          {(!isProd && (gameSource === 'morrowind' || gameSource === 'fallout')) && (
+            <div className="bg-[#1a1a1a] border border-amber-900/20 rounded-xl p-3 flex flex-col items-center justify-center gap-1 opacity-60">
+              <Download className="w-4 h-4 text-amber-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">Drag & Drop .BSA / .ESM</span>
+            </div>
           )}
         </div>
 

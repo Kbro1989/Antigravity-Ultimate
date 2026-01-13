@@ -38,7 +38,7 @@ export type AIAction =
     | 'pipeline_build' | 'pipeline_deploy' | 'pipeline_test'
     | 'classic_import' | 'classic_view' | 'classic_convert'
     | 'orchestrate_plan' | 'orchestrate_limb' | 'orchestrate_auto' | 'orchestrate_negotiate' | 'orchestrate_critique' | 'orchestrate_generate_plan' | 'orchestrate_execute_graph' | 'orchestrate_get_symphony_status' | 'orchestrate_architect_solution'
-    | 'proxy_forward' | 'version_commit' | 'version_history' | 'audit_landscape_id' | 'audit_item_id' | 'audit_npc_id';
+    | 'proxy_forward' | 'version_commit' | 'version_history' | 'audit_landscape_id' | 'audit_item_id' | 'audit_npc_id' | 'system_optimize';
 
 /**
  * Hardened Tasking Logic ⚖️
@@ -99,6 +99,16 @@ export interface FileOperationIntent extends BaseIntent {
         path: string;
         content?: string;
         base64?: boolean;
+    };
+}
+
+export interface OptimizeIntent extends BaseIntent {
+    action: 'system_optimize';
+    payload: {
+        target: string;
+        goal: string;
+        constraints?: string[];
+        aggressive?: boolean;
     };
 }
 
@@ -229,5 +239,32 @@ export const POG_TOOL_CABINET: Record<AIAction, AITool> = {
         description: 'Overrides system constraints for emergency recovery.',
         capability: AgentCapability.MESH_OPERATIONS,
         parameters: { type: 'object', properties: { reason: { type: 'string' } } }
+    },
+    'video_generate': {
+        name: 'Generate Video',
+        description: 'Generates cinematic sequences via Cloudflare Stream (Paid) or Sprite Sheets (Free). Default to cinematic if paid, fallback to sprite_sheet for Free Plan.',
+        capability: AgentCapability.VIDEO_OPERATIONS,
+        parameters: {
+            type: 'object',
+            properties: {
+                prompt: { type: 'string' },
+                format: { type: 'string', enum: ['video', 'sprite_sheet'], default: 'sprite_sheet' }
+            }
+        }
+    },
+    'system_optimize': {
+        name: 'Optimize System',
+        description: 'Performs AI-driven optimization on assets (meshes, images) or system logic (code, data). Reconciles with the Museum Truth knowledge base.',
+        capability: AgentCapability.OPTIMIZE_SYSTEM,
+        parameters: {
+            type: 'object',
+            required: ['target', 'goal'],
+            properties: {
+                target: { type: 'string', description: 'The asset ID or system component to optimize.' },
+                goal: { type: 'string', description: 'The optimization goal (e.g., "reduce polycount", "palette reduction", "code efficiency").' },
+                constraints: { type: 'array', items: { type: 'string' } },
+                aggressive: { type: 'boolean', default: false }
+            }
+        }
     }
 } as any;

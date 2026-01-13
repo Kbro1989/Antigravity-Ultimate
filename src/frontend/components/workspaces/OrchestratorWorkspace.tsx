@@ -13,8 +13,8 @@ export function OrchestratorWorkspace() {
         setIsThinking(true);
         try {
             // 1. Plan the Sync
-            addNotification('info', 'Initializing Global Reconstruction Pipeline...');
-            const plan: any = await callLimb('pipeline', 'reconstruct_relic_sync', { relicId: 'sector_varrock_01' });
+            addNotification('info', 'Initializing RSC Sovereign Reconstruction...');
+            const plan: any = await callLimb('pipeline', 'reconstruct_relic_sync', { relicId: 'config85.jag' });
 
             setPipeline(plan);
             setCurrentStageIndex(0);
@@ -32,7 +32,7 @@ export function OrchestratorWorkspace() {
                 await new Promise(r => setTimeout(r, 1000)); // Pacing for effect
             }
 
-            addNotification('success', 'Full Sector Reconstruction Complete. Ready for Live Session.');
+            addNotification('success', 'RSC Relic Matrix Reconstruction Complete. Ready for Live Session.');
             setPipeline(null);
             setCurrentStageIndex(-1);
 
@@ -53,8 +53,8 @@ export function OrchestratorWorkspace() {
                             🎼
                         </div>
                         <div className="flex flex-col gap-1">
-                            <div className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Active Orchestration Mode</div>
-                            <div className="text-2xl font-black text-white">{strategy} Engine <span className="text-neon-cyan font-mono text-sm ml-2">v6.5.PRO</span></div>
+                            <div className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Active Sovereign Mode</div>
+                            <div className="text-2xl font-black text-white">Opal v1.0 Flow <span className="text-neon-cyan font-mono text-sm ml-2">v1.0.PRIME</span></div>
                         </div>
                     </div>
                     <div className="flex gap-4">
@@ -63,7 +63,7 @@ export function OrchestratorWorkspace() {
                             disabled={isThinking}
                             className={`px-8 py-3 rounded-2xl font-black text-[10px] uppercase transition-all shadow-xl ${isThinking ? 'bg-white/10 text-white animate-pulse' : 'bg-neon-cyan text-black hover:bg-white'}`}
                         >
-                            {isThinking ? 'Executing Pipeline...' : 'Initialize Sector Sync'}
+                            {isThinking ? 'Executing Pipeline...' : 'Initialize Relic Sync'}
                         </button>
                     </div>
                 </div>

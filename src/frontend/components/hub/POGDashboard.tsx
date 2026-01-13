@@ -50,6 +50,13 @@ import { WorkspaceMode } from '../../../types/workspace';
 import '../../styles/hub.css';
 
 
+interface SystemAlert {
+    id: string;
+    type: 'info' | 'success' | 'warn' | 'error';
+    message: string;
+    timestamp: number;
+}
+
 // Map Workspace Modes to registered Limb IDs
 const LimbMap: Record<string, string> = {
     'creative': 'image',
@@ -69,7 +76,9 @@ export function POGDashboard() {
     const { callLimb } = useServiceHub();
     const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 });
 
-    const [alerts, setAlerts] = React.useState(["INITIALIZING SYSTEM..."]);
+    const [alerts, setAlerts] = React.useState<SystemAlert[]>([
+        { id: 'init', type: 'info', message: 'INITIALIZING SOVEREIGN CORE...', timestamp: Date.now() }
+    ]);
     const [alertIndex, setAlertIndex] = React.useState(0);
     const [showOrchestrator, setShowOrchestrator] = React.useState(false);
     const [showSettings, setShowSettings] = React.useState(false);
@@ -101,30 +110,37 @@ export function POGDashboard() {
             try {
                 const result = await callLimb('security', 'get_logs', {});
                 if (result?.data?.logs) {
-                    const newAlerts = result.data.logs
+                    const newAlerts: SystemAlert[] = result.data.logs
                         .slice(0, 5)
-                        .map((l: any) => `[${l.level?.toUpperCase() || 'INFO'}] ${l.action}`);
+                        .map((l: any, i: number) => ({
+                            id: `log-${i}-${Date.now()}`,
+                            type: (l.level === 'error' ? 'error' : l.level === 'warn' ? 'warn' : 'info') as any,
+                            message: `[${l.level?.toUpperCase() || 'INFO'}] ${l.action}`,
+                            timestamp: Date.now()
+                        }));
 
                     if (newAlerts.length > 0) {
                         setAlerts(prev => {
-                            const combined = [...newAlerts, "SYSTEM OPTIMAL"];
-                            return JSON.stringify(prev) !== JSON.stringify(combined) ? combined : prev;
+                            const combined = [...newAlerts, ...prev].slice(0, 10);
+                            // Simple deduplication by message
+                            const unique = combined.filter((v, i, a) => a.findIndex(t => t.message === v.message) === i);
+                            return unique;
                         });
                     }
                 }
             } catch (e) {
-                // Silent fail for tick
+                console.warn('[POGDashboard] Failed to fetch background logs');
             }
         };
 
-        const interval = setInterval(fetchSystemAlerts, 5000);
-        fetchSystemAlerts(); // Initial
+        const interval = setInterval(fetchSystemAlerts, 10000);
+        fetchSystemAlerts();
         return () => clearInterval(interval);
     }, [callLimb]);
 
     React.useEffect(() => {
         const interval = setInterval(() => {
-            setAlertIndex((prev) => (prev + 1) % alerts.length);
+            setAlertIndex((prev) => (prev + 1) % (alerts.length || 1));
         }, 3000);
         return () => clearInterval(interval);
     }, [alerts]);
@@ -212,7 +228,7 @@ export function POGDashboard() {
                         <div className="flex items-center gap-4">
                             <div className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse shadow-[0_0_10px_#00ffff]" />
                             <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] w-80 truncate">
-                                {alerts[alertIndex]}
+                                {alerts[alertIndex]?.message || 'SOVEREIGN_IDLE'}
                             </div>
                         </div>
                         <div className="flex gap-4">
@@ -281,79 +297,98 @@ export function POGDashboard() {
             </div>
         );
     }
-}
 
-return (
-    <div className="h-screen w-screen overflow-hidden bg-void relative flex flex-col p-8">
-        <ParticleSystem layer="background" />
-        <div className="flex-1 flex flex-col gap-6 relative z-10">
-            {/* Header with Back Button */}
-            <div className="flex items-center gap-6">
-                <button
-                    onClick={() => {
-                        window.location.hash = '';
-                    }}
-                    className="w-16 h-16 rounded-[24px] glass-ultra border border-white/5 flex items-center justify-center text-white/40 hover:text-neon-cyan hover:border-neon-cyan/40 transition-all group shadow-xl"
-                >
-                    <svg className="w-6 h-6 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                </button>
 
-                <div className="flex-1 flex items-center gap-6">
-                    <AIDashboardHead workspace={activeWorkspace as WorkspaceMode} />
-                    <div className="flex gap-4 glass-ultra px-6 py-3 rounded-2xl border border-white/5 shadow-xl">
-                        <button onClick={() => setShowOrchestrator(true)} className="text-[10px] font-black text-neon-cyan/40 hover:text-neon-cyan tracking-widest transition-colors uppercase">Orchestrator</button>
-                        <button onClick={() => setShowSettings(true)} className="text-[10px] font-black text-white/20 hover:text-white tracking-widest transition-colors uppercase">Settings</button>
+    return (
+        <div className="h-screen w-screen overflow-hidden bg-void relative flex flex-col p-8">
+            <ParticleSystem layer="background" />
+            <div className="flex-1 flex flex-col gap-6 relative z-10">
+                {/* Header with Back Button */}
+                <div className="flex items-center gap-6">
+                    <button
+                        onClick={() => {
+                            window.location.hash = '';
+                        }}
+                        className="w-16 h-16 rounded-[24px] glass-ultra border border-white/5 flex items-center justify-center text-white/40 hover:text-neon-cyan hover:border-neon-cyan/40 transition-all group shadow-xl"
+                    >
+                        <svg className="w-6 h-6 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                    </button>
+
+                    <div className="flex-1 flex items-center gap-6">
+                        <AIDashboardHead workspace={activeWorkspace as WorkspaceMode} />
+                        <div className="flex gap-4 glass-ultra px-6 py-3 rounded-2xl border border-white/5 shadow-xl">
+                            <button onClick={() => setShowOrchestrator(true)} className="text-[10px] font-black text-neon-cyan/40 hover:text-neon-cyan tracking-widest transition-colors uppercase">Orchestrator</button>
+                            <button onClick={() => setShowSettings(true)} className="text-[10px] font-black text-white/20 hover:text-white tracking-widest transition-colors uppercase">Settings</button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Workspace Area */}
+                <div className="flex-1 flex gap-6 overflow-hidden">
+                    <div className="w-24 shrink-0 flex flex-col items-center">
+                        {activeWorkspace && (
+                            <WorkspaceSpine
+                                workspace={activeWorkspace as WorkspaceMode}
+                                onToolSelect={async (toolId, capability, params) => {
+                                    try {
+                                        const newAlert: SystemAlert = {
+                                            id: `tool-${Date.now()}`,
+                                            type: 'info',
+                                            message: `EXECUTING ${toolId.toUpperCase()}...`,
+                                            timestamp: Date.now()
+                                        };
+                                        setAlerts(prev => [newAlert, ...prev].slice(0, 10));
+                                        // Execute via Unified Limb Registry Client
+                                        const result = await LimbRegistryClient.executeTool(activeWorkspace, toolId, {
+                                            ...params,
+                                            activeFile: (window as any).activeFile, // Hook into global file tracker if available
+                                            selection: window.getSelection()?.toString()
+                                        });
+
+                                        if (result) {
+                                            const successAlert: SystemAlert = {
+                                                id: `success-${Date.now()}`,
+                                                type: 'success',
+                                                message: `${toolId.toUpperCase()} SUCCESS`,
+                                                timestamp: Date.now()
+                                            };
+                                            setAlerts(prev => [successAlert, ...prev].slice(0, 10));
+                                        }
+                                    } catch (e: any) {
+                                        const errorAlert: SystemAlert = {
+                                            id: `error-${Date.now()}`,
+                                            type: 'error',
+                                            message: `ERROR: ${e.message.toUpperCase()}`,
+                                            timestamp: Date.now()
+                                        };
+                                        setAlerts(prev => [errorAlert, ...prev].slice(0, 10));
+                                    }
+                                }}
+                            />
+                        )}
+                    </div>
+
+                    <div className="flex-1 glass-ultra rounded-[40px] border border-white/5 overflow-hidden relative shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+                        <Suspense fallback={
+                            <div className="flex flex-col items-center justify-center h-full gap-4">
+                                <div className="text-4xl animate-pulse">💠</div>
+                                <div className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20">Syncing Workspace Matrix...</div>
+                            </div>
+                        }>
+                            {WorkspaceComponent ? <WorkspaceComponent /> : (
+                                <div className="flex flex-col items-center justify-center h-full gap-4">
+                                    <div className="text-4xl animate-pulse">💠</div>
+                                    <div className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20">Initializing Interface...</div>
+                                </div>
+                            )}
+                        </Suspense>
                     </div>
                 </div>
             </div>
-
-            {/* Workspace Area */}
-            <div className="flex-1 flex gap-6 overflow-hidden">
-                <div className="w-24 shrink-0 flex flex-col items-center">
-                    {activeWorkspace && (
-                        <WorkspaceSpine
-                            workspace={activeWorkspace as WorkspaceMode}
-                            onToolSelect={async (toolId, capability, params) => {
-                                try {
-                                    setAlerts(prev => [`EXECUTING ${toolId.toUpperCase()}...`, ...prev.slice(0, 4)]);
-                                    // Execute via Unified Limb Registry Client
-                                    const result = await LimbRegistryClient.executeTool(activeWorkspace, toolId, {
-                                        ...params,
-                                        activeFile: (window as any).activeFile, // Hook into global file tracker if available
-                                        selection: window.getSelection()?.toString()
-                                    });
-
-                                    if (result) {
-                                        setAlerts(prev => [`${toolId.toUpperCase()} SUCCESS`, ...prev.slice(0, 4)]);
-                                    }
-                                } catch (e: any) {
-                                    setAlerts(prev => [`ERROR: ${e.message.toUpperCase()}`, ...prev.slice(0, 4)]);
-                                }
-                            }}
-                        />
-                    )}
-                </div>
-
-                <div className="flex-1 glass-ultra rounded-[40px] border border-white/5 overflow-hidden relative shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-                    <Suspense fallback={
-                        <div className="flex flex-col items-center justify-center h-full gap-4">
-                            <div className="text-4xl animate-pulse">💠</div>
-                            <div className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20">Syncing Workspace Matrix...</div>
-                        </div>
-                    }>
-                        {WorkspaceComponent ? <WorkspaceComponent /> : (
-                            <div className="flex flex-col items-center justify-center h-full gap-4">
-                                <div className="text-4xl animate-pulse">💠</div>
-                                <div className="text-[10px] font-black uppercase tracking-[0.6em] text-white/20">Initializing Interface...</div>
-                            </div>
-                        )}
-                    </Suspense>
-                </div>
-            </div>
         </div>
-    </div>
-);
+    );
+}
 
 

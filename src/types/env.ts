@@ -15,6 +15,9 @@ export interface Env {
     KV: KVNamespace; // POG System State / Cache Alias
     BRAIN: KVNamespace; // Agent Memory
     VECTOR_INDEX: VectorizeIndex; // RAG Memory
+    R2_ARTIFACTS: R2Bucket; // Trinity Artifacts
+    R2_BATCHES: R2Bucket; // Trinity Batches
+    R2_HALTS: R2Bucket; // Trinity Halts
     INSTANT_APP_ID: string;
     INSTANT_ADMIN_TOKEN: string;
     GOOGLE_CLIENT_SECRET: string; // OAuth Client Secret (Confidential)

@@ -36,12 +36,15 @@ export function VideoWorkspace() {
             });
 
             if (result.status === 'success') {
-                // Cloudflare Stream Integration: Construct HLS/WHEP manifest URL from UID
-                const streamUid = result.uid || result.videoUrl?.split('/').pop();
-                const customerCode = 'pog-network'; // Placeholder customer code
-                const manifestUrl = isSubSecond
-                    ? `https://customer-${customerCode}.cloudflarestream.com/${streamUid}/manifest/video.whep`
-                    : `https://customer-${customerCode}.cloudflarestream.com/${streamUid}/manifest/video.m3u8`;
+                // Cloudflare Stream Integration: Construct HLS/WHEP manifest URL
+                let manifestUrl = result.videoUrl;
+
+                if (result.metadata?.type === 'cloud_stream') {
+                    // Use WHEP for sub-second if requested
+                    if (isSubSecond && result.uid) {
+                        manifestUrl = manifestUrl.replace('video.m3u8', 'video.whep');
+                    }
+                }
 
                 setPreviewUrl(manifestUrl);
                 addNotification('success', `Cinema Engine: ${isSubSecond ? 'Magical HDMI Link (WHEP)' : 'Stream Manifest'} Distributed`);

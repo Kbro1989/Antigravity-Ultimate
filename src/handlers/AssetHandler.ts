@@ -94,6 +94,25 @@ app.get('/ai/assets/*', async (c) => {
     return new Response(object.body, { headers });
 });
 
+app.get('/ai/assets-list/*', async (c) => {
+    const key = c.req.path.replace('/ai/assets-list/', '');
+    if (!c.env.ASSETS_BUCKET) return c.json({ error: 'R2 Not Configured' }, 503);
+
+    try {
+        const list = await c.env.ASSETS_BUCKET.list({ prefix: key + '/' });
+        return c.json({
+            success: true,
+            files: list.objects.map(o => ({
+                name: o.key.split('/').pop(),
+                size: o.size,
+                path: o.key
+            }))
+        });
+    } catch (e: any) {
+        return c.json({ error: e.message }, 500);
+    }
+});
+
 app.get('/limbs/:limbId', async (c) => {
     const limbId = c.req.param('limbId');
     const manifest = getAssetManifest();
@@ -132,7 +151,8 @@ app.get('/dist/:assetName', async (c) => {
             }
         );
 
-        if (assetName.endsWith('.bin')) {
+        const binaryExtensions = ['.bin', '.jag', '.mem', '.idx', '.jag85', '.jag63', '.jag36', '.jag17', '.jag24', '.jag58'];
+        if (binaryExtensions.some(ext => assetName.endsWith(ext))) {
             return new Response(response.body, {
                 ...response,
                 headers: {

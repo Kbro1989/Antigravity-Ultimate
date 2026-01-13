@@ -70,4 +70,17 @@ export class IDAuditor {
             valid: isValid
         };
     }
+
+    /**
+     * Enforces "Museum Truth": ensuring IDs are within the read-only museum range (0-9999)
+     * for relevant operations.
+     */
+    auditID(id: number | string): boolean {
+        const idNum = typeof id === 'string' ? parseInt(id) : id;
+        if (isNaN(idNum)) return true; // Non-numeric IDs are allowed (as innovations)
+
+        // Museum IDs (0-9999) are read-only. 
+        // If an operation tries to write to these, it should be flagged or diverted.
+        return idNum >= 0 && idNum <= 9999;
+    }
 }

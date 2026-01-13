@@ -42,6 +42,25 @@ export class ModernRSMVService implements IRSMVService {
                     }
                 }
             }
+        } else if (typeof window !== 'undefined') {
+            // --- BROWSER HTTP LOADING (Client) ---
+            console.log(`[ModernRSMV] Loading cache via HTTP for ${path}`);
+            const { HttpScriptFS } = await import('../HttpScriptFS');
+            const fs = new HttpScriptFS(); // Root or path?
+            // HttpScriptFS assumes prefix provided in constructor or just path in calls
+            // linkLocalCache passed 'path' as the directory to look in.
+
+            // We can use readDir to find jcache files
+            const files = await fs.readDir(path);
+
+            for (const file of files) {
+                if (file.name.endsWith('.jcache')) {
+                    // Fetch full content as blob
+                    // HttpScriptFS.readFileBuffer returns Buffer, we need Blob
+                    const buf = await fs.readFileBuffer(`${path}/${file.name}`);
+                    dbFiles[file.name] = new Blob([buf]);
+                }
+            }
         } else {
             // --- OPTIONAL LOCAL BRIDGE FALLBACK ---
             const files = await localBridgeClient.listDirectory(path);

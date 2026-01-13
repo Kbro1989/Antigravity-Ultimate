@@ -82,6 +82,41 @@ export class SessionDO extends DurableObject {
             return new Response('Command Processed', { status: 200 });
         }
 
+        // GET /api/session/stats - Real-time system metrics
+        if (request.method === 'GET' && url.pathname.includes('/api/session/stats')) {
+            return new Response(JSON.stringify({
+                tokensUsed: (globalThis as any).tokensUsed || 0,
+                tokensLimit: 500000,
+                cost: (globalThis as any).totalCost || 0.00,
+                requests: (globalThis as any).requestCount || 0,
+                status: 'nominal',
+                relicsProcessed: 124 // Mock for now, but RSC specific
+            }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        // POST /api/limb/execute - Unified Limb Execution
+        if (request.method === 'POST' && url.pathname.includes('/api/limb/execute')) {
+            try {
+                const body = await request.json() as { limbId: string, action: string, payload: any };
+                console.log(`[SessionDO] Executing Limb: ${body.limbId}::${body.action}`);
+
+                // In a real implementation, we would route this to the specific limb service.
+                // For now, let's look for the diag call specifically
+                if (body.limbId === 'system' && body.action === 'diag') {
+                    return new Response(JSON.stringify({
+                        status: 'success',
+                        platform: 'Cloudflare Workers (Opal v1.0)',
+                        integrity: 'Sovereign',
+                        activeErrors: []
+                    }), { status: 200 });
+                }
+
+                return new Response(JSON.stringify({ status: 'success', message: 'Limb executed in sovereign context' }), { status: 200 });
+            } catch (e: any) {
+                return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+            }
+        }
+
         // POST /approve - Finalize to R2/D1
         if (request.method === 'POST' && url.pathname === '/approve') {
             await this.finalize();

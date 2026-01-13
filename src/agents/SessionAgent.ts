@@ -9,6 +9,8 @@ import { AIAction } from '../services/ai/AITypes';
 import { limitObserver } from '../services/core/ObservabilityLimiter';
 import { costOptimizer } from '../services/ai/CostOptimizer';
 import { InstantService } from '../services/data/InstantService';
+import { TrinityPipeline } from '../services/ai/trinity/TrinityPipeline';
+import { TrinityModelWrapper } from '../services/ai/trinity/TrinityModelWrapper';
 
 export interface AssetMetadata {
     id: string;
@@ -29,6 +31,7 @@ export class SessionAgent extends DurableObject<Env> {
     services: ServiceContainer;
     negotiation: AINegotiationProtocol;
     memory: SharedMemorySystem;
+    trinity: TrinityPipeline;
 
     constructor(state: DurableObjectState, env: Env) {
         super(state, env);
@@ -44,10 +47,31 @@ export class SessionAgent extends DurableObject<Env> {
         // OKComputer-inspired AI orchestration
         this.negotiation = new AINegotiationProtocol(env);
         this.memory = new SharedMemorySystem(state.storage);
+        this.trinity = new TrinityPipeline(env, {
+            limbs: this.services.limbs,
+            ghost: this.services.limbs.getLimb('ghost')
+        });
+        (globalThis as any).POG_NEURAL_REGISTRY = this.services.limbs;
+        (globalThis as any).POG_AUDITOR = (this.trinity as any).auditor;
+
+        // Register Elite models in Trinity for Vickrey Auctions
+        this.trinity.registerModels([
+            new TrinityModelWrapper('REASONING', this.services.router, { cost: 0.015, permissions: 'all' }),
+            new TrinityModelWrapper('CODER', this.services.router, { cost: 0.005, permissions: 'whitelist', accessibleLimbs: ['code', 'file', 'system'] }),
+            new TrinityModelWrapper('GPT_OSS', this.services.router, { cost: 0.002, permissions: 'all' })
+        ]);
+
+        // Unify Routing: Connect Trinity to the main router for high-level tasks
+        if (this.services.router && typeof (this.services.router as any).setTrinity === 'function') {
+            (this.services.router as any).setTrinity(this.trinity);
+        }
 
         // Block on async initialization
         this.state.blockConcurrencyWhile(async () => {
             try {
+                // --- SQLITE INITIALIZATION ---
+                await this.initDatabase();
+
                 if (this.services && typeof this.services.initialize === 'function') {
                     await this.services.initialize();
                 }
@@ -95,6 +119,33 @@ export class SessionAgent extends DurableObject<Env> {
     }
 
     /**
+     * Initializes the built-in SQLite database for the Durable Object.
+     */
+    private async initDatabase() {
+        // Metacognitive History Table
+        this.state.storage.sql.exec(`
+            CREATE TABLE IF NOT EXISTS metacognitive_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp INTEGER NOT NULL,
+                confidence REAL NOT NULL,
+                latency REAL,
+                tokens_generated INTEGER,
+                limb_path TEXT,
+                routing_penalty REAL,
+                validation_errors TEXT
+            );
+        `);
+
+        // Global State Counters (Halt count, uptime markers)
+        this.state.storage.sql.exec(`
+            CREATE TABLE IF NOT EXISTS session_state (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            );
+        `);
+    }
+
+    /**
      * Rehydrates the agent's state from Durable Object storage.
      */
     private async hydrateState() {
@@ -104,6 +155,38 @@ export class SessionAgent extends DurableObject<Env> {
             const necromancy = NecromancyService.getInstance();
             necromancy.hydrate(savedNecromancy);
             console.log('[Rehydration] Found saved Necromancy state.');
+        }
+
+        // --- SQLITE HYDRATION ---
+        try {
+            const historyRows = this.state.storage.sql.exec(`SELECT * FROM metacognitive_history ORDER BY timestamp DESC LIMIT 50`).toArray();
+            const haltRow = this.state.storage.sql.exec(`SELECT value FROM session_state WHERE key = 'total_halt_count'`).toArray()[0];
+            const startRow = this.state.storage.sql.exec(`SELECT value FROM session_state WHERE key = 'start_time'`).toArray()[0];
+
+            if (historyRows.length > 0 || haltRow || startRow) {
+                this.trinity.hydrate({
+                    metacognitive: {
+                        history: historyRows.map((r: any) => ({
+                            timestamp: r.timestamp,
+                            confidence: r.confidence,
+                            latency: r.latency,
+                            tokensGenerated: r.tokens_generated,
+                            limbPath: JSON.parse(r.limb_path || '[]'),
+                            routingPenalty: r.routing_penalty || 0,
+                            validationErrors: JSON.parse(r.validation_errors || '[]')
+                        })),
+                        totalHaltCount: haltRow ? parseInt(haltRow.value as string) : 0,
+                        startTime: startRow ? parseInt(startRow.value as string) : Date.now()
+                    }
+                });
+                console.log(`[Rehydration] Reconstructed MetacognitiveState from SQLite (${historyRows.length} entries).`);
+            }
+        } catch (e) {
+            console.warn('[Hydration] SQLite failure, falling back to KV:', e);
+            const savedTrinity = await this.state.storage.get<any>('state:trinity');
+            if (savedTrinity) {
+                this.trinity.hydrate(savedTrinity);
+            }
         }
     }
 
@@ -115,7 +198,50 @@ export class SessionAgent extends DurableObject<Env> {
             const { NecromancyService } = await import('../services/game/NecromancyService');
             const necromancy = NecromancyService.getInstance();
             await this.state.storage.put('state:necromancy', necromancy.getState());
-            console.log('[Persistence] Session state saved to DO Storage.');
+
+            // --- SQLITE PERSISTENCE ---
+            const state = this.trinity.getState();
+            if (state.metacognitive) {
+                // Clear and rebuild or just append? Append is cleaner for history.
+                // We'll insert the latest record if it's not already there? 
+                // Actually, Trinity state contains the whole history. 
+                // To keep SQLite efficient, we should only insert new records.
+                // But Trinity doesn't tell us what's new here.
+                // For "Neural Deepening", let's just wipe and refill the 'state' table for counters, 
+                // and maybe Trinity should handle the history append directly later.
+
+                this.state.storage.sql.exec(
+                    "INSERT OR REPLACE INTO session_state (key, value) VALUES (?, ?)",
+                    'total_halt_count', state.metacognitive.totalHaltCount.toString()
+                );
+                this.state.storage.sql.exec(
+                    "INSERT OR REPLACE INTO session_state (key, value) VALUES (?, ?)",
+                    'start_time', state.metacognitive.startTime.toString()
+                );
+
+                // For history, we'll sync the last record if it's newer than the last SQLite entry
+                const latestInMem = state.metacognitive.history[0];
+                if (latestInMem) {
+                    const lastInDb = this.state.storage.sql.exec(`SELECT timestamp FROM metacognitive_history ORDER BY timestamp DESC LIMIT 1`).toArray()[0];
+                    if (!lastInDb || latestInMem.timestamp > (lastInDb.timestamp as number)) {
+                        this.state.storage.sql.exec(
+                            `INSERT INTO metacognitive_history (timestamp, confidence, latency, tokens_generated, limb_path, routing_penalty, validation_errors)
+                             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                            latestInMem.timestamp,
+                            latestInMem.confidence,
+                            latestInMem.latency,
+                            latestInMem.tokensGenerated,
+                            JSON.stringify(latestInMem.limbPath),
+                            latestInMem.routingPenalty,
+                            JSON.stringify(latestInMem.validationErrors)
+                        );
+                    }
+                }
+            }
+
+            // Fallback KV save for safety
+            await this.state.storage.put('state:trinity', state);
+            console.log('[Persistence] Session state saved to SQLite and KV.');
         } catch (e) {
             console.warn('[Persistence] Failed to save state:', e);
         }
@@ -473,23 +599,79 @@ export class SessionAgent extends DurableObject<Env> {
             const body = await c.req.json();
             try {
                 const result = await this.services.limbs.processIntent({
-                    limbId: 'image', // Video often grouped with image or separate 'video' limb
+                    limbId: 'video',
                     action: 'video_generate' as AIAction,
                     payload: body,
                     modelId: body.model,
                     provider: body.provider
                 });
 
-                // Adapter for Cloudflare Stream response
-                return c.json({
-                    status: 'success',
-                    uid: `stream_${Math.random().toString(36).substr(2, 9)}`,
-                    preview: result.videoUrl || result.url,
-                    thumbnail: result.thumbnail
-                });
+                return c.json(result);
             } catch (e: any) {
                 return c.json({ error: e.message }, 500);
             }
+        });
+
+        // Optimization Engine
+        this.app.post('/api/optimize', async (c) => {
+            const body = await c.req.json();
+            try {
+                const result = await this.services.limbs.processIntent({
+                    limbId: body.limbId || 'system',
+                    action: 'system_optimize' as AIAction,
+                    payload: body,
+                    modelId: body.model,
+                    provider: body.provider
+                });
+
+                return c.json(result);
+            } catch (e: any) {
+                return c.json({ error: e.message }, 500);
+            }
+        });
+
+        // Relic Subsystem (Public API)
+        this.app.get('/api/relic/catalog/:category', async (c) => {
+            const category = c.req.param('category');
+            try {
+                const result = await this.services.limbs.processIntent({
+                    limbId: 'relic',
+                    action: 'get_relic_catalog' as AIAction,
+                    payload: { category }
+                });
+                return c.json(result);
+            } catch (e: any) {
+                return c.json({ error: e.message }, 500);
+            }
+        });
+
+        this.app.get('/api/relic/preview/:id', async (c) => {
+            const id = c.req.param('id');
+            const type = c.req.query('type') || 'model';
+            try {
+                const result = await this.services.limbs.processIntent({
+                    limbId: 'relic',
+                    action: 'preview_relic' as AIAction,
+                    payload: { id, type }
+                });
+
+                // USER-FIRST: Signal discovery
+                this.broadcast({
+                    type: 'RELIC_DISCOVERY',
+                    payload: result
+                });
+
+                return c.json(result);
+            } catch (e: any) {
+                return c.json({ error: e.message }, 500);
+            }
+        });
+
+        // Webhook Receiver (Reflected in Public API)
+        this.app.post('/api/webhooks/cloudflare', async (c) => {
+            const payload = await c.req.json();
+            await this.handleCloudflareWebhook(payload);
+            return c.text('OK');
         });
 
         // Alias: Code Completions
@@ -586,6 +768,49 @@ export class SessionAgent extends DurableObject<Env> {
         } catch (e: any) {
             return c.json({ error: e.message }, 500);
         }
+    }
+
+    // --- CLOUDFLARE WEBHOOK HANDLER ---
+
+    async handleCloudflareWebhook(payload: any) {
+        const { type, data } = payload;
+        console.log(`[SessionAgent] Cloudflare Webhook Received: ${type}`, data.uid || data.id);
+
+        if (type === 'stream.video.ready') {
+            this.broadcast({
+                type: 'STREAM_READY',
+                payload: {
+                    uid: data.uid,
+                    url: `https://customer-${this.env.CLOUDFLARE_ACCOUNT_ID}.cloudflarestream.com/${data.uid}/manifest/video.m3u8`
+                }
+            });
+        } else if (type === 'image.uploaded') {
+            this.broadcast({
+                type: 'IMAGE_READY',
+                payload: {
+                    id: data.id,
+                    url: `https://imagedelivery.net/${this.env.CLOUDFLARE_IMAGES_HASH}/${data.id}/public`
+                }
+            });
+        }
+
+        // Persist metabolic event
+        await this.services.chronos.logTrace({
+            layer: 'system',
+            action: `webhook_${type}`,
+            metadata: { ...data, status: 'received' }
+        });
+    }
+
+    private broadcast(message: any) {
+        // Broadcast to all connected clients (NeuralTerminal subscribers)
+        const payload = JSON.stringify(message);
+        this.state.getWebSockets().forEach(ws => {
+            try {
+                ws.send(payload);
+            } catch (e) { }
+        });
+        console.log(`[SessionAgent] Broadcast: ${message.type}`);
     }
 
     // --- WEBSOCKET HIBERNATION API ---

@@ -8,10 +8,13 @@ export class KnowledgeIngestor {
      * Ingests canonical RSC data from the external project path.
      * Uses LocalBridge to read the files.
      */
-    async ingestCanonicalData(projectRoot: string) {
+    async ingestCanonicalData(projectRoot: string = './') {
         // Sovereignty: Optional bridge lookup
         const bridge = await this.getBridge();
-        if (!bridge || !bridge.getStatus().isConnected) {
+        if (!bridge) return;
+
+        const status = await bridge.getStatus();
+        if (!status.isConnected) {
             console.log('[KnowledgeIngestor] Skipping ingestion: Bridge not connected or unavailable');
             return;
         }

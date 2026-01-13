@@ -53,24 +53,31 @@ class LocalBridgeClient {
         // --- CLOUD-FIRST STARTUP ---
         console.log("[LocalBridge] Initializing in Cloud-First Mode.");
 
-        // --- SIGNALING CHAIN INITIALIZATION ---
-        this.checkSignalingChain();
-
         // Auto-detect Cloud/HTTPS environment to prevent Mixed Content errors
         if (typeof window !== 'undefined' && window.location) {
             const isSecure = window.location.protocol === 'https:';
             const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname === '127.0.0.1';
+            const isProd = window.location.hostname.includes('.workers.dev') ||
+                window.location.hostname.includes('.pages.dev') ||
+                window.location.hostname.includes('pog-ultimate');
+
+            if (isProd && !this.isRelayMode) {
+                console.log("[LocalBridge] Sovereign Cloud Mode Active: Internal CLI and Bridge dependencies suspended.");
+                this.isCloudMode = true;
+                return; // SKIP signaling and connection
+            }
 
             if (isSecure && !isLocalhost) {
                 console.log("[LocalBridge] Secure Cloud Environment. Defaulting to Cloud Mode (Bridge Disabled).");
-                // this.setRelayMode(); // DISABLE AUTO-RELAY: User requested no WebSocket dependency
                 this.isCloudMode = true;
             } else if (isLocalhost) {
                 // If local, we can still auto-connect, but we start in Cloud sync mode
-                // so we don't accidentally write to local FS without user toggle
                 setTimeout(() => this.connect(), 100);
             }
         }
+
+        // --- SIGNALING CHAIN INITIALIZATION (Local/Relay Only) ---
+        this.checkSignalingChain();
     }
 
     private async checkSignalingChain() {

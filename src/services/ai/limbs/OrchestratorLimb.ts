@@ -151,19 +151,39 @@ export class OrchestratorLimb extends NeuralLimb {
 
     async negotiate_consensus(params: any) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
-        const { request } = params;
+        const { request, projectRoot } = params;
 
-        // Lazy load to avoid circular init issues if any, or just new instance
         const { AINegotiationProtocol } = await import('../orchestrator/AINegotiationProtocol');
         const protocol = new AINegotiationProtocol();
 
-        const result = await protocol.negotiateTask(request);
+        const result = await protocol.negotiateTask(request, projectRoot || 'willow-ai-game-dev');
 
         return {
             status: 'negotiated',
             finalPlan: result.finalPlan,
+            workDistribution: result.workDistribution,
+            consensusConfidence: result.consensusConfidence,
             rounds: result.rounds,
-            consensus: true // Protocol handles fallback
+            consensus: true
+        };
+    }
+
+    async respond_to_error(params: any) {
+        this.enforceCapability(AgentCapability.AI_INFERENCE);
+        const { error, fileContent } = params;
+
+        const { AIErrorResponder } = await import('../orchestrator/AIErrorResponder');
+        const responder = new AIErrorResponder(true); // Auto-fix enabled
+
+        const result = await responder.respondToError(error, {
+            fileContent,
+            projectRoot: 'willow-ai-game-dev',
+            userPatterns: {}
+        });
+
+        return {
+            status: 'analyzed',
+            ...result
         };
     }
 

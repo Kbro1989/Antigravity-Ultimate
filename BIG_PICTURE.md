@@ -1,9 +1,9 @@
 # POG-Ultimate: The Big Picture (Cloud Native)
 
-> **Generated**: 2026-01-12
+> **Version**: **Opal v1.0 (Sovereign RSC Editor)**
 > **Production URL**: [pog-ultimate.kristain33rs.workers.dev](https://pog-ultimate.kristain33rs.workers.dev/)
-> **Deployment Type**: **Cloudflare Worker (Enterprise-Scale Neural Mesh)**
-> **Core Philosophy**: **Cloud Sovereignty**. The application is autonomous and self-sufficient.
+> **Deployment Type**: **Cloudflare Worker (Sovereign Neural Mesh)**
+> **Core Philosophy**: **Cloud Sovereignty**. The application is autonomous, tracing authentic RSC .jag archives outward.
 
 This document is the **Master Strategy Guide** for the **POG-Ultimate Main App**. It defines the architecture of the serverless MMO engine running on the Edge.
 
@@ -40,10 +40,10 @@ These Limbs are **autonomous and self-sufficient**, running residency-optimized 
 ### **The Orchestration Layer (The Brain)**
 | Limb | Role | Independence Strategy |
 | :--- | :--- | :--- |
-| **Orchestrator** | **The Conductor** | Uses DeepSeek R1 to decompose complex user intents into sequential multi-limb blueprints. |
-| **System** | **Kernel Controller** | Manages system execution, resource optimization, and economy modes (Standard/Economy/Turbo). |
-| **Security** | **Guardian** | Enforces the Agent Constitution, audits risk levels, and signs artifacts via `ProvenanceService`. |
-| **AssetPipeline**| **The Migrator** | Coordinates the synchronized reconstruction of game sectors (Relic -> Divine -> LiveGame). |
+| **Orchestrator** | **Sovereign Flow** | Uses Opal v1.0 (DeepSeek R1) to decompose complex RSC intents into sequential .jag-tracing blueprints. |
+| **System** | **Worker Runtime** | Manages system execution, diagnostic vitals, and economy modes (Standard/Economy/Turbo). |
+| **Security** | **Audit Shield** | Enforces the Agent Constitution, audits risk levels, and signs RSC artifacts via `ProvenanceService`. |
+| **AssetPipeline**| **JAG Reconstructor**| Coordinates the synchronized reconstruction of game sectors (Relic -> Divine -> LiveGame). |
 
 ### **The creative Trinity (Asset Synthesis)**
 | Limb | Role | Independence Strategy |
@@ -71,10 +71,10 @@ These Limbs are **autonomous and self-sufficient**, running residency-optimized 
 ### **The Knowledge Cortex (Memory)**
 | Limb | Role | Independence Strategy |
 | :--- | :--- | :--- |
-| **Relic** | **Archeologist** | **Museum Mode**: Reads Jagex/RSC archives. **Protocol**: Auto-forks artifacts to Innovation layer. |
-| **IDAuditor** | **Gatekeeper** | **Pure RSC Limit**: Enforces strict ID ranges (0-9999 Museum, 10000+ Innovation). |
-| **Data/Neural** | **Knowledge Base** | Ingests canonical RSC data into Vector vectorized memory for high-fidelity reasoning. |
-| **Quantum/Reality**| **Convergence** | Generates infinite procedural variants and anchors them into the persistent world reality. |
+| **Relic (ARCH)** | **Archeologist** | **Museum Mode**: Reads Jagex/RSC archives (.jag). **Protocol**: Auto-forks artifacts to Innovation layer. |
+| **IDAuditor (IDEX)** | **Gatekeeper** | **Pure RSC Limit**: Enforces strict ID ranges (0-9999 Museum, 10000+ Innovation). |
+| **Data/Neural** | **Relic Matrix** | Ingests canonical RSC data into Vector vectorized memory for high-fidelity reasoning. |
+| **Quantum (OPAL)** | **Innovation** | Generates infinite procedural variants and anchors them into the persistent world reality. |
 
 ---
 
@@ -449,5 +449,47 @@ For rapid iteration without external account overhead, Cloudflare provides a sui
 
 ---
 
-**End of Master Strategy Guide.**
+**End of Master Strategy Guide.**---
+
+## 17. The Opal v1.0 Update (Sovereign RSC Editor)
+
+As of January 2026, the POG-Ultimate dashboard has been successfully reconstructed into the **Sovereign RSC Editor (Opal v1.0)**. This phase focused on purging all remaining placeholder content and establishing absolute functional truth at the edge.
+
+### Key Reconstruction Milestones:
+- **Branding Architecture**: The UI now strictly reflects the **Opal v1.0** core, with the centralized dashboard rebranded as the **Sovereign RSC Node**.
+- **Limb Alignment**: All workspace tools in the `WorkspaceSpine` have been mapped to real cloud-native capabilities:
+    - **RELC / ARCH**: Archeological restoration of `.jag` archives.
+    - **IDEX**: Strict ID range enforcement via the `IDAuditor`.
+    - **OPAL**: Neural innovation and procedural asset synthesis.
+    - **LOGC**: RSC-native logic script reconstruction.
+- **Diagnostic Sovereignty**: Mock "Neurometrics" have been replaced with real-time diagnostic vitals fetched directly from the `DiagnosticService` and `SessionDO`.
+- **Relic Matrix Pipeline**: The `OrchestratorWorkspace` now executes real sovereign flows for relic reconstruction (e.g., `config85.jag` restoration) rather than simulated "sector syncs."
+- **Asset Integrity**: `AssetHandler` now natively supports and serves RSC-specific binary formats (`.jag`, `.mem`, `.idx`) with correct `octet-stream` headers, enabling high-fidelity game data restoration.
+
+**Status**: The POG Dashboard is now a functional, hardened, and Sovereign representation of the Cloudflare Worker's capabilities. 🏛️🌑
+
+---
 "In the convergence of binary history and neural future, we find the POG."
+
+---
+
+## 18. Phase 25: Zero Local Dependency Protocol (January 2026)
+
+The POG-Ultimate application has achieved **full Cloud Sovereignty**. There is no longer any runtime dependency on local file systems, Jagex Launcher paths, or background bridge detection. All user data workflows are now strictly **User Intent** driven.
+
+### Key Achievements:
+
+- **0 Local Needs**: Purged all hardcoded absolute paths (`C:\Program Files`, `C:\ProgramData\Jagex`) from the codebase.
+- **ServiceHub Hardening**: The `isBridgeAvailable()` check now correctly uses `status.isConnected` and returns `false` for all `.workers.dev` / `.pages.dev` hosts.
+- **CodeLimb Guards**: All forensic methods (`read`, `write`, `test`, `reconstruct_forensic_handling`) are guarded by `isCloudMode()` and return informative "Sovereignty Alert" messages instead of failing silently.
+- **RSMVBrowser (Pure Drop-In)**: Removed all "Magic Link" buttons and auto-linking `useEffect` hooks. The UI now explicitly invites users to **Drag & Drop** their device cache (`.jcache`, `.jag`, `.mem`) directly into the viewer.
+- **rsmvService Sanitization**: Deleted `verifyLocalCache` and `linkLocalCache` methods. The `RSMVEngine` now relies on the active drop-in workflow.
+- **Classic vs RS3 Alignment**:
+    - **Classic (Sovereign Museum)**: Data is bundled as internal app assets. Overwrites are prohibited to preserve "Museum" integrity.
+    - **RS3 (User Intent)**: Leveraging the **webviewer-deconstructed** repository's technical schemas, the app now uses a pure Drag & Drop workflow. The system treats your device-provided cache as a transient, user-governed source of truth.
+
+### Technical Foundation:
+
+This phase was enabled by the user's prior work on `C:\Users\Destiny\Desktop\New folder\webviewer-deconstructed`, a dedicated reverse-engineering effort for the RS3 webviewer. The deconstructed modules (109 total) now serve as the technical "brain" for the application's RS3 data handling.
+
+**Status**: The application is now a **portable, standalone Cloudflare Worker asset** that requires no local bridge to function. 🛡️☁️

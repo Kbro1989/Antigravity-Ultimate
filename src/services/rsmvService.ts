@@ -24,34 +24,12 @@ export const FEATURED_MODELS: Record<GameSource, RSMVModelEntry[]> = {
   ]
 };
 
-export const JAGEX_LAUNCHER_PATHS = {
-  root: 'C:\\Program Files (x86)\\Jagex Launcher',
-  games: 'C:\\Program Files (x86)\\Jagex Launcher\\Games',
-  launcher: 'C:\\Program Files (x86)\\Jagex Launcher\\JagexLauncher.exe',
-  libcef: 'C:\\Program Files (x86)\\Jagex Launcher\\libcef.dll',
-  vulkan: 'C:\\Program Files (x86)\\Jagex Launcher\\vulkan-1.dll'
-};
-
+// Jagex Launcher paths removed as per Zero Local Dependency protocol.
 export const verifyJagexLauncher = async (): Promise<boolean> => {
-  try {
-    if (!(window as any).agentAPI) return false;
-    const res = await (window as any).agentAPI.fs.stat(JAGEX_LAUNCHER_PATHS.launcher);
-    return !!res.success;
-  } catch (err) {
-    return false;
-  }
+  // Sovereignty: Launcher check is disabled in Cloud Mode.
+  return false;
 };
 
-export const verifyLocalCache = async (): Promise<boolean> => {
-  try {
-    const { localBridgeClient } = await import('./bridge/LocalBridgeService');
-    const cachePath = 'C:/ProgramData/Jagex/RuneScape'; // Primary authentic path
-    const stat = await localBridgeClient.statFile(cachePath);
-    return !!stat.success;
-  } catch (err) {
-    return false;
-  }
-};
 
 /**
  * RSMVEngine (Unified Delegator)
@@ -73,9 +51,6 @@ export class RSMVEngine {
     return rsmv.loadModel(id);
   }
 
-  async linkLocalCache(path?: string) {
-    return rsmv.linkLocalCache(path);
-  }
 
   getSceneCache() {
     return rsmv.getSceneCache();

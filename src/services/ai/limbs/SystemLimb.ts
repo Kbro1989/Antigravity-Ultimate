@@ -21,11 +21,15 @@ export class SystemLimb extends NeuralLimb {
 
     async diag(params: any) {
         this.enforceCapability(AgentCapability.METRIC_ACCESS);
+        const { diagnosticService } = await import('../core/DiagnosticService');
+        diagnosticService.broadcastHealth();
+
         return {
             status: 'success',
             platform: 'Cloudflare Workers',
             architecture: 'Neural Service Mesh',
-            integrity: 'Nominal'
+            integrity: 'Nominal',
+            activeErrors: diagnosticService.getActiveErrors()
         };
     }
 

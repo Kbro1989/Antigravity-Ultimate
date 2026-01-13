@@ -27,34 +27,34 @@ export function BubbleWorldHUD({ onSelectWorkspace, activeWorkspace }: BubbleWor
 
     const workspaces = useMemo(() => [
 
-        { id: 'orchestrator', icon: '🎼', label: 'ORCH', color: '#9d00ff', description: 'Symphony Conductor' },
-        { id: 'ghost', icon: '👻', label: 'GHOST', color: '#ffffff', description: 'Error Recovery & Local Fallback' },
-        { id: 'file', icon: '📁', label: 'FILE', color: '#ffff00', description: 'Filesystem Operations' },
-        { id: 'data', icon: '📊', label: 'DATA', color: '#00ffff', description: 'Knowledge & Vector Memory' },
-        { id: 'entity', icon: '👾', label: 'ENTITY', color: '#ff8000', description: 'ECS Archetype Management' },
-        { id: 'system', icon: '⚙️', label: 'SYS', color: '#888888', description: 'Ops & Token Economics' },
-        { id: 'mesh', icon: '🔷', label: 'MESH', color: '#0080ff', description: 'Model Forge Pro' },
-        { id: 'material', icon: '🎨', label: 'MAT', color: '#ff8000', description: 'PBR Shader Compiler' },
-        { id: 'animation', icon: '🏃', label: 'ANIM', color: '#00ff80', description: 'Skeletal & Procedural Animation' },
-        { id: 'image', icon: '🖼️', label: 'IMG', color: '#ff00ff', description: 'Texture & Sprite Generation' },
-        { id: 'video', icon: '🎥', label: 'VIDEO', color: '#ff0080', description: 'Cinematic Video Suite' },
-        { id: 'world', icon: '🌍', label: 'WORLD', color: '#00ff80', description: 'Procedural World Generation' },
-        { id: 'landscape', icon: '🏔️', label: 'LAND', color: '#9d00ff', description: 'Terrain & Collision' },
-        { id: 'physics', icon: '🍎', label: 'PHYS', color: '#ffff00', description: 'Rigid Body & Simulation' },
-        { id: 'spatial', icon: '🎭', label: 'SPAT', color: '#ff0080', description: 'Scene Graph Optimization' },
-        { id: 'audio', icon: '🎵', label: 'AUDIO', color: '#9d00ff', description: 'Audio Studio & Voiceover' },
-        { id: 'game', icon: '🎮', label: 'LIVE', color: '#00ff00', description: 'Real-Time Entity Simulation' },
-        { id: 'code', icon: '💻', label: 'CODE', color: '#00ffff', description: 'Code Generation & Refactoring' },
-        { id: 'quantum', icon: '⚛️', label: 'QUANT', color: '#9d00ff', description: 'Variant Generation' },
-        { id: 'relic', icon: '⛏️', label: 'RELIC', color: '#00ffff', description: 'Relic Matrix (Truth)' },
-        { id: 'security', icon: '🛡️', label: 'SEC', color: '#ff0000', description: 'Audit & Shielding' },
-        { id: 'idauditor', icon: '🔍', label: 'AUDIT', color: '#ff8000', description: 'Asset Governance' },
-        { id: 'versioncontrol', icon: '🔄', label: 'GIT', color: '#0080ff', description: 'Git & Commit Synthesis' },
-        { id: 'pipeline', icon: '🏗️', label: 'PIPE', color: '#00ffff', description: 'Build Automation' },
-        { id: 'network', icon: '🌐', label: 'NET', color: '#0080ff', description: 'Edge Logic & Network Orchestration' },
+        { id: 'orchestrator', icon: '🎼', label: 'ORCH', color: '#9d00ff', description: 'Sovereign Flow Conductor' },
+        { id: 'ghost', icon: '👻', label: 'GHOST', color: '#ffffff', description: 'Neural Error Recovery' },
+        { id: 'file', icon: '📁', label: 'JAG', color: '#ffff00', description: 'Archive Operations (.jag)' },
+        { id: 'data', icon: '📊', label: 'RELC', color: '#00ffff', description: 'Relic Matrix & Innovation' },
+        { id: 'entity', icon: '👾', label: 'ENTT', color: '#ff8000', description: 'RSC Entity Archetypes' },
+        { id: 'system', icon: '⚙️', label: 'SYS', color: '#888888', description: 'Cloud Worker Runtime' },
+        { id: 'mesh', icon: '🔷', label: 'MESH', color: '#0080ff', description: 'RT2/RT5/RT7 Model Forge' },
+        { id: 'material', icon: '🎨', label: 'SHDR', color: '#ff8000', description: 'RSC Shader Compiler' },
+        { id: 'animation', icon: '🏃', label: 'ANIM', color: '#00ff80', description: 'Skeletal Sequence Logic' },
+        { id: 'image', icon: '🖼️', label: 'SPRT', color: '#ff00ff', description: 'Sprite & Texture Lab' },
+        { id: 'video', icon: '🎥', label: 'CUTS', color: '#ff0080', description: 'Cinematic Sequence Suite' },
+        { id: 'world', icon: '🌍', label: 'WRLD', color: '#00ff80', description: 'World Landscape Genesis' },
+        { id: 'landscape', icon: '🏔️', label: 'MAPS', color: '#9d00ff', description: 'Sector & Path Mapping' },
+        { id: 'physics', icon: '🍎', label: 'PHYS', color: '#ffff00', description: 'Collision & Navmesh' },
+        { id: 'spatial', icon: '🎭', label: 'SPAT', color: '#ff0080', description: 'Client Scene Graph' },
+        { id: 'audio', icon: '🎵', label: 'SONG', color: '#9d00ff', description: 'MIDI & SFX Synthesis' },
+        { id: 'game', icon: '🎮', label: 'LIVE', color: '#00ff00', description: 'Sovereign Live Session' },
+        { id: 'code', icon: '💻', label: 'LOGC', color: '#00ffff', description: 'RSC Script & Logic Engine' },
+        { id: 'quantum', icon: '⚛️', label: 'OPAL', color: '#9d00ff', description: 'Variant Innovation Matrix' },
+        { id: 'relic', icon: '⛏️', label: 'ARCH', color: '#00ffff', description: 'Archival Relic Extraction' },
+        { id: 'security', icon: '🛡️', label: 'SHLD', color: '#ff0000', description: 'Sovereign Audit Shield' },
+        { id: 'idauditor', icon: '🔍', label: 'IDEX', color: '#ff8000', description: 'Item/NPC ID Indexer' },
+        { id: 'versioncontrol', icon: '🔄', label: 'SYNC', color: '#0080ff', description: 'Cloud State Persistance' },
+        { id: 'pipeline', icon: '🏗️', label: 'PIPE', color: '#00ffff', description: 'Global Reconstruction' },
+        { id: 'network', icon: '🌐', label: 'EDGE', color: '#0080ff', description: 'Cloudflare Network Mesh' },
         { id: 'reality', icon: '🔮', label: 'REAL', color: '#ffd700', description: 'State Checkpointing' },
-        { id: 'divine', icon: '🤍', label: 'DIVINE', color: '#ffffff', description: 'World Logic & Narrative' },
-        { id: 'instant' as WorkspaceMode, icon: '⚡', label: 'DB', color: '#ff00ff', description: 'InstantDB Realtime Offloading' },
+        { id: 'divine', icon: '🤍', label: 'CORE', color: '#ffffff', description: 'Sovereign Logic Center' },
+        { id: 'instant' as WorkspaceMode, icon: '⚡', label: 'BUFF', color: '#ff00ff', description: 'InstantDB Fast-Path' },
     ], []);
 
     return (
@@ -75,15 +75,15 @@ export function BubbleWorldHUD({ onSelectWorkspace, activeWorkspace }: BubbleWor
                         {/* Rotating POG Bubble */}
                         <div className="w-64 h-64 rounded-full glass-divine flex items-center justify-center relative shadow-[0_0_150px_rgba(255,215,0,0.15)] border-white/20 group-hover:border-neon-gold/50 animate-logo-flip-continuous transition-all duration-500 pointer-events-auto">
                             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-neon-gold/25 to-neon-purple/25 animate-pulse group-hover:scale-110 transition-transform duration-1000"></div>
-                            <div className="text-[10rem] font-black glitch-text-enhanced neon-glow-ultra transform -rotate-12" data-text="POG" style={{ color: 'var(--neon-gold)', textShadow: 'rgba(255, 215, 0, 0.4) 0px 0px 60px' }}>POG</div>
+                            <div className="text-[10rem] font-black glitch-text-enhanced neon-glow-ultra transform -rotate-12" data-text="RSC" style={{ color: 'var(--neon-gold)', textShadow: 'rgba(255, 215, 0, 0.4) 0px 0px 60px' }}>RSC</div>
                         </div>
 
-                        {/* AI Suffix (Suspended next to it) */}
+                        {/* Sovereign Suffix */}
                         <div className="absolute left-full ml-8 flex flex-col whitespace-nowrap group-hover:translate-x-4 transition-transform duration-500 pointer-events-none">
                             <div className="text-8xl font-black italic tracking-tighter text-white/90 filter drop-shadow-[0_0_40px_rgba(0,255,255,0.4)]">
-                                <span className="text-neon-cyan">AI</span>
+                                <span className="text-neon-cyan">OPAL</span>
                             </div>
-                            <div className="text-[12px] font-black uppercase tracking-[1em] text-white/20 mt-2 ml-1 group-hover:text-neon-gold transition-colors">v6.5 CORE</div>
+                            <div className="text-[12px] font-black uppercase tracking-[1em] text-white/20 mt-2 ml-1 group-hover:text-neon-gold transition-colors">v1.0 SOVEREIGN</div>
                         </div>
                     </button>
                 </div>
