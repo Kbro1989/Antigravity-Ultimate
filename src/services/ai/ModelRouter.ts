@@ -475,7 +475,9 @@ export async function orchestrateMedia(type: 'audio' | 'video', prompt: string, 
 export const modelRouter = { route, orchestrateMedia };
 export default modelRouter;
 
-// Class wrapper
+// Class wrapper (aliased for backend compatibility)
+export { ModelRouter as BackendModelRouter };
+
 export class ModelRouter {
     private trinity?: any;
 
