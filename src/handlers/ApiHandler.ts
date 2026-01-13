@@ -96,6 +96,57 @@ app.get('/session/:sessionId/api/session/stats', async (c) => {
     }
 });
 
+// GET /session/:sessionId/api/health -> Stateless (no DO needed)
+app.get('/session/:sessionId/api/health', async (c) => {
+    const sessionId = c.req.param('sessionId');
+    console.log(`[STATELESS_BYPASS] Health check for session: ${sessionId}`);
+    return c.json({
+        status: 'ok',
+        mode: 'stateless_bypass',
+        sessionId,
+        timestamp: Date.now(),
+        message: 'DO quota protection active - using stateless mode'
+    });
+});
+
+// POST /session/:sessionId/api/limb/execute -> Stateless AI (bypass DO)
+app.post('/session/:sessionId/api/limb/execute', async (c) => {
+    const sessionId = c.req.param('sessionId');
+    console.log(`[STATELESS_BYPASS] Limb execute for session: ${sessionId}`);
+    try {
+        const body = await c.req.json();
+        const { limbId, action, params } = body;
+
+        // Route through modelRouter directly without DO
+        const result = await modelRouter.route({
+            userId: sessionId,
+            type: action === 'generate' || action === 'image' ? 'image' : 'text',
+            prompt: params?.prompt || params?.message || JSON.stringify(params),
+            modelId: params?.model || params?.modelId,
+            provider: params?.provider
+        }, c.env);
+
+        if (result instanceof ReadableStream) {
+            return c.body(result);
+        }
+
+        return c.json({
+            status: 'success',
+            limbId,
+            action,
+            result,
+            mode: 'stateless_bypass'
+        });
+    } catch (e: any) {
+        console.error(`[STATELESS_BYPASS] Limb execute failed: ${e.message}`);
+        return c.json({
+            status: 'error',
+            error: e.message,
+            mode: 'stateless_bypass'
+        }, 500);
+    }
+});
+
 // ==================== END INSTANTDB OVERFLOW ROUTES ====================
 
 // Proxy to Session Agent (remaining routes that aren't bypassed)
