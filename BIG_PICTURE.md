@@ -581,5 +581,35 @@ We shifted `RSMVBrowser` and `RelicLimb` from an "all-or-nothing" fetch to a rob
 
 **Status**: Complete ✅ (2026-01-13)
 
+---
+
+## Phase 30: API Hardening & Documentation (January 2026)
+
+This phase focused on ensuring **System Stability** and **Knowledge Transfer**. We addressed critical 500 errors in the stateless bypass caused by parameter mismatches and established a standardized documentation layer for the Neural Mesh.
+
+### Key Stabilization Fixes:
+1.  **Stateless Bypass 500 Error**:
+    *   **Root Cause**: `ApiHandler.ts` expected `params` in the request body, but the client sent `payload`. This caused `prompt` to be undefined.
+    *   **Fix**: Updated handler to destructure `payload` as a fallback for `params`.
+    *   **Defense**: Added a guard clause in `CostOptimizer.ts` (`estimateTokens`) to return 0 if `prompt` is falsy, preventing `.length` crashes.
+
+2.  **Documentation Standard**:
+    *   **Limbs**: Added `src/services/ai/limbs/README.md` detailing the registry and all 30+ limb capabilities.
+    *   **Handlers**: Added `src/handlers/README.md` explaining the `ApiHandler` (Logic) vs `AssetHandler` (Static) split and routing priority.
+
+### Upcoming Roadmap (Todo):
+- [ ] **Phase 32: Multi-Agent Collaboration**: Activate the `CollaborationServer`.
+- [ ] **Phase 33: Quantum Provenance**: Enable `QuantumLimb`.
+
+### Completed (Done):
+- [x] **Phase 31: Advanced Media Pipeline**: Implemented Pagination (`cursor`/`limit`) and Batch Processing for Media Limbs (2026-01-13).
+- [x] **Debug Cloudflare 500 Error**: Fixed `limb/execute` crash.
+- [x] **Documentation**: Added READMEs for Limbs and Handlers.
+- [x] **RelicLimb Optimization**: Implemented server-side search and pagination.
+- [x] **RS3 "User Intent"**: Implemented drag-and-drop workflow for modern caches.
+
+**Status**: Stable & Documented 📚🛡️
+
+
 
 

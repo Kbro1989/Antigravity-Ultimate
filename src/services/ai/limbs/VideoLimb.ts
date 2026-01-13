@@ -223,15 +223,19 @@ export class VideoLimb extends NeuralLimb {
      * List all videos in the Stream account.
      * Provides gallery listing for VideoWorkspace.
      */
-    async inventory_videos(params?: any) {
+    /**
+     * List all videos in the Stream account.
+     * Provides gallery listing for VideoWorkspace.
+     */
+    async inventory_videos(params: { limit?: number; after?: string; before?: string } = {}) {
         this.enforceCapability(AgentCapability.VIDEO_OPERATIONS);
 
-        await this.logActivity('video_inventory', 'pending', {});
+        await this.logActivity('video_inventory', 'pending', params);
 
         const streamService = new CloudflareStreamService(this.env);
 
         try {
-            const videos = await streamService.listVideos();
+            const videos = await streamService.listVideos(params);
 
             await this.logActivity('video_inventory', 'success', { count: videos.length });
 
@@ -264,19 +268,51 @@ export class VideoLimb extends NeuralLimb {
 
         await this.logActivity('video_batch_generate', 'pending', { count: prompts.length });
 
-        const results = await Promise.all(
-            prompts.map(prompt => this.generate({ prompt, format }, intent))
-        );
+        // Phase 1: Batch AI Inference
+        const aiRequests = prompts.map(prompt => ({
+            type: 'image',
+            prompt: `Sprite sheet, 4x4 grid, animation frames of ${prompt}.`,
+            options: { format },
+            ...intent
+        }));
+
+        const aiResults = await this.batchRoute(aiRequests);
+
+        // Phase 2: Parallel Persistence
+        const finalResults = await Promise.all(aiResults.map(async (result: any, index: number) => {
+            if (result.imageUrl || result.url || result.content) {
+                const url = result.imageUrl || result.url || result.content;
+                const creationId = `anim_${Date.now()}_${index}`;
+                const stagedPath = `video/sprites/${creationId}.png`;
+
+                // Persist logic duplicated from generate() 
+                const finalUrl = await this.persistAsset('texture', url, {
+                    animationType: format,
+                    frames: 16,
+                    suggestedPath: stagedPath,
+                    ...result.metadata
+                });
+
+                return {
+                    status: 'success',
+                    originalPrompt: prompts[index],
+                    videoUrl: finalUrl,
+                    type: format,
+                    metadata: result.metadata
+                };
+            }
+            return { status: 'failed', originalPrompt: prompts[index], error: 'AI generation failed' };
+        }));
 
         await this.logActivity('video_batch_generate', 'success', {
-            count: results.length,
-            successful: results.filter(r => r.status === 'success').length
+            count: finalResults.length,
+            successful: finalResults.filter(r => r.status === 'success').length
         });
 
         return {
             status: 'success',
-            count: results.length,
-            results
+            count: finalResults.length,
+            results: finalResults
         };
     }
 }

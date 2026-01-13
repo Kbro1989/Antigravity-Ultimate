@@ -191,16 +191,22 @@ export class ImageLimb extends NeuralLimb {
      * List all images in the innovation layer.
      * Provides gallery listing for ImageWorkspace.
      */
-    async inventory_images(params?: any) {
+    async inventory_images(params: { limit?: number; cursor?: string } = {}) {
         this.enforceCapability(AgentCapability.IMAGE_OPERATIONS);
+        const { limit = 50, cursor } = params;
 
-        await this.logActivity('image_inventory', 'pending', {});
+        await this.logActivity('image_inventory', 'pending', { limit, cursor });
 
         const root = 'innovations/image';
 
         if (this.env?.ASSETS_BUCKET) {
             try {
-                const list = await this.env.ASSETS_BUCKET.list({ prefix: root + '/' });
+                const list = await this.env.ASSETS_BUCKET.list({
+                    prefix: root + '/',
+                    limit,
+                    cursor
+                });
+
                 const images = list.objects.map((o: any) => ({
                     id: o.key.split('/').pop()?.replace(/\.[^/.]+$/, ''),
                     key: o.key,
@@ -211,11 +217,13 @@ export class ImageLimb extends NeuralLimb {
                     source: 'cloud'
                 }));
 
-                await this.logActivity('image_inventory', 'success', { count: images.length });
+                await this.logActivity('image_inventory', 'success', { count: images.length, truncated: list.truncated });
 
                 return {
                     status: 'success',
                     count: images.length,
+                    truncated: list.truncated,
+                    cursor: list.truncated ? list.cursor : undefined,
                     images
                 };
             } catch (e: any) {

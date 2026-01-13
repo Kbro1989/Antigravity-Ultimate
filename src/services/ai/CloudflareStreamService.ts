@@ -110,8 +110,22 @@ export class CloudflareStreamService {
     /**
      * Lists videos in the account.
      */
-    async listVideos(): Promise<StreamVideo[]> {
-        const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${this.accountId}/stream`, {
+    async listVideos(params: {
+        limit?: number;
+        after?: string;
+        before?: string;
+        backend?: string;
+        status?: string;
+        asc?: boolean;
+    } = {}): Promise<StreamVideo[]> {
+        const query = new URLSearchParams();
+        if (params.limit) query.set('limit', params.limit.toString());
+        if (params.after) query.set('after', params.after);
+        if (params.before) query.set('before', params.before);
+        if (params.status) query.set('status', params.status);
+        if (params.asc) query.set('asc', params.asc.toString());
+
+        const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${this.accountId}/stream?${query.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${this.apiToken}`
             }
