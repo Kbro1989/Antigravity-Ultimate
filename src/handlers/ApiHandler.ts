@@ -115,15 +115,16 @@ app.post('/session/:sessionId/api/limb/execute', async (c) => {
     console.log(`[STATELESS_BYPASS] Limb execute for session: ${sessionId}`);
     try {
         const body = await c.req.json();
-        const { limbId, action, params } = body;
+        const { limbId, action, params, payload } = body;
+        const requestParams = params || payload || {};
 
         // Route through modelRouter directly without DO
         const result = await modelRouter.route({
             userId: sessionId,
             type: action === 'generate' || action === 'image' ? 'image' : 'text',
-            prompt: params?.prompt || params?.message || JSON.stringify(params),
-            modelId: params?.model || params?.modelId,
-            provider: params?.provider
+            prompt: requestParams.prompt || requestParams.message || JSON.stringify(requestParams) || '',
+            modelId: requestParams.model || requestParams.modelId,
+            provider: requestParams.provider
         }, c.env);
 
         if (result instanceof ReadableStream) {

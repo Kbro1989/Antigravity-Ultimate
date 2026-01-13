@@ -348,18 +348,20 @@ function script_${selectedEntry.id}() {
                         <span className="text-[9px] font-mono text-neon-cyan/60 uppercase">ERA: {era.toUpperCase()} {drilledItems.length > 0 ? '(DRILL_ACTIVE)' : ''}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                        {drilledItems.length > 0 && (
-                            <>
-                                <input
-                                    type="text"
-                                    placeholder="Search relics..."
-                                    value={filterText}
-                                    onChange={(e) => setFilterText(e.target.value)}
-                                    className="bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-[10px] text-white focus:outline-none focus:border-neon-cyan/40 w-48 font-mono"
-                                />
-                                <button onClick={() => { setDrilledItems([]); setFilterText(''); }} className="text-[10px] font-bold uppercase text-neon-magenta hover:underline">Reset</button>
-                            </>
-                        )}
+                        <div className="flex items-center gap-4">
+                            {(drilledItems.length > 0 || era === 'modern') && (
+                                <>
+                                    <input
+                                        type="text"
+                                        placeholder={era === 'modern' ? "Search ID (e.g. 4151)..." : "Search relics..."}
+                                        value={filterText}
+                                        onChange={(e) => setFilterText(e.target.value)}
+                                        className="bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-[10px] text-white focus:outline-none focus:border-neon-cyan/40 w-48 font-mono"
+                                    />
+                                    <button onClick={() => { setDrilledItems([]); setFilterText(''); }} className="text-[10px] font-bold uppercase text-neon-magenta hover:underline">Reset</button>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
 

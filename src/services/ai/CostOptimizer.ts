@@ -156,6 +156,7 @@ export class CostOptimizer {
      * Estimate tokens from prompt
      */
     private estimateTokens(prompt: string): number {
+        if (!prompt) return 0;
         // Rough estimate: ~4 chars per token
         return Math.ceil(prompt.length / 4);
     }
