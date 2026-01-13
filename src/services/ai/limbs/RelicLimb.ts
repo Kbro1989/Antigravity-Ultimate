@@ -411,9 +411,9 @@ export class RelicLimb extends NeuralLimb {
      * Roots the dashboard directly to the source of truth.
      * Includes static fallback when CLI bridge is offline.
      */
-    async explore_museum(params: any) {
+    async explore_museum(params: { category?: string, limit?: number, offset?: number, search?: string }) {
         this.enforceCapability(AgentCapability.READ_FILES);
-        const { category = 'archives' } = params || {};
+        const { category = 'archives', limit = 50, offset = 0, search } = params || {};
 
         const projectRoot = this.env?.PROJECT_ROOT || '.';
 
@@ -474,18 +474,31 @@ export class RelicLimb extends NeuralLimb {
             };
         };
 
-        const artifacts = [
+        let artifacts = [
             ...STATIC_DATA204_MANIFEST,
             { name: 'items.json', size: 102400 },
             { name: 'npcs.json', size: 85000 },
             { name: 'objects.json', size: 92000 }
         ].map(categorizeArtifact);
 
+        // Filter by Search
+        if (search) {
+            const lowerSearch = search.toLowerCase();
+            artifacts = artifacts.filter(a => a.name.toLowerCase().includes(lowerSearch) || a.type.toLowerCase().includes(lowerSearch));
+        }
+
+        // Apply Pagination
+        const total = artifacts.length;
+        const pagedArtifacts = artifacts.slice(offset, offset + limit);
+
         return {
             status: 'success',
             mode: 'museum_204_cloud',
             source: 'manifest',
-            artifacts
+            total,
+            offset,
+            limit,
+            artifacts: pagedArtifacts
         };
     }
 
@@ -557,14 +570,28 @@ export class RelicLimb extends NeuralLimb {
      * GALLERY MODE: Explore the Innovation Layer.
      * Lists all forked/generated assets in public/assets/generated.
      */
-    async explore_innovations(params?: any) {
+    /**
+     * GALLERY MODE: Explore the Innovation Layer.
+     * Lists all forked/generated assets in public/assets/generated with Pagination & Search.
+     */
+    async explore_innovations(params?: { cursor?: string, limit?: number, search?: string }) {
         this.enforceCapability(AgentCapability.READ_FILES);
         const root = 'assets/generated'; // Normalized R2 prefix
+        const { cursor, limit = 50, search } = params || {};
 
         if (this.env?.ASSETS_BUCKET) {
             try {
-                const list = await this.env.ASSETS_BUCKET.list({ prefix: root + '/' });
-                const innovations = list.objects
+                // R2 native listing with pagination
+                const options: R2ListOptions = {
+                    prefix: root + '/',
+                    limit: limit,
+                    cursor: cursor
+                };
+
+                const list = await this.env.ASSETS_BUCKET.list(options);
+
+                // Map results
+                let innovations = list.objects
                     .filter((o: any) => o.key.endsWith('.json') && !o.key.endsWith('.manifest.json'))
                     .map((o: any) => {
                         const parts = o.key.split('/');
@@ -577,15 +604,28 @@ export class RelicLimb extends NeuralLimb {
                             folder,
                             size: o.size,
                             path: o.key,
-                            url: `/ai/assets/${o.key}`
+                            url: `/ai/assets/${o.key}`,
+                            uploaded: o.uploaded
                         };
                     });
+
+                // Post-fetch filtering for search (if search is provided, we might need to fetch more or filter client-side? 
+                // R2 doesn't support server-side search. For now, we return what we find and let client filter if page is small, 
+                // or we accept that search only works on the current page if we don't scan deep.)
+                // BETTER APPROACH FOR SEARCH: If search term is present, we might want to rely on a KV index in the future.
+                // For now, we will filter the CURRENT page. This isn't perfect but allows some filtering.
+                if (search) {
+                    const lowerSearch = search.toLowerCase();
+                    innovations = innovations.filter(i => i.name.toLowerCase().includes(lowerSearch) || i.type.toLowerCase().includes(lowerSearch));
+                }
 
                 return {
                     status: 'success',
                     mode: 'innovation_gallery',
                     source: 'r2',
                     count: innovations.length,
+                    truncated: list.truncated,
+                    cursor: list.truncated ? list.cursor : undefined, // Next page token using R2's cursor directly
                     innovations
                 };
             } catch (e: any) {

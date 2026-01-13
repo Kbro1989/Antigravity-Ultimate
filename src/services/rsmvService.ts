@@ -57,14 +57,38 @@ export class RSMVEngine {
   }
 }
 
-export const getRsmvModels = async (gameSource: GameSource, category: ModelCategory): Promise<RSMVModelEntry[]> => {
-  const curatedModels = FEATURED_MODELS[gameSource] || [];
-  if (gameSource !== 'runescape') return curatedModels;
+export const getRsmvModels = async (
+  gameSource: GameSource,
+  category: ModelCategory,
+  options?: { limit?: number; offset?: number; search?: string }
+): Promise<{ models: RSMVModelEntry[]; total?: number }> => {
+  const { limit = 50, offset = 0, search = '' } = options || {};
+
+  // filtered curated models
+  let curated = FEATURED_MODELS[gameSource] || [];
+  if (search) {
+    const lower = search.toLowerCase();
+    curated = curated.filter(m =>
+      m.name.toLowerCase().includes(lower) ||
+      m.tags?.some(t => t.toLowerCase().includes(lower))
+    );
+  }
+
+  // Use curated only if not runescape (legacy/other sources might not have limb support yet)
+  if (gameSource !== 'runescape') {
+    return { models: curated, total: curated.length };
+  }
 
   // Archaeological Expansion via Relic Limb
   try {
     const { ServiceHub } = await import('./ServiceHub');
-    const res = await ServiceHub.limbs.call('relic', 'explore_museum', { category });
+    // We request the limb to handle the heavy lifting (pagination/search)
+    const res = await ServiceHub.limbs.call('relic', 'explore_museum', {
+      category,
+      limit,
+      offset,
+      search
+    });
 
     if (res.status === 'success' && res.artifacts) {
       const archaeologicalModels = res.artifacts.map((a: any) => ({
@@ -75,19 +99,24 @@ export const getRsmvModels = async (gameSource: GameSource, category: ModelCateg
         vertexCount: a.size / 100 // Estimate
       }));
 
-      // Merge & De-duplicate (Curated Research takes precedence)
-      const merged = [...curatedModels];
-      archaeologicalModels.forEach((am: any) => {
-        if (!merged.find(m => m.id === am.id)) {
-          merged.push(am);
-        }
-      });
-      return merged;
+      // If offset is 0, we prepend curated models
+      let models = archaeologicalModels;
+      if (offset === 0) {
+        // Merge without duplicates favoring curated
+        const archaeoIds = new Set(archaeologicalModels.map((m: any) => m.id));
+        const uniqueCurated = curated.filter(c => !archaeoIds.has(c.id));
+        models = [...uniqueCurated, ...archaeologicalModels];
+      }
+
+      return {
+        models,
+        total: res.total || (models.length + (offset > 0 ? limit : 0)) // Fallback total estimation if API doesn't return it
+      };
     }
   } catch (e) {
     console.warn('[RSMV] Relic Limb unavailable, using curated baseline only');
   }
 
-  return curatedModels;
+  return { models: curated, total: curated.length };
 };
 
