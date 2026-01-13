@@ -45,6 +45,7 @@ const InstantWorkspace = React.lazy(() => import('../workspaces/InstantWorkspace
 
 import { OrchestratorPanel } from '../orchestrator/OrchestratorPanel';
 import { SettingsPanel } from './SettingsPanel';
+import { NeuralTerminal } from './NeuralTerminal';
 import { useStateManager } from '../../../services/core/StateManager';
 import { WorkspaceMode } from '../../../types/workspace';
 import '../../styles/hub.css';
@@ -82,6 +83,7 @@ export function POGDashboard() {
     const [alertIndex, setAlertIndex] = React.useState(0);
     const [showOrchestrator, setShowOrchestrator] = React.useState(false);
     const [showSettings, setShowSettings] = React.useState(false);
+    const [showTerminal, setShowTerminal] = React.useState(false);
 
     // InstantDB Auth Hook
     const { user: instantUser } = db.useAuth();
@@ -218,8 +220,16 @@ export function POGDashboard() {
     if (view === 'hub') {
         return (
             <div className="dashboard-root h-screen w-screen overflow-hidden bg-void relative z-0">
+                <div className="grid-matrix" />
                 <div className="scanner-sweep" />
                 <ParticleSystem layer="background" />
+
+                {/* HUD Corner Brackets */}
+                <div className="hud-bracket tl" />
+                <div className="hud-bracket tr" />
+                <div className="hud-bracket bl" />
+                <div className="hud-bracket br" />
+
                 <BubbleWorldHUD onSelectWorkspace={handleSelectWorkspace} activeWorkspace={activeWorkspace as WorkspaceMode} />
 
                 {/* Status Bar */}
@@ -231,7 +241,9 @@ export function POGDashboard() {
                                 {alerts[alertIndex]?.message || 'SOVEREIGN_IDLE'}
                             </div>
                         </div>
-                        <div className="flex gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="text-[9px] font-mono text-neon-cyan/60 border-r border-white/10 pr-4">ACTIVE: {activeWorkspace?.toUpperCase() || 'HUB'}</div>
+                            <div className="text-[9px] font-mono text-white/30">v6.0.5</div>
                             <button onClick={() => setShowOrchestrator(true)} className="text-[10px] font-black text-neon-cyan/40 hover:text-neon-cyan tracking-widest transition-colors uppercase">Orchestrator</button>
                             <button onClick={() => setShowSettings(true)} className="text-[10px] font-black text-white/20 hover:text-white tracking-widest transition-colors uppercase">Settings</button>
                         </div>
@@ -319,6 +331,7 @@ export function POGDashboard() {
                     <div className="flex-1 flex items-center gap-6">
                         <AIDashboardHead workspace={activeWorkspace as WorkspaceMode} />
                         <div className="flex gap-4 glass-ultra px-6 py-3 rounded-2xl border border-white/5 shadow-xl">
+                            <button onClick={() => setShowTerminal(prev => !prev)} className={`text-[10px] font-black tracking-widest transition-colors uppercase ${showTerminal ? 'text-neon-magenta' : 'text-white/20 hover:text-neon-magenta'}`}>Terminal</button>
                             <button onClick={() => setShowOrchestrator(true)} className="text-[10px] font-black text-neon-cyan/40 hover:text-neon-cyan tracking-widest transition-colors uppercase">Orchestrator</button>
                             <button onClick={() => setShowSettings(true)} className="text-[10px] font-black text-white/20 hover:text-white tracking-widest transition-colors uppercase">Settings</button>
                         </div>
@@ -385,6 +398,15 @@ export function POGDashboard() {
                             )}
                         </Suspense>
                     </div>
+
+                    {/* Neural Terminal Panel */}
+                    {activeWorkspace && (
+                        <NeuralTerminal
+                            workspace={activeWorkspace as any}
+                            isVisible={showTerminal}
+                            onClose={() => setShowTerminal(false)}
+                        />
+                    )}
                 </div>
             </div>
         </div>
