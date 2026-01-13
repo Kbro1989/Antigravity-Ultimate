@@ -58,4 +58,88 @@ export class InstantService {
             console.error('[InstantService] Failed to record trace:', e);
         }
     }
+
+    // ==================== OVERFLOW ROUTING METHODS ====================
+    // These methods handle high-volume data that would otherwise hit DO quota limits
+
+    /**
+     * Get assets from InstantDB (bypasses DO).
+     */
+    async getAssets(userId: string): Promise<any[]> {
+        try {
+            const result = await this.db.query({ assets: { $: { where: { userId } } } });
+            return result?.assets || [];
+        } catch (e) {
+            console.warn('[InstantService] Failed to get assets:', e);
+            return [];
+        }
+    }
+
+    /**
+     * Save asset to InstantDB (bypasses DO).
+     */
+    async saveAsset(userId: string, asset: any): Promise<string> {
+        const assetId = `asset_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        try {
+            await this.db.transact([
+                this.db.tx.assets[assetId].create({
+                    ...asset,
+                    id: assetId,
+                    userId,
+                    timestamp: Date.now()
+                })
+            ]);
+            return assetId;
+        } catch (e) {
+            console.error('[InstantService] Failed to save asset:', e);
+            throw e;
+        }
+    }
+
+    /**
+     * Get session stats from InstantDB (bypasses DO).
+     */
+    async getStats(userId: string): Promise<any> {
+        try {
+            const result = await this.db.query({ metabolism: { $: { where: { id: userId } } } });
+            const stats = result?.metabolism?.[0];
+            return stats || {
+                cloudflareUsed: 0,
+                cloudflareLimit: 10000,
+                geminiSpent: 0,
+                geminiLimit: 5.0,
+                savingsEstimate: 0,
+                source: 'instant_default'
+            };
+        } catch (e) {
+            console.warn('[InstantService] Failed to get stats:', e);
+            return {
+                cloudflareUsed: 0,
+                cloudflareLimit: 10000,
+                geminiSpent: 0,
+                geminiLimit: 5.0,
+                savingsEstimate: 0,
+                error: String(e),
+                source: 'instant_fallback'
+            };
+        }
+    }
+
+    /**
+     * Save session stats to InstantDB.
+     */
+    async saveStats(userId: string, stats: any): Promise<void> {
+        try {
+            await this.db.transact([
+                this.db.tx.metabolism[userId].update({
+                    ...stats,
+                    id: userId,
+                    updatedAt: Date.now()
+                })
+            ]);
+        } catch (e) {
+            console.error('[InstantService] Failed to save stats:', e);
+        }
+    }
 }
+

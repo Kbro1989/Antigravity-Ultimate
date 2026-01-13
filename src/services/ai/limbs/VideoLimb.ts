@@ -87,10 +87,11 @@ export class VideoLimb extends NeuralLimb {
                 ...result.metadata
             });
 
-            result.videoUrl = finalUrl;
-            result.StartFrame = 0;
-            result.EndFrame = 15;
-            result.type = 'sprite_sheet';
+            // Cast to any for dynamic property assignment
+            (result as any).videoUrl = finalUrl;
+            (result as any).StartFrame = 0;
+            (result as any).EndFrame = 15;
+            (result as any).type = 'sprite_sheet';
         }
 
         return result;
@@ -123,8 +124,10 @@ export class VideoLimb extends NeuralLimb {
 
         const streamService = new CloudflareStreamService(this.env);
 
-        // Note: Cloudflare Stream supports clipping via signed URLs with start/end params
-        const clipUrl = await streamService.createSignedUrl(uid, start, end);
+        // Note: Cloudflare Stream doesn't natively support clipping in signed URLs.
+        // We return the signed URL and let the player handle start/end.
+        const baseUrl = await streamService.createSignedUrl(uid);
+        const clipUrl = `${baseUrl}#t=${start},${end}`;
 
         await this.logActivity('video_clip', 'success', { uid, duration: end - start });
 

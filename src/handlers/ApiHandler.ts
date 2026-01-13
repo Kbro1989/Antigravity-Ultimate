@@ -4,6 +4,7 @@ import { Env } from '../types/env';
 import { SignatureVerifier } from '../services/security/SignatureVerifier';
 import { ensurePipeline } from '../services/ai/trinity/TrinityWorker';
 import { modelRouter } from '../services/ai/ModelRouter';
+import { InstantService } from '../services/data/InstantService';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -41,7 +42,63 @@ app.use('/*', async (c, next) => {
     await next();
 });
 
-// Proxy to Session Agent
+// ==================== INSTANTDB OVERFLOW ROUTES ====================
+// These bypass the Durable Object to avoid quota exhaustion
+
+// GET /session/:sessionId/api/assets -> InstantDB
+app.get('/session/:sessionId/api/assets', async (c) => {
+    const sessionId = c.req.param('sessionId');
+    console.log(`[INSTANT_BYPASS] Serving assets from InstantDB for session: ${sessionId}`);
+    try {
+        const instant = InstantService.getInstance(c.env);
+        const assets = await instant.getAssets(sessionId);
+        return c.json(assets);
+    } catch (e: any) {
+        console.error(`[INSTANT_BYPASS] Asset fetch failed: ${e.message}`);
+        return c.json([], 200); // Return empty array on failure
+    }
+});
+
+// POST /session/:sessionId/api/assets/register -> InstantDB
+app.post('/session/:sessionId/api/assets/register', async (c) => {
+    const sessionId = c.req.param('sessionId');
+    console.log(`[INSTANT_BYPASS] Saving asset via InstantDB for session: ${sessionId}`);
+    try {
+        const body = await c.req.json();
+        const instant = InstantService.getInstance(c.env);
+        const assetId = await instant.saveAsset(sessionId, body);
+        return c.json({ success: true, assetId });
+    } catch (e: any) {
+        console.error(`[INSTANT_BYPASS] Asset save failed: ${e.message}`);
+        return c.json({ error: e.message }, 500);
+    }
+});
+
+// GET /session/:sessionId/api/session/stats -> InstantDB
+app.get('/session/:sessionId/api/session/stats', async (c) => {
+    const sessionId = c.req.param('sessionId');
+    console.log(`[INSTANT_BYPASS] Serving stats from InstantDB for session: ${sessionId}`);
+    try {
+        const instant = InstantService.getInstance(c.env);
+        const stats = await instant.getStats(sessionId);
+        return c.json(stats);
+    } catch (e: any) {
+        console.error(`[INSTANT_BYPASS] Stats fetch failed: ${e.message}`);
+        return c.json({
+            cloudflareUsed: 0,
+            cloudflareLimit: 10000,
+            geminiSpent: 0,
+            geminiLimit: 5.0,
+            savingsEstimate: 0,
+            error: e.message,
+            source: 'fallback'
+        });
+    }
+});
+
+// ==================== END INSTANTDB OVERFLOW ROUTES ====================
+
+// Proxy to Session Agent (remaining routes that aren't bypassed)
 app.all('/session/:sessionId/*', async (c) => {
     try {
         const sessionId = c.req.param('sessionId');
