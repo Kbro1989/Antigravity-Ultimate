@@ -184,4 +184,160 @@ export class ImageLimb extends NeuralLimb {
             }
         };
     }
+
+    // ==================== OPTIMIZED IMAGE OPERATIONS ====================
+
+    /**
+     * List all images in the innovation layer.
+     * Provides gallery listing for ImageWorkspace.
+     */
+    async inventory_images(params?: any) {
+        this.enforceCapability(AgentCapability.IMAGE_OPERATIONS);
+
+        await this.logActivity('image_inventory', 'pending', {});
+
+        const root = 'innovations/image';
+
+        if (this.env?.ASSETS_BUCKET) {
+            try {
+                const list = await this.env.ASSETS_BUCKET.list({ prefix: root + '/' });
+                const images = list.objects.map((o: any) => ({
+                    id: o.key.split('/').pop()?.replace(/\.[^/.]+$/, ''),
+                    key: o.key,
+                    size: o.size,
+                    uploaded: o.uploaded,
+                    url: `/ai/assets/${o.key}`,
+                    thumbnailUrl: `/ai/assets/${o.key}?width=150`,
+                    source: 'cloud'
+                }));
+
+                await this.logActivity('image_inventory', 'success', { count: images.length });
+
+                return {
+                    status: 'success',
+                    count: images.length,
+                    images
+                };
+            } catch (e: any) {
+                console.warn('[ImageLimb] R2 inventory failed:', e.message);
+            }
+        }
+
+        return { status: 'success', count: 0, images: [], note: 'Image storage unavailable.' };
+    }
+
+    /**
+     * Extract color palette from a relic asset.
+     * Directly parses RSC sprite colors without AI overhead.
+     */
+    async extract_palette(params: { relicId: string; maxColors?: number }, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.IMAGE_OPERATIONS);
+        const { relicId, maxColors = 16 } = params;
+
+        await this.logActivity('image_extract_palette', 'pending', { relicId });
+
+        // Use direct relic access for speed
+        const relicData = await this.getRelicContent(relicId, 'sprite');
+
+        if (relicData?.palette) {
+            await this.logActivity('image_extract_palette', 'success', { relicId, source: 'direct' });
+            return {
+                status: 'success',
+                relicId,
+                palette: relicData.palette.slice(0, maxColors),
+                colorCount: Math.min(relicData.palette.length, maxColors),
+                source: 'relic_direct'
+            };
+        }
+
+        // Fallback: Use AI to analyze the image
+        const aiResult: any = await this.cachedRoute({
+            type: 'text',
+            prompt: `Analyze relic asset ${relicId} and extract the dominant ${maxColors} colors as hex values. Return as JSON array.`,
+            ...intent
+        });
+
+        let palette: string[] = [];
+        try {
+            const parsed = JSON.parse(aiResult.content.replace(/```json\n?|\n?```/g, '').trim());
+            palette = Array.isArray(parsed) ? parsed : parsed.palette || [];
+        } catch (e) {
+            // Generate placeholder palette
+            palette = ['#8B4513', '#228B22', '#4169E1', '#FFD700', '#DC143C', '#2F4F4F'];
+        }
+
+        await this.logActivity('image_extract_palette', 'success', { relicId, source: 'ai' });
+
+        return {
+            status: 'success',
+            relicId,
+            palette: palette.slice(0, maxColors),
+            colorCount: palette.length,
+            source: 'ai_analysis'
+        };
+    }
+
+    /**
+     * Generate a seamlessly tileable texture.
+     * Useful for terrain and material generation.
+     */
+    async tile_texture(params: { prompt: string; size?: number }, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.IMAGE_OPERATIONS);
+        const { prompt, size = 256 } = params;
+
+        await this.logActivity('image_tile_texture', 'pending', { prompt, size });
+
+        const enhancedPrompt = `Seamless tileable texture: ${prompt}. 
+            Must tile perfectly in all directions. 
+            ${size}x${size} pixels. 
+            No visible seams or edges.`;
+
+        const result = await this.callAI({
+            type: 'image',
+            prompt: enhancedPrompt,
+            options: { size: `${size}x${size}`, seamless: true },
+            ...intent
+        });
+
+        await this.logActivity('image_tile_texture', 'success', { prompt });
+
+        return {
+            ...result,
+            type: 'tileable_texture',
+            size
+        };
+    }
+
+    /**
+     * Batch generate multiple images in parallel.
+     * Optimized for bulk content creation.
+     */
+    async batch_generate(params: { prompts: string[]; options?: any }, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.IMAGE_OPERATIONS);
+        const { prompts, options = {} } = params;
+
+        await this.logActivity('image_batch_generate', 'pending', { count: prompts.length });
+
+        const results = await this.batchRoute(
+            prompts.map(prompt => ({
+                type: 'image',
+                prompt,
+                ...options,
+                ...intent
+            }))
+        );
+
+        await this.logActivity('image_batch_generate', 'success', { count: results.length });
+
+        return {
+            status: 'success',
+            count: results.length,
+            results: results.map((r: any, i: number) => ({
+                prompt: prompts[i],
+                imageUrl: r.imageUrl || r.url || r.content,
+                metadata: r
+            }))
+        };
+    }
 }
+

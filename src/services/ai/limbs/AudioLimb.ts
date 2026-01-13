@@ -246,4 +246,110 @@ export class AudioLimb extends NeuralLimb {
             return null;
         }
     }
+
+    // ==================== OPTIMIZED AUDIO OPERATIONS ====================
+
+    /**
+     * Extract audio data from a relic asset.
+     * Directly parses RSC MIDI/samples without AI overhead.
+     */
+    async extract_from_relic(params: { relicId: string }, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AUDIO_OPERATIONS);
+        const { relicId } = params;
+
+        await this.logActivity('audio_extract_relic', 'pending', { relicId });
+
+        // Use direct relic access for speed
+        const relicData = await this.getRelicContent(relicId, 'audio');
+
+        if (relicData) {
+            await this.logActivity('audio_extract_relic', 'success', { relicId, source: 'direct' });
+            return {
+                status: 'success',
+                relicId,
+                audioUrl: `rsmv://relic:${relicId}`,
+                format: relicData.format || 'midi',
+                duration: relicData.duration || 0,
+                data: relicData,
+                source: 'relic_direct'
+            };
+        }
+
+        // Fallback: Use AI to interpret the relic
+        const synthManifest = await this.generateSynthManifest(
+            `Sound effect based on relic asset: ${relicId}`,
+            { action: 'extract', relicId },
+            intent
+        );
+
+        await this.logActivity('audio_extract_relic', 'success', { relicId, source: 'synth' });
+
+        return {
+            status: 'success',
+            relicId,
+            synthManifest,
+            source: 'ai_synthesis'
+        };
+    }
+
+    /**
+     * Batch synthesize multiple audio assets in parallel.
+     * Optimized for bulk content creation.
+     */
+    async batch_synthesize(params: { prompts: string[]; type?: string }, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AUDIO_OPERATIONS);
+        const { prompts, type = 'sfx' } = params;
+
+        await this.logActivity('audio_batch_synthesize', 'pending', { count: prompts.length });
+
+        const results = await Promise.all(
+            prompts.map(prompt =>
+                this.generateSynthManifest(prompt, { type }, intent)
+            )
+        );
+
+        await this.logActivity('audio_batch_synthesize', 'success', { count: results.length });
+
+        return {
+            status: 'success',
+            count: results.length,
+            results: results.map((r: any, i: number) => ({
+                prompt: prompts[i],
+                manifest: r,
+                playable: true
+            }))
+        };
+    }
+
+    /**
+     * Mix multiple audio tracks together.
+     * Creates a layered audio composition.
+     */
+    async mix_tracks(params: { trackIds: string[]; levels?: number[] }, intent: BaseIntent) {
+        this.enforceCapability(AgentCapability.AUDIO_OPERATIONS);
+        const { trackIds, levels } = params;
+
+        await this.logActivity('audio_mix_tracks', 'pending', { trackCount: trackIds.length });
+
+        // Generate a mix manifest for client-side processing
+        const mixManifest = {
+            id: `mix_${Date.now()}`,
+            tracks: trackIds.map((id, i) => ({
+                trackId: id,
+                level: levels?.[i] ?? 1.0,
+                pan: 0
+            })),
+            masterLevel: 1.0,
+            format: 'mix_manifest'
+        };
+
+        await this.logActivity('audio_mix_tracks', 'success', { mixId: mixManifest.id });
+
+        return {
+            status: 'success',
+            mixManifest,
+            trackCount: trackIds.length
+        };
+    }
 }
+

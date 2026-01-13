@@ -4,7 +4,14 @@ import { AgentCapability, assertCapability, AgentLaw, RSC_SOVEREIGN_DIRECTIVE } 
 import { chronoshell, Chronoshell } from '../../core/Chronoshell';
 import { BaseIntent } from '../AITypes';
 import { Env } from '../../../types/env';
+import { modelRouter } from '../ModelRouter';
 
+// Cache entry interface for LimbCache
+interface CacheEntry {
+    result: any;
+    expiry: number;
+    hits: number;
+}
 
 export interface LimbConfig {
     id: string;
@@ -24,8 +31,12 @@ export abstract class NeuralLimb {
     protected env: Env;
     protected state: any;
     protected limbs: any;
-
     protected config: LimbConfig;
+
+    // LimbCache: Smart caching layer for AI responses
+    private cache = new Map<string, CacheEntry>();
+    private static CACHE_DEFAULT_TTL = 60000; // 60 seconds
+    private static CACHE_MAX_SIZE = 100;
 
 
     constructor(config: LimbConfig) {
@@ -129,6 +140,90 @@ export abstract class NeuralLimb {
                 provider: response.provider
             }
         };
+    }
+
+    // ==================== CACHING LAYER ====================
+
+    /**
+     * Cached AI routing - returns cached result if available and valid.
+     * Significantly reduces latency for repeated prompts.
+     */
+    protected async cachedRoute(request: any, ttlMs = NeuralLimb.CACHE_DEFAULT_TTL): Promise<any> {
+        const key = this.hashRequest(request);
+        const cached = this.cache.get(key);
+
+        if (cached && Date.now() < cached.expiry) {
+            cached.hits++;
+            console.log(`[NeuralLimb] Cache HIT for ${this.id}: ${key.substring(0, 20)}... (${cached.hits} hits)`);
+            return cached.result;
+        }
+
+        const result = await modelRouter.route(request, this.env);
+
+        // Evict oldest if at capacity
+        if (this.cache.size >= NeuralLimb.CACHE_MAX_SIZE) {
+            const oldestKey = this.cache.keys().next().value;
+            if (oldestKey) this.cache.delete(oldestKey);
+        }
+
+        this.cache.set(key, { result, expiry: Date.now() + ttlMs, hits: 1 });
+        return result;
+    }
+
+    /**
+     * Batch AI routing - processes multiple requests in parallel.
+     * Returns array of results in same order as requests.
+     */
+    protected async batchRoute(requests: any[]): Promise<any[]> {
+        console.log(`[NeuralLimb] Batch routing ${requests.length} requests for ${this.id}`);
+        return Promise.all(requests.map(req => modelRouter.route(req, this.env)));
+    }
+
+    /**
+     * Direct relic content access - bypasses AI for authentic data extraction.
+     * Uses RelicLimb if available in registry.
+     */
+    protected async getRelicContent(relicId: string, type: string = 'raw'): Promise<any> {
+        if (this.limbs && typeof this.limbs.call === 'function') {
+            try {
+                const result = await this.limbs.call('relic', 'fetch_relic_content', {
+                    id: relicId,
+                    type
+                });
+                return result?.data || null;
+            } catch (e) {
+                console.warn(`[NeuralLimb] Relic fetch failed for ${relicId}:`, e);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Generates a hash key for caching based on request properties.
+     */
+    private hashRequest(request: any): string {
+        const normalized = JSON.stringify({
+            type: request.type,
+            prompt: request.prompt?.substring(0, 200), // Truncate long prompts
+            modelId: request.modelId,
+            options: request.options
+        });
+        // Simple hash function
+        let hash = 0;
+        for (let i = 0; i < normalized.length; i++) {
+            const char = normalized.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return `${this.id}_${hash.toString(36)}`;
+    }
+
+    /**
+     * Clears the limb's cache. Can be called after major state changes.
+     */
+    protected clearCache(): void {
+        this.cache.clear();
+        console.log(`[NeuralLimb] Cache cleared for ${this.id}`);
     }
 
     protected async logActivity(step: string, status: 'success' | 'failure' | 'pending', metadata?: any) {
