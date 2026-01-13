@@ -538,27 +538,92 @@ export class RelicLimb extends NeuralLimb {
     /**
      * GET RELIC CATALOG: Provides granular metadata for game assets.
      */
-    async get_relic_catalog(params: { category: string }) {
+    /**
+     * GET RELIC CATALOG: Provides granular metadata for game assets.
+     * Performs server-side search and pagination to prevent client-side flooding.
+     */
+    async get_relic_catalog(params: { category: string; search?: string; limit?: number; offset?: number }) {
         this.enforceCapability(AgentCapability.READ_FILES);
-        const { category } = params;
+        const { category, search = '', limit = 50, offset = 0 } = params;
 
-        // Mocking a catalog response based on authentic 204 data
-        const catalog: Record<string, any[]> = {
-            'npcs': [
-                { id: 1, name: 'Man', combat: 2, hits: 10, examine: 'An average Gielinorian.' },
-                { id: 5, name: 'Hans', combat: 0, hits: 10, examine: 'The oldest inhabitant of Lumbridge.' }
-            ],
-            'items': [
-                { id: 10, name: 'Bronze Sword', type: 'weapon', bonus: 2, examine: 'A jagged bronze sword.' },
-                { id: 38, name: 'Pot of Flour', type: 'ingredient', examine: 'Used for baking.' }
-            ]
+        // Map category to file path
+        // Sovereignty: RSC Archives are stored in data204 or generated assets
+        const fileMap: Record<string, string> = {
+            'npcs': 'npcs.json',
+            'items': 'items.json',
+            'objects': 'objects.json',
+            'spells': 'rsc-data/config/spells.json', // Hypothetical path
+            'prayers': 'rsc-data/config/prayers.json'
         };
+
+        const fileName = fileMap[category] || `${category}.json`;
+        let fullData: any[] = [];
+
+        try {
+            // 1. Try Fetching from R2/KV (Innovation/Cache Layer)
+            // We reuse fetch_relic_content logic implicitly or directly
+            // Optimization: If the file is huge, we should consider a KV index, 
+            // but for RSC (<5mb JSONs), parsing in Worker is acceptable for now.
+
+            let contentString = '';
+
+            if (this.env?.ASSETS_BUCKET) {
+                // Try data204 root first, then generated
+                let obj = await this.env.ASSETS_BUCKET.get(`public/data204/${fileName}`);
+                if (!obj) obj = await this.env.ASSETS_BUCKET.get(`data204/${fileName}`);
+                if (!obj) obj = await this.env.ASSETS_BUCKET.get(fileName); // Root fallback
+
+                if (obj) {
+                    contentString = await obj.text();
+                }
+            }
+
+            // Fallback to KV Static if R2 miss
+            if (!contentString && this.env?.__STATIC_CONTENT) {
+                // @ts-ignore
+                const manifest = typeof manifestJSON === 'string' ? JSON.parse(manifestJSON) : manifestJSON;
+                const assetKey = manifest ? manifest[fileName] : null;
+                if (assetKey) {
+                    const kvAsset = await this.env.__STATIC_CONTENT.get(assetKey, { type: 'text' });
+                    if (kvAsset) contentString = kvAsset;
+                }
+            }
+
+            if (contentString) {
+                fullData = JSON.parse(contentString);
+            } else {
+                // Last Resort: Mock for bootstrapping if file missing (dev mode)
+                console.warn(`[RelicLimb] Catalog ${fileName} not found. Returning empty.`);
+                fullData = [];
+            }
+
+        } catch (e) {
+            console.error(`[RelicLimb] Catalog load error:`, e);
+            fullData = [];
+        }
+
+        // 2. Filter
+        let filtered = fullData;
+        if (search) {
+            const lowerSearch = search.toLowerCase();
+            filtered = fullData.filter((item: any) =>
+                (item.name && item.name.toLowerCase().includes(lowerSearch)) ||
+                (item.examine && item.examine.toLowerCase().includes(lowerSearch)) ||
+                String(item.id).includes(lowerSearch)
+            );
+        }
+
+        // 3. Paginate
+        const sliced = filtered.slice(offset, offset + limit);
 
         return {
             status: 'success',
             category,
-            items: catalog[category] || [],
-            source: 'truth_registry'
+            items: sliced,
+            total: filtered.length,
+            limit,
+            offset,
+            source: 'cloud_catalog_v1'
         };
     }
 

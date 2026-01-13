@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStateManager } from '../../../services/core/StateManager';
 import { WorkspaceMode } from '../../../services/core/ModeManager';
 import { usePresence } from '../../hooks/usePresence';
-import { ModelSelector } from './ModelSelector';
+import { SettingsPanel } from './SettingsPanel';
 
 import { db } from '../InstantProvider';
 
@@ -167,14 +167,18 @@ export function AIDashboardHead({ workspace }: AIDashboardHeadProps) {
                     <button
                         onClick={() => setShowModels(true)}
                         className="w-12 h-12 rounded-2xl glass-ultra hover:bg-white/5 border border-white/10 flex items-center justify-center transition-all group shadow-xl"
-                        title="Configure AI Models"
+                        title="Global Settings (General, AI, Security)"
                     >
                         <span className="material-icons text-white/40 group-hover:text-cyan-400 group-hover:rotate-90 transition-all duration-500">settings</span>
                     </button>
                 </div>
             </div>
 
-            {showModels && <ModelSelector onClose={() => setShowModels(false)} />}
+            {showModels && (
+                <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in">
+                    <SettingsPanel onClose={() => setShowModels(false)} />
+                </div>
+            )}
         </div>
     );
 }

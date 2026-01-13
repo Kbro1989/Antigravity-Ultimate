@@ -82,6 +82,70 @@ export function RSCModelViewer({ id, category, era = 'classic', autoRotate = tru
         }
     };
 
+    // Modern Era (RS3) - RSMV Integration
+    useEffect(() => {
+        if (era !== 'modern') return;
+
+        let cleanup: (() => void) | undefined;
+        let rsmvInstance: any = null;
+
+        const initRSMV = async () => {
+            if (!(window as any).RSMV) {
+                // Load Script dynamically
+                const script = document.createElement('script');
+                script.src = '/libs/rsmv_custom.js';
+                script.async = true;
+                script.onload = () => {
+                    initRSMV(); // Retry after load
+                };
+                document.body.appendChild(script);
+                return;
+            }
+
+            // Initialize on the dedicated container
+            const container = document.getElementById('rsmv-container');
+            if (container && !(container as any)._rsmvInitialized) {
+                console.log('[RSCModelViewer] Initializing RSMV (Rust/WASM)...');
+
+                try {
+                    // Instantiate based on deconstructed findings (assuming global RSMV usage)
+                    // We might need to adjust this API signature based on runtime checks
+                    const RSMV = (window as any).RSMV;
+                    rsmvInstance = new RSMV.Viewer({
+                        canvas: document.getElementById('rsmv-canvas'),
+                        workerPath: '/libs/rsmv_worker.js' // Assumption, might just handle main thread for now
+                    });
+
+                    if (rsmvInstance.init) {
+                        await rsmvInstance.init();
+                    }
+
+                    (container as any)._rsmvInitialized = true;
+
+                    // Attempt load if ID provided
+                    if (id) {
+                        console.log(`[RSCModelViewer] Modern Intent: Loading ${category} #${id}`);
+                        // Mocking the specific API call found in standard webviewers
+                        // rsmvInstance.load(id); 
+                        // For now, we wait for Drag & Drop as per protocol
+                    }
+
+                } catch (e) {
+                    console.error("RSMV Init Failed:", e);
+                    setError("RSMV Core Failure: " + (e as any).message);
+                }
+            }
+        };
+
+        const timer = setTimeout(initRSMV, 100);
+
+        return () => {
+            clearTimeout(timer);
+            if (rsmvInstance && rsmvInstance.destroy) rsmvInstance.destroy();
+        };
+    }, [era, id, category]);
+
+
     if (error) {
         return (
             <div className="flex items-center justify-center w-full h-full text-neon-magenta font-mono text-[10px] uppercase p-8 text-center bg-neon-magenta/5 rounded-[40px] border border-neon-magenta/20">
@@ -90,7 +154,7 @@ export function RSCModelViewer({ id, category, era = 'classic', autoRotate = tru
         );
     }
 
-    if (isLoading) {
+    if (isLoading && era !== 'modern') {
         return (
             <div className="flex items-center justify-center w-full h-full">
                 <div className="w-12 h-12 border-2 border-neon-cyan/20 border-t-neon-cyan rounded-full animate-spin" />
@@ -98,6 +162,50 @@ export function RSCModelViewer({ id, category, era = 'classic', autoRotate = tru
         );
     }
 
+    // MODERN ERA RENDER: Dedicated DOM Overlay for RSMV
+    if (era === 'modern') {
+        return (
+            <div className={`w-full h-full relative group ${className}`} id="rsmv-container">
+                <canvas
+                    id="rsmv-canvas"
+                    className="w-full h-full block bg-[#232323]"
+                    style={{ outline: "none" }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                        e.preventDefault();
+                        console.log("RSMV Cache Drop Detected:", e.dataTransfer.files);
+                        // Pass to global instance if available
+                        // (window as any).RSMV?.handleDrop(e.dataTransfer.files);
+                    }}
+                />
+
+                {/* Protocol HUD */}
+                <div className="absolute top-8 left-8 flex flex-col gap-2 pointer-events-none">
+                    <div className="text-[10px] font-black uppercase text-[#438ab5] tracking-[0.4em] mb-2 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#438ab5] shadow-[0_0_8px_#438ab5] animate-pulse"></span>
+                        RSMV_RUST_CORE
+                    </div>
+                    <div className="flex flex-wrap gap-2 max-w-[300px]">
+                        <span className="glass px-3 py-1 rounded-full text-[8px] font-mono text-white/60 uppercase border border-[#438ab5]/30">
+                            INTENT: {id ? `ID #${id}` : 'WAITING_DROP'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Empty State Overlay if no ID */}
+                {!id && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="text-center opacity-50">
+                            <div className="text-[#438ab5] font-bold tracking-widest mb-2">AWAITING LOCAL CACHE</div>
+                            <div className="text-[10px] text-white/40">Drop Files to View</div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // CLASSIC ERA RENDER: React-Three-Fiber
     return (
         <div className={`w-full h-full relative group ${className}`}>
             <Canvas shadows className="w-full h-full" gl={{ antialias: true, preserveDrawingBuffer: true }}>

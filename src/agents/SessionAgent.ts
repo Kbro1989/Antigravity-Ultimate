@@ -281,6 +281,14 @@ export class SessionAgent extends DurableObject<Env> {
             const userId = this.state.id.toString();
 
             try {
+                // Extract keys from headers (forwarded from client settings)
+                const apiKeys = {
+                    gemini: c.req.header('X-Gemini-Key'),
+                    fireworks: c.req.header('X-Fireworks-Key'),
+                    openRouter: c.req.header('X-OpenRouter-Key')
+                };
+                const allowPaid = c.req.header('X-Allow-Paid') === 'true';
+
                 // Metabolism check is now inside router.route via costOptimizer
                 const result = await this.services.router.route({
                     userId,
@@ -290,6 +298,8 @@ export class SessionAgent extends DurableObject<Env> {
                     systemPrompt: body.systemPrompt,
                     modelId: body.modelId || body.model,
                     provider: body.provider,
+                    apiKeys,
+                    allowPaid,
                     ...body.options
                 }, c.env);
 
@@ -303,12 +313,18 @@ export class SessionAgent extends DurableObject<Env> {
         this.app.post('/api/generate-image', async (c) => {
             const body = await c.req.json();
             try {
+                const apiKeys = {
+                    gemini: c.req.header('X-Gemini-Key'),
+                    fireworks: c.req.header('X-Fireworks-Key')
+                };
+
                 const result = await this.services.limbs.processIntent({
                     limbId: 'image',
                     action: 'image_generate' as AIAction,
                     payload: body,
                     modelId: body.modelId,
-                    provider: body.provider
+                    provider: body.provider,
+                    apiKeys // Pass keys to limb
                 });
                 return c.json(result);
             } catch (e: any) {
@@ -320,12 +336,18 @@ export class SessionAgent extends DurableObject<Env> {
         this.app.post('/api/code-complete', async (c) => {
             const body = await c.req.json();
             try {
+                const apiKeys = {
+                    gemini: c.req.header('X-Gemini-Key'),
+                    fireworks: c.req.header('X-Fireworks-Key')
+                };
+
                 const result = await this.services.limbs.processIntent({
                     limbId: 'code',
                     action: 'code_complete' as AIAction,
                     payload: body,
                     modelId: body.modelId,
-                    provider: body.provider
+                    provider: body.provider,
+                    apiKeys
                 });
                 return c.json(result);
             } catch (e: any) {
@@ -380,12 +402,18 @@ export class SessionAgent extends DurableObject<Env> {
                     }
                 }
 
+                const apiKeys = {
+                    gemini: c.req.header('X-Gemini-Key'),
+                    fireworks: c.req.header('X-Fireworks-Key')
+                };
+
                 const result = await this.services.limbs.processIntent({
                     limbId,
                     action: action as AIAction,
                     payload,
                     modelId: payload?.modelId,
-                    provider: payload?.provider
+                    provider: payload?.provider,
+                    apiKeys
                 });
                 return c.json(result);
             } catch (e: any) {
@@ -517,6 +545,11 @@ export class SessionAgent extends DurableObject<Env> {
         this.app.post('/ai/complete', async (c) => {
             const body = await c.req.json();
             try {
+                const apiKeys = {
+                    gemini: c.req.header('X-Gemini-Key'),
+                    fireworks: c.req.header('X-Fireworks-Key')
+                };
+
                 const result = await this.services.router.route({
                     userId: this.state.id.toString(),
                     type: 'text',
@@ -524,7 +557,9 @@ export class SessionAgent extends DurableObject<Env> {
                     history: body.history,
                     systemPrompt: body.systemPrompt,
                     modelId: body.modelId,
-                    provider: body.provider
+                    provider: body.provider,
+                    apiKeys,
+                    allowPaid: c.req.header('X-Allow-Paid') === 'true'
                 }, c.env);
                 return c.json(result);
             } catch (e: any) {

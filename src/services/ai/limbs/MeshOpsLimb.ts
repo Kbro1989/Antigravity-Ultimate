@@ -75,7 +75,9 @@ export class MeshOpsLimb extends NeuralLimb {
                 systemPrompt: this.getConstitutionalPrompt(),
                 domain: '3D',
                 modelId: (intent as any).modelId || '@cf/meta/llama-3.3',
-                provider: (intent as any).provider || 'cloudflare'
+                provider: (intent as any).provider || 'cloudflare',
+                apiKeys: (intent as any).apiKeys,
+                allowPaid: (intent as any).allowPaid
             }, this.env);
 
             await this.realityLimb.anchor_convergence({
@@ -108,7 +110,9 @@ export class MeshOpsLimb extends NeuralLimb {
             prompt: options?.imageUrl || prompt,
             domain: '3D',
             modelId: (intent as any).modelId,
-            provider: (intent as any).provider
+            provider: (intent as any).provider,
+            apiKeys: (intent as any).apiKeys,
+            allowPaid: (intent as any).allowPaid
         }, this.env) as any;
 
         if (i23Resp.modelUrl) {
@@ -137,7 +141,9 @@ export class MeshOpsLimb extends NeuralLimb {
             prompt: `Concept art for 3D modeling, ${prompt}, neutral lighting, isometric view, high fidelity`,
             options: { steps: 20 },
             modelId: (intent as any).modelId,
-            provider: (intent as any).provider
+            provider: (intent as any).provider,
+            apiKeys: (intent as any).apiKeys,
+            allowPaid: (intent as any).allowPaid
         }, this.env);
 
         if (!conceptResp.imageUrl) {
@@ -150,7 +156,9 @@ export class MeshOpsLimb extends NeuralLimb {
             prompt: conceptResp.imageUrl,
             domain: '3D',
             modelId: (intent as any).modelId,
-            provider: (intent as any).provider
+            provider: (intent as any).provider,
+            apiKeys: (intent as any).apiKeys,
+            allowPaid: (intent as any).allowPaid
         }, this.env) as any;
 
         if (i23RespFromText.modelUrl) {
@@ -220,7 +228,9 @@ export class MeshOpsLimb extends NeuralLimb {
             prompt: `High-resolution PBR Material maps for ${prompt}. Top-Left: BaseColor, Top-Right: Normal, Bottom-Left: Roughness, Bottom-Right: Displacement.`,
             systemPrompt: this.getConstitutionalPrompt() + "\nFocus on building RSC-style materials.",
             modelId: intent.modelId,
-            provider: intent.provider
+            provider: intent.provider,
+            apiKeys: (intent as any).apiKeys,
+            allowPaid: (intent as any).allowPaid
         }, this.env) as any;
 
         const atlasUrl = pbrResp.imageUrl;
@@ -384,7 +394,9 @@ export class MeshOpsLimb extends NeuralLimb {
             systemPrompt: this.getConstitutionalPrompt(),
             domain: '3D',
             modelId: (intent as any).modelId,
-            provider: (intent as any).provider
+            provider: (intent as any).provider,
+            apiKeys: (intent as any).apiKeys,
+            allowPaid: (intent as any).allowPaid
         }, this.env);
 
         return {

@@ -1,13 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { mcpConfigManager, MCPConfig } from '../../../services/mcp/MCPConfigManager';
 import { useServiceHub } from '../../hooks';
-import { MODEL_CATALOG } from '../../../services/ai/ModelRegistry';
+import { modelRegistry, MODEL_CATALOG, ModelCapabilityKey, ModelTier, ModelDefinition } from '../../../services/ai/ModelRegistry';
 
 export const SettingsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const { hub } = useServiceHub();
     const [config, setConfig] = useState<MCPConfig>(mcpConfigManager.getConfig());
     const [backendStats, setBackendStats] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'general' | 'models' | 'security'>('general');
+
+    // Model Tab State
+    const [selectedCapability, setSelectedCapability] = useState<ModelCapabilityKey>('textGeneration');
+    const capabilities = modelRegistry.listCapabilities();
+
+    const handleModelChange = (capability: ModelCapabilityKey, tier: ModelTier, modelId: string) => {
+        let foundModel: ModelDefinition | undefined;
+        const capabilityModels = modelRegistry.getModelsForCapability(capability);
+        Object.values(capabilityModels).forEach(m => {
+            // @ts-ignore
+            if (m.id === modelId) foundModel = m;
+        });
+
+        if (foundModel) {
+            modelRegistry.setOverride(capability, tier, foundModel);
+            // Force re-render if needed, though registry might be outside react state
+            // setOverrides(prev => ({ ...prev, [`${capability}:${tier}`]: foundModel! }));
+        }
+    };
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -98,20 +117,72 @@ export const SettingsPanel: React.FC<{ onClose: () => void }> = ({ onClose }) =>
                 )}
 
                 {activeTab === 'models' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {Object.entries(MODEL_CATALOG).map(([category, capability]) => (
-                            <div key={category} className="p-5 glass-divine rounded-2xl border-white/5">
-                                <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-3">{category}</h4>
-                                <div className="space-y-2">
-                                    {Object.entries(capability).map(([tier, model]) => (
-                                        <div key={tier} className="flex justify-between items-center text-[10px] font-mono p-2 bg-white/5 rounded-lg border border-white/5">
-                                            <span className="text-white/40 uppercase">{tier}:</span>
-                                            <span className="text-white/80">{(model as any).id}</span>
-                                        </div>
-                                    ))}
-                                </div>
+                    <div className="flex gap-6 h-[400px]">
+                        {/* Capability Sidebar */}
+                        <div className="w-1/3 flex flex-col gap-2 overflow-y-auto pr-2 custom-scrollbar border-r border-white/5">
+                            <h4 className="text-[10px] font-black text-cyan-400/40 uppercase mb-2 tracking-widest px-2">Capabilities</h4>
+                            {capabilities.map(cap => (
+                                <button
+                                    key={cap}
+                                    onClick={() => setSelectedCapability(cap)}
+                                    className={`text-left px-4 py-3 rounded-xl text-xs transition-all duration-200 border ${selectedCapability === cap
+                                        ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.1)]'
+                                        : 'border-transparent hover:bg-white/5 text-slate-400 hover:text-white'
+                                        }`}
+                                >
+                                    <div className="font-bold mb-0.5 capitalize">{cap.replace(/([A-Z])/g, ' $1').trim()}</div>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Config Area */}
+                        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                            <div className="mb-6 border-b border-white/5 pb-4">
+                                <h3 className="text-xl font-light text-white mb-1 capitalize">
+                                    {selectedCapability.replace(/([A-Z])/g, ' $1').trim()}
+                                </h3>
+                                <p className="text-slate-400 text-[10px]">
+                                    Configure the neural backend for this capability.
+                                </p>
                             </div>
-                        ))}
+
+                            <div className="grid gap-4">
+                                {['default', 'fast', 'quality', 'reasoning'].map((tier) => {
+                                    const currentModel = modelRegistry.getModel(selectedCapability, tier as ModelTier);
+                                    const availableModels = modelRegistry.getModelsForCapability(selectedCapability);
+
+                                    // Only show if this tier exists in the catalog or if it's default
+                                    // @ts-ignore
+                                    if (!availableModels[tier] && tier !== 'default') return null;
+
+                                    return (
+                                        <div key={tier} className="glass-dark p-4 rounded-xl border border-white/5 hover:border-cyan-500/30 transition-colors">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <div className="text-[10px] font-black text-cyan-400 uppercase tracking-wider mb-1">{tier} Tier</div>
+                                                    <div className="text-xs font-medium text-white/70">{currentModel.description}</div>
+                                                </div>
+                                                <div className="px-2 py-0.5 rounded text-[9px] font-bold bg-white/5 border border-white/10 text-slate-400">
+                                                    {currentModel.provider.toUpperCase()}
+                                                </div>
+                                            </div>
+
+                                            <select
+                                                value={currentModel.id}
+                                                onChange={(e) => handleModelChange(selectedCapability, tier as ModelTier, e.target.value)}
+                                                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-cyan-100 focus:border-cyan-500/50 outline-none transition-colors font-mono"
+                                            >
+                                                {Object.values(availableModels).map((m: any) => (
+                                                    <option key={m.id} value={m.id}>
+                                                        {m.id.replace('@cf/', '')} ({m.provider})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
                 )}
 

@@ -149,8 +149,23 @@ export class WorldLimb extends NeuralLimb {
         const name = innovationName || `evolved_${relicId}`;
 
         // 1. Resolve Truth Asset
+        let resolvedId = relicId;
+
+        // Intelligent Lookup: If relicId is non-numeric, search Catalog
+        if (isNaN(Number(relicId))) {
+            const catalogRes = await this.limbs.call('relic', 'get_relic_catalog', {
+                category: 'items', // Default to items, could be dynamic
+                search: relicId,
+                limit: 1
+            });
+            if (catalogRes.status === 'success' && catalogRes.items.length > 0) {
+                resolvedId = catalogRes.items[0].id;
+                console.log(`[WorldLimb] Evolve target resolved: ${relicId} -> ${resolvedId}`);
+            }
+        }
+
         const truth = await this.limbs.call('relic', 'resolve_asset', {
-            uri: `relic://${relicId}`,
+            uri: `relic://${resolvedId}`,
             type: 'mesh'
         });
 

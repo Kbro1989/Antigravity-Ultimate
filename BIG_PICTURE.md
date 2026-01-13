@@ -557,6 +557,29 @@ Instead of routing all stateful requests to Durable Objects, we leverage **Insta
 - **Reliability**: 500 Errors eliminated for polling endpoints.
 - **Speed**: Stats and Asset lookups now benefit from InstantDB's real-time sync and admin-token speed.
 
-**Status**: Complete ✅ (2026-01-12)
+
+---
+
+## Phase 29: RelicLimb & Browser Optimization (Lazy Loading)
+
+This phase addresses the **scalability impact** of generating thousands of assets. The previous "eager loading" strategy caused browser crashes and high memory usage (1.2GB+).
+
+### Solution: Search-First Discovery
+We shifted `RSMVBrowser` and `RelicLimb` from an "all-or-nothing" fetch to a robust **paginated, search-driven** architecture.
+
+| Feature | Implementation | Benefit |
+|:---|:---|:---|
+| **R2 Pagination** | `cursor` based iteration | Constant memory usage regardless of library size |
+| **Server-Side Search** | `prefix` and filtered listing | Fast retrieval of specific assets |
+| **Infinite Scroll** | `hasMore` detection in UI | Smooth user experience without data dumps |
+| **Cloud Sovereignty** | Removed local filesystem bridges | 100% Cloudflare Worker/R2 dependencies |
+
+### Implementation Details:
+- **RelicLimb.ts**: Updated `explore_innovations` and `explore_museum` with `limit`, `cursor`, `search`.
+- **rsmvService.ts**: Updated `getRsmvModels` to be a pass-through for pagination params.
+- **RSMVBrowser.tsx**: Implemented search bar debouncing and "Load More" logic.
+
+**Status**: Complete ✅ (2026-01-13)
+
 
 

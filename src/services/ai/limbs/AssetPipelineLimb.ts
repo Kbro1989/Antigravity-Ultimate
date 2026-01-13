@@ -30,7 +30,9 @@ export class AssetPipelineLimb extends NeuralLimb {
                     Breakdown into steps: concept, mesh, material, rig, animation.`,
             systemPrompt: "You are a Pipeline Orchestrator. Output ONLY a JSON array of steps with limbId and action.",
             modelId: intent.modelId,
-            provider: intent.provider
+            provider: intent.provider,
+            apiKeys: intent.apiKeys, // [ATTACHED]
+            allowPaid: intent.allowPaid // [ATTACHED]
         }, this.env) as any;
 
         let steps;

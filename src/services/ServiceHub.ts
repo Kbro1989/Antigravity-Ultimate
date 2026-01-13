@@ -13,6 +13,7 @@ import {
 
 import { costOptimizer } from './ai/CostOptimizer';
 import { modelRegistry } from './ai/ModelRegistry';
+import { mcpConfigManager } from './mcp/MCPConfigManager';
 
 // Types only - directly from source to avoid barrel side-effects
 import type { FlowEngine } from './ai/FlowEngine';
@@ -112,9 +113,16 @@ export class ServiceHubClass {
             const capability = this.mapActionToCapability(intent.action);
             const definition = modelRegistry.getModel(capability);
 
+            const config = mcpConfigManager.getConfig();
+
             const response = await fetch('/api/session/default/ai/complete', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Gemini-Key': config.providers.gemini?.apiKey || '',
+                    'X-Fireworks-Key': config.providers.external?.fireworksKey || '',
+                    'X-Allow-Paid': config.routing.allowPaidOverflow ? 'true' : 'false'
+                },
                 body: JSON.stringify({
                     ...intent,
                     modelId: definition.id,
@@ -230,11 +238,16 @@ export class ServiceHubClass {
             handlers.forEach(h => h(data));
         },
         call: async (limbId: string, verb: string, payload: any) => {
+            const config = mcpConfigManager.getConfig();
+
             const response = await fetch('/api/session/default/api/limb/execute', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Session-ID': 'default'
+                    'X-Session-ID': 'default',
+                    'X-Gemini-Key': config.providers.gemini?.apiKey || '',
+                    'X-Fireworks-Key': config.providers.external?.fireworksKey || '',
+                    'X-Allow-Paid': config.routing.allowPaidOverflow ? 'true' : 'false'
                 },
                 body: JSON.stringify({ limbId, action: verb, payload })
             });

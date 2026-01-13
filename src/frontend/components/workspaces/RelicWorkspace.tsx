@@ -187,52 +187,78 @@ function script_${selectedEntry.id}() {
     const [selectedEntry, setSelectedEntry] = useState<any>(null);
     const [isEditing, setIsEditing] = useState(false);
 
+    // State for managing server-side pagination/search
+    const [isSearching, setIsSearching] = useState(false);
+    const [activeDrillCategory, setActiveDrillCategory] = useState<string | null>(null);
+
+    // Effect: Live Search / Catalog Fetching
+    useEffect(() => {
+        if (!activeDrillCategory) return;
+
+        const fetchCatalog = async () => {
+            setIsSearching(true);
+            try {
+                // If classic, we use the Limb. If modern, we might still fallback to direct service for now, 
+                // but user wants RelicLimb attached for RSC tab specifically.
+                if (era === 'classic') {
+                    const res: any = await hub.limbs.call('relic', 'get_relic_catalog', {
+                        category: activeDrillCategory,
+                        search: filterText,
+                        limit: 50,
+                        offset: 0 // TODO: Add pagination UI if needed
+                    });
+
+                    if (res.status === 'success') {
+                        setDrilledItems(res.items.map((it: any) => ({ ...it, type: activeDrillCategory.slice(0, -1) }))); // 'items' -> 'item'
+                    }
+                } else {
+                    // Modern / RS3 Era: "View only by user intent"
+                    // We do not eagerly fetch catalogs. We only respond to explicit ID searches.
+                    const idMatch = filterText.trim().match(/^(\w+)?\s*(\d+)$/);
+                    if (idMatch) {
+                        const [_, typeArg, idArg] = idMatch;
+                        // Construct reliable synthetic entry for the Viewer to attempt loading
+                        const cleanType = (typeArg || activeDrillCategory || 'item').replace(/s$/, ''); // singularize
+                        const synthetic = {
+                            id: parseInt(idArg),
+                            name: `${cleanType.toUpperCase()} #${idArg}`,
+                            type: cleanType,
+                            description: 'User Intent Lookup',
+                            isSynthetic: true
+                        };
+                        setDrilledItems([synthetic]);
+                    } else if (!filterText) {
+                        setDrilledItems([]);
+                    }
+                }
+            } catch (e) {
+                console.error("Catalog fetch failed", e);
+            } finally {
+                setIsSearching(false);
+            }
+        };
+
+        const timeout = setTimeout(fetchCatalog, 300); // Debounce
+        return () => clearTimeout(timeout);
+    }, [filterText, activeDrillCategory, era, hub.limbs]);
+
     const handleDrillDown = async (item: any) => {
         try {
-            const service = era === 'modern' ? hub.rsmv.modern : hub.rsmv.classic;
-            if (!service) {
-                if (era === 'classic') {
-                    addNotification('info', 'Initializing Classic Pipeline...');
-                    await hub.initClassicPipeline();
-                } else {
-                    addNotification('warning', 'Modern RS3 Cache not linked. Please drop .jcache files into the viewport.');
-                    return;
-                }
-            }
+            // Identify Category
+            let cat = '';
+            if (item.name === 'items.json' || item.type === 'item_index') cat = 'items';
+            else if (item.name === 'npcs.json' || item.type === 'npc_index') cat = 'npcs';
+            else if (item.name === 'objects.json' || item.type === 'object_index') cat = 'objects';
+            else if (needsCategory === 'spells') cat = 'spells';
+            else if (needsCategory === 'prayers') cat = 'prayers';
+            else return;
 
-            const activeService = era === 'modern' ? hub.rsmv.modern : hub.rsmv.classic;
+            setActiveDrillCategory(cat);
+            setFilterText(''); // Reset search on new category
+            addNotification('info', `Connecting to Relic Catalog: ${cat.toUpperCase()}`);
 
-            if (item.name === 'items.json' || item.type === 'item_index') {
-                addNotification('info', `Indexing ${era.toUpperCase()} Items...`);
-                const items = await activeService.getItems();
-                setDrilledItems(items.map((it: any) => ({ ...it, type: 'item' })));
-            } else if (item.name === 'npcs.json' || item.type === 'npc_index') {
-                addNotification('info', `Indexing ${era.toUpperCase()} NPCs...`);
-                const npcs = await activeService.getNPCs();
-                setDrilledItems(npcs.map((it: any) => ({ ...it, type: 'npc' })));
-            } else if (item.name === 'objects.json' || item.type === 'object_index') {
-                addNotification('info', `Indexing ${era.toUpperCase()} Objects...`);
-                const objects = await activeService.getObjects();
-                setDrilledItems(objects.map((it: any) => ({ ...it, type: 'object' })));
-            } else if (needsCategory === 'spells') {
-                addNotification('info', 'Indexing Spells from RSC Config...');
-                const spells = await activeService.getSpells();
-                setDrilledItems(spells.map((it: any, idx: number) => ({ ...it, id: idx, type: 'spell' })));
-            } else if (needsCategory === 'prayers') {
-                addNotification('info', 'Indexing Prayers from RSC Config...');
-                const prayers = await activeService.getPrayers();
-                setDrilledItems(prayers.map((it: any, idx: number) => ({ ...it, id: idx, type: 'prayer' })));
-            } else if (needsCategory === 'wall_objects') {
-                addNotification('info', 'Indexing Wall Objects from RSC Config...');
-                const wallObjs = await activeService.getWallObjects();
-                setDrilledItems(wallObjs.map((it: any, idx: number) => ({ ...it, id: idx, type: 'wall_object' })));
-            } else if (needsCategory === 'tiles') {
-                addNotification('info', 'Indexing Tiles from RSC Config...');
-                const tiles = await activeService.getTiles();
-                setDrilledItems(tiles.map((it: any, idx: number) => ({ ...it, id: idx, type: 'tile' })));
-            } else {
-                setDrilledItems([]);
-            }
+            // We do NOT fetch here manually anymore. The useEffect matches activeDrillCategory and fetches.
+
         } catch (e) {
             console.error('Drill down failed', e);
             addNotification('error', 'Archaeological failure during indexing');
@@ -338,6 +364,21 @@ function script_${selectedEntry.id}() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto pr-2 space-y-2">
+                    {/* Modern Era Empty State: RuneApps Protocol */}
+                    {era === 'modern' && drilledItems.length === 0 && !isSearching && (
+                        <div className="p-8 text-center font-mono text-xs border border-white/10 rounded-xl bg-white/5 mx-4 mt-8">
+                            <div className="mb-3 uppercase tracking-widest text-[#438ab5] font-bold flex items-center justify-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-[#438ab5]"></span>
+                                RuneApps Protocol
+                            </div>
+                            <div className="space-y-2 text-white/60">
+                                <p>Drag Local Cache to Index</p>
+                                <p>Search <span className="text-white px-1 bg-white/10 rounded">type #id</span> to Inspect</p>
+                            </div>
+                            <div className="mt-4 text-[10px] text-white/20 uppercase tracking-widest">Mid-2004+ Handling Active</div>
+                        </div>
+                    )}
+
                     {(drilledItems.length > 0
                         ? drilledItems.filter(it => (it.name || '').toLowerCase().includes(filterText.toLowerCase()) || String(it.id).includes(filterText))
                         : needsItems

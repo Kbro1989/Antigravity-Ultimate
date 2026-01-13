@@ -67,7 +67,7 @@ export function BubbleWorldHUD({ onSelectWorkspace, activeWorkspace }: BubbleWor
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            onSelectWorkspace('divine');
+                            // Spinner click no longer navigates to divine
                         }}
                         className="relative flex items-center justify-center group cursor-pointer focus:outline-none"
                         aria-label="Access Divine Core"
@@ -81,7 +81,7 @@ export function BubbleWorldHUD({ onSelectWorkspace, activeWorkspace }: BubbleWor
                         {/* Sovereign Suffix */}
                         <div className="absolute left-full ml-8 flex flex-col whitespace-nowrap group-hover:translate-x-4 transition-transform duration-500 pointer-events-none">
                             <div className="text-8xl font-black italic tracking-tighter text-white/90 filter drop-shadow-[0_0_40px_rgba(0,255,255,0.4)]">
-                                <span className="text-neon-cyan">OPAL</span>
+                                <span className="text-neon-cyan">AI</span>
                             </div>
                             <div className="text-[12px] font-black uppercase tracking-[1em] text-white/20 mt-2 ml-1 group-hover:text-neon-gold transition-colors">v1.0 SOVEREIGN</div>
                         </div>

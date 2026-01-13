@@ -69,13 +69,32 @@ export class DivineLimb extends NeuralLimb {
 
         // 1. Fetch Source Truth (if a relic ID is provided)
         let context = "";
-        if (sourceRelic && sourceRelic.id) {
-            // Authoritative Truth Retrieval: Get real data from Scoured archives
-            const truth = await this.limbs.call('relic', 'resolve_asset', {
-                uri: `relic://${sourceRelic.id}`,
-                type: sourceRelic.type || 'mesh'
-            });
-            context = `Authentic Source Truth [${sourceRelic.id}]: ${JSON.stringify(truth.data || truth.asset || sourceRelic)}`;
+        let truthEntry = sourceRelic;
+
+        if (sourceRelic) {
+            // Intelligent Lookup: If ID is name-like or missing, search Catalog first
+            if (!sourceRelic.id || isNaN(Number(sourceRelic.id))) {
+                const searchName = sourceRelic.name || sourceRelic.id || sourceRelic; // lenient input
+                const catalogRes = await this.limbs.call('relic', 'get_relic_catalog', {
+                    category: sourceRelic.type || 'items',
+                    search: searchName,
+                    limit: 1
+                });
+
+                if (catalogRes.status === 'success' && catalogRes.items.length > 0) {
+                    truthEntry = catalogRes.items[0];
+                    console.log(`[DivineLimb] Fuzzy matched Relic: ${searchName} -> ${truthEntry.name} (${truthEntry.id})`);
+                }
+            }
+
+            if (truthEntry.id) {
+                // Authoritative Truth Retrieval: Get real data from Scoured archives
+                const truth = await this.limbs.call('relic', 'resolve_asset', {
+                    uri: `relic://${truthEntry.id}`,
+                    type: truthEntry.type || sourceRelic.type || 'mesh'
+                });
+                context = `Authentic Source Truth [${truthEntry.id}]: ${JSON.stringify(truth.data || truth.asset || truthEntry)}`;
+            }
         }
 
         // 2. Inference for New Creation

@@ -135,6 +135,20 @@ export class CodeLimb extends NeuralLimb {
     async reconstruct_forensic_handling(params: { id: number; type: 'npc' | 'item' | 'object' | 'spell' | 'prayer' }) {
         this.enforceCapability(AgentCapability.READ_FILES);
         const { id, type } = params;
+        let targetId = id;
+
+        // Intelligent Lookup: If ID is non-numeric, search Catalog
+        if (isNaN(Number(id))) {
+            const catalogRes = await this.limbs.call('relic', 'get_relic_catalog', {
+                category: type + 's', // npc -> npcs
+                search: String(id),
+                limit: 1
+            });
+            if (catalogRes.status === 'success' && catalogRes.items.length > 0) {
+                targetId = catalogRes.items[0].id;
+                console.log(`[CodeLimb] Forensic Logic resolved: ${id} -> ${targetId}`);
+            }
+        }
 
         if (this.isCloudMode()) {
             return {
