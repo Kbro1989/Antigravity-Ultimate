@@ -55,6 +55,26 @@ export class CloudScriptFS implements ScriptFS {
             }
         }
 
+        // 3. Try Remote Source of Truth (Sovereign Fetch Fallback)
+        // If it's a known RSC binary format, we parity fetch from the authentic worker
+        const isRSCBinary = key.endsWith('.jag') || key.endsWith('.mem') || key.endsWith('.idx');
+        if (isRSCBinary && this.env.RSC_AUTHENTIC_WORKER_URL) {
+            // Extract the simple filename if there's a prefix
+            const filename = name.split('/').pop() || name;
+            const remoteUrl = `${this.env.RSC_AUTHENTIC_WORKER_URL}/asset/${filename}`;
+            console.log(`[CloudScriptFS] Trying Sovereign Fetch: ${remoteUrl}`);
+            try {
+                const response = await fetch(remoteUrl);
+                if (response.ok) {
+                    const arr = await response.arrayBuffer();
+                    console.log(`[CloudScriptFS] Sovereign Success! Fetched ${filename} (${arr.byteLength} bytes)`);
+                    return Buffer.from(arr);
+                }
+            } catch (e) {
+                console.warn(`[CloudScriptFS] Sovereign Fetch failed for ${filename}:`, e);
+            }
+        }
+
         throw new Error(`[CloudScriptFS] File not found: ${key}`);
     }
 

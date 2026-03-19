@@ -61,6 +61,13 @@ export interface BaseIntent {
     modelId?: string;
     provider?: string;
     payload: Record<string, any>;
+    apiKeys?: {
+        gemini?: string;
+        fireworks?: string;
+        openai?: string;
+        anthropic?: string;
+    };
+    allowPaid?: boolean;
 }
 
 // --- SPECIFIC INTENT SCHEMAS ---

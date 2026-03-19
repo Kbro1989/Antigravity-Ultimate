@@ -25,6 +25,14 @@
             {
                 "name": "METABOLISM_DO",
                 "class_name": "MetabolismDO"
+            },
+            {
+                "name": "RELIC_DO",
+                "class_name": "RelicDO"
+            },
+            {
+                "name": "GAME_WORLD_DO",
+                "class_name": "GameWorldDO"
             }
         ]
     },
@@ -43,7 +51,9 @@
             "type": "Data",
             "globs": [
                 "**/*.bin",
-                "**/*.wasm"
+                "**/*.wasm",
+                "**/*.jag",
+                "**/*.mem"
             ],
             "fallthrough": true
         }
@@ -68,7 +78,14 @@
         {
             "tag": "v4",
             "new_sqlite_classes": [
-                "MetabolismDO"
+                "MetabolismDO",
+                "RelicDO"
+            ]
+        },
+        {
+            "tag": "v5",
+            "new_sqlite_classes": [
+                "GameWorldDO"
             ]
         }
     ],

@@ -301,7 +301,7 @@ export class SessionAgent extends DurableObject<Env> {
                     apiKeys,
                     allowPaid,
                     ...body.options
-                }, c.env);
+                });
 
                 return c.json(result);
             } catch (e: any) {
@@ -384,12 +384,14 @@ export class SessionAgent extends DurableObject<Env> {
 
                     if (action === 'save_metadata') {
                         const { id, type, url, metadata } = payload;
-                        // Use D1 if available, otherwise fallback to DO storage
+                        // SOVEREIGN LOCK: Redirecting shared D1 sync to local DO storage to protect DNA
+                        /*
                         if (c.env.DB) {
                             await c.env.DB.prepare(
                                 "INSERT INTO assets (id, type, url, timestamp, session_id, metadata) VALUES (?, ?, ?, ?, ?, ?)"
                             ).bind(id, type, url, Date.now(), this.state.id.toString(), JSON.stringify(metadata)).run();
                         }
+                        */
 
                         await this.state.storage.put(`asset:${id}`, {
                             id, type, url, timestamp: Date.now(), metadata
@@ -466,6 +468,8 @@ export class SessionAgent extends DurableObject<Env> {
                 const state = necromancy.getState();
 
                 if (c.env.DB && state.isUnlocked) {
+                    // SOVEREIGN LOCK: Direct D1 sync disabled to prevent DNA corruption of authentic RSC Registry
+                    /*
                     await c.env.DB.prepare(
                         "INSERT OR REPLACE INTO characters (id, user_id, name, class, level, is_online, created_at, game_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                     ).bind(
@@ -479,6 +483,8 @@ export class SessionAgent extends DurableObject<Env> {
                         'classic'
                     ).run();
                     console.log('[D1_SYNC] Character profile updated in Global Registry.');
+                    */
+                    console.log('[D1_SYNC] Bypassed: Shared D1 is Sovereign Locked.');
                 }
 
                 return c.json({ success: true, message: 'Session checkpointed' });
@@ -560,7 +566,7 @@ export class SessionAgent extends DurableObject<Env> {
                     provider: body.provider,
                     apiKeys,
                     allowPaid: c.req.header('X-Allow-Paid') === 'true'
-                }, c.env);
+                });
                 return c.json(result);
             } catch (e: any) {
                 return c.json({ error: e.message }, 500);
@@ -721,14 +727,14 @@ export class SessionAgent extends DurableObject<Env> {
         this.app.post('/api/audit', async (c) => {
             const body = await c.req.json();
             try {
-                const result = await this.services.router.route({
+                const result = (await this.services.router.route({
                     type: 'text',
                     prompt: `Audit this code:\n${body.code}`,
-                    modelId: 'DEEPSEEK_R1', // Force high reasoning
+                    modelId: 'REASONING', // Force high reasoning
                     systemPrompt: 'You are a Senior Security Engineer. Audit the code.'
-                });
+                })) as any;
                 // Adapter for CloudflareService expected { issues: [] }
-                return c.json({ issues: [{ severity: 'info', message: result.response }] });
+                return c.json({ issues: [{ severity: 'info', message: result.content }] });
             } catch (e: any) {
                 return c.json({ error: e.message }, 500);
             }
@@ -738,12 +744,12 @@ export class SessionAgent extends DurableObject<Env> {
         this.app.post('/api/refactor', async (c) => {
             const body = await c.req.json();
             try {
-                const result = await this.services.router.route({
+                const result = (await this.services.router.route({
                     type: 'text',
                     prompt: `Refactor this code:\n${body.code}`,
-                    modelId: 'DEEPSEEK_R1'
-                });
-                return c.json({ suggestion: { original: body.code, modified: result.response, explanation: 'AI Refactor' } });
+                    modelId: 'REASONING'
+                })) as any;
+                return c.json({ suggestion: { original: body.code, modified: result.content, explanation: 'AI Refactor' } });
             } catch (e: any) {
                 return c.json({ error: e.message }, 500);
             }

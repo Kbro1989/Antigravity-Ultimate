@@ -17,24 +17,27 @@ export class LiveGameLimb extends NeuralLimb {
     constructor(config: any) {
         super(config);
 
-        // Auto-connect if configured and on localhost
+        // Auto-connect to Sovereign World
         if (typeof window !== 'undefined') {
-            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            if (isLocal) {
-                this.connect();
-            } else {
-                console.log('[LiveGame] Skipping auto-connect in Cloud Environment.');
-            }
+            this.connect();
         }
     }
 
-    public connect(url: string = 'ws://localhost:8080') {
+    public connect(url?: string) {
         if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
             return;
         }
 
+        let wsUrl = url;
+        if (!wsUrl && typeof window !== 'undefined') {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl = `${protocol}//${window.location.host}/world/default/`;
+        }
+
+        if (!wsUrl) return;
+
         try {
-            this.ws = new WebSocket(url);
+            this.ws = new WebSocket(wsUrl);
 
             this.ws.onopen = () => {
                 console.log(`[LiveGame] Connected to ${url}`);
@@ -151,16 +154,20 @@ export class LiveGameLimb extends NeuralLimb {
         };
     }
 
-    // Support for LiveWorkspace dynamic actions
-    async spawn_npc(params: any) { return this.send_event({ type: 'spawn_npc', data: params }); }
-    async toggle_physics(params: any) { return this.send_event({ type: 'toggle_physics', data: params }); }
-    async change_weather(params: any) { return this.send_event({ type: 'change_weather', data: params }); }
+    async inject_asset(params: any) {
+        this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
+        const { relicId, x, y } = params;
+
+        // Sovereign Logic: Forward to GameWorldDO for template expansion
+        return this.send('inject_template', {
+            relicId,
+            x: x || 0,
+            y: y || 0
+        });
+    }
 
     /**
-     * Pipeline Injection Endpoint.
-     * Receives assets from Orchestrator/AssetPipeline and hot-loads them.
-     */
-    async inject_asset(params: any) {
+     * Pipeline Injection Endpoint. (Legacy fallback)
         this.enforceCapability(AgentCapability.EXECUTE_COMMAND);
         const { assetId, state } = params;
 

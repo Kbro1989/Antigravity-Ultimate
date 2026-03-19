@@ -16,6 +16,9 @@ fallthrough = true
 [site]
 bucket = "./dist/site"
 
+[vars]
+RSC_AUTHENTIC_WORKER_URL = "https://rscaievolution-png.destiny.workers.dev"
+
 [durable_objects]
 bindings = [
   { name = "SESSION_AGENT", class_name = "SessionAgent" },
@@ -65,6 +68,7 @@ preview_id = "624458956eec4dbb9c927e29385cf667"
 binding = "DB"
 database_name = "rsc-d1"
 database_id = "d021ab5b-ab13-47b8-9287-1aabebfe51df"
+# WARNING: Shared with authentic RSC game server. READ ONLY in POG-Ultimate context.
 
 [[vectorize_indexes]]
 binding = "VECTOR_INDEX"

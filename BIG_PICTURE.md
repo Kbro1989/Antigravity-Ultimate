@@ -1,6 +1,6 @@
 # POG-Ultimate: The Big Picture (Cloud Native)
 
-> **Version**: **Opal v1.0 (Sovereign RSC Editor)**
+> **Version**: **POG v1.0 (Sovereign RSC Editor)**
 > **Production URL**: [pog-ultimate.kristain33rs.workers.dev](https://pog-ultimate.kristain33rs.workers.dev/)
 > **Deployment Type**: **Cloudflare Worker (Sovereign Neural Mesh)**
 > **Core Philosophy**: **Cloud Sovereignty**. The application is autonomous, tracing authentic RSC .jag archives outward.
@@ -40,7 +40,7 @@ These Limbs are **autonomous and self-sufficient**, running residency-optimized 
 ### **The Orchestration Layer (The Brain)**
 | Limb | Role | Independence Strategy |
 | :--- | :--- | :--- |
-| **Orchestrator** | **Sovereign Flow** | Uses Opal v1.0 (DeepSeek R1) to decompose complex RSC intents into sequential .jag-tracing blueprints. |
+| **Orchestrator** | **Sovereign Flow** | Uses POG v1.0 (DeepSeek R1) to decompose complex RSC intents into sequential .jag-tracing blueprints. |
 | **System** | **Worker Runtime** | Manages system execution, diagnostic vitals, and economy modes (Standard/Economy/Turbo). |
 | **Security** | **Audit Shield** | Enforces the Agent Constitution, audits risk levels, and signs RSC artifacts via `ProvenanceService`. |
 | **AssetPipeline**| **JAG Reconstructor**| Coordinates the synchronized reconstruction of game sectors (Relic -> Divine -> LiveGame). |
@@ -159,7 +159,7 @@ The project contains a specialized layer dedicated to the high-fidelity reconstr
 The application leverages the full power of the Cloudflare Developer Platform to create a highly autonomous AI mesh.
 
 ### **The Routing Engine** (`src/services/ai/`)
-*   **ModelRouter**: A centralized gateway supporting **85+ AI models** (Llama 3.3, DeepSeek R1, Flux, Whisper). It features intelligent auto-routing based on task patterns (Code, Math, Reasoning).
+| **Orchestrator** | **Sovereign Flow** | Uses POG v1.0 (DeepSeek R1) to decompose complex RSC intents into sequential .jag-tracing blueprints. |
 *   **VickreyRouter**: An auction-based model selector that scores candidates based on:
     1.  **Capability Match**: Can the model access the required Limbs?
     2.  **Economic Rank**: Cost vs. Latency vs. Confidence.
@@ -451,12 +451,12 @@ For rapid iteration without external account overhead, Cloudflare provides a sui
 
 **End of Master Strategy Guide.**---
 
-## 17. The Opal v1.0 Update (Sovereign RSC Editor)
+## 17. The POG v1.0 Update (Sovereign RSC Editor)
 
-As of January 2026, the POG-Ultimate dashboard has been successfully reconstructed into the **Sovereign RSC Editor (Opal v1.0)**. This phase focused on purging all remaining placeholder content and establishing absolute functional truth at the edge.
+As of January 2026, the POG-Ultimate dashboard has been successfully reconstructed into the **Sovereign RSC Editor (POG v1.0)**. This phase focused on purging all remaining placeholder content and establishing absolute functional truth at the edge.
 
 ### Key Reconstruction Milestones:
-- **Branding Architecture**: The UI now strictly reflects the **Opal v1.0** core, with the centralized dashboard rebranded as the **Sovereign RSC Node**.
+- **Branding Architecture**: The UI now strictly reflects the **POG v1.0** core, with the centralized dashboard rebranded as the **Sovereign RSC Node**.
 - **Limb Alignment**: All workspace tools in the `WorkspaceSpine` have been mapped to real cloud-native capabilities:
     - **RELC / ARCH**: Archeological restoration of `.jag` archives.
     - **IDEX**: Strict ID range enforcement via the `IDAuditor`.

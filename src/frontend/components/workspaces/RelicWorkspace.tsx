@@ -320,12 +320,36 @@ function script_${selectedEntry.id}() {
 
                     <div className="flex flex-col gap-2 overflow-y-auto pr-2">
                         {era === 'classic' ? (
-                            ['archives', 'ids', 'config', 'locations', 'landscape', 'skills', 'spells', 'prayers', 'wall_objects', 'tiles'].map(cat => (
-                                <div key={cat} onClick={() => { setNeedsCategory(cat); setDrilledItems([]); setSelectedEntry(null); }}
-                                    className={`p-4 glass rounded-2xl border flex items-center justify-between cursor-pointer transition-all
+                            [
+                                // Core Config
+                                'npcs', 'items', 'objects', 'spells', 'prayers', 'wall_objects', 'tiles', 'animations', 'binary_archive',
+                                // World / Spawns
+                                'spawns_npc', 'spawns_item', 'spawns_obj', 'spawns_wall',
+                                // Drops & Rolls
+                                'rolls_drops', 'rolls_casket', 'rolls_cracker', 'rolls_chest',
+                                // Skills
+                                'skill_agility', 'skill_cooking', 'skill_crafting', 'skill_fishing',
+                                'skill_fletching', 'skill_herblaw', 'skill_magic', 'skill_mining',
+                                'skill_prayer', 'skill_smithing', 'skill_thieving', 'skill_woodcutting',
+                                // Legacy Archives
+                                'archives', 'ids', 'config', 'locations', 'landscape'
+                            ].map(cat => (
+                                <div key={cat} onClick={() => {
+                                    setNeedsCategory(cat);
+                                    setDrilledItems([]);
+                                    setSelectedEntry(null);
+                                    // Use DB for everything except legacy archive browsing
+                                    if (!['archives', 'ids', 'config', 'locations', 'landscape'].includes(cat)) {
+                                        setActiveDrillCategory(cat);
+                                    } else {
+                                        setActiveDrillCategory(null);
+                                    }
+                                }}
+                                    className={`p-3 glass rounded-2xl border flex items-center justify-between cursor-pointer transition-all
                                     ${needsCategory === cat ? 'border-cyan-500/40 bg-cyan-500/5' : 'border-white/5 hover:bg-white/5'}
                                 `}>
-                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${needsCategory === cat ? 'text-cyan-400' : 'text-white/60'}`}>{cat}</span>
+                                    <span className={`text-[9px] font-bold uppercase tracking-widest ${needsCategory === cat ? 'text-cyan-400' : 'text-white/40'}`}>{cat.replace('_', ' ')}</span>
+                                    {!['archives', 'ids', 'config', 'locations', 'landscape'].includes(cat) && <span className="text-[7px] text-neon-cyan/20">DB</span>}
                                 </div>
                             ))
                         ) : (
@@ -349,6 +373,28 @@ function script_${selectedEntry.id}() {
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-4">
+                            <button
+                                onClick={async () => {
+                                    addNotification('info', 'Synchronizing Relic Matrix...');
+                                    const res: any = await hub.limbs.call('relic', 'synchronize_relic_index', {});
+                                    if (res.status === 'success') addNotification('success', res.message);
+                                    else addNotification('error', res.message);
+                                }}
+                                className="text-[9px] font-black uppercase text-neon-cyan/40 hover:text-neon-cyan border border-white/5 px-3 py-1 rounded-full hover:bg-white/5 transition-all"
+                            >
+                                Sync Index
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    addNotification('info', 'Decoding Sovereign Archives...');
+                                    const res: any = await hub.limbs.call('relic', 'index_jag_archive_contents', {});
+                                    if (res.status === 'success') addNotification('success', res.message);
+                                    else addNotification('error', res.message);
+                                }}
+                                className="text-[9px] font-black uppercase text-purple-400/40 hover:text-purple-400 border border-white/5 px-3 py-1 rounded-full hover:bg-white/5 transition-all"
+                            >
+                                Index Binary
+                            </button>
                             {(drilledItems.length > 0 || era === 'modern') && (
                                 <>
                                     <input

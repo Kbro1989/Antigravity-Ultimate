@@ -6,8 +6,28 @@ import { BaseIntent } from '../AITypes';
 // @ts-ignore
 import manifestJSON from '__STATIC_CONTENT_MANIFEST';
 import { Stream } from '../../utils/Stream';
+import { hashFilename, JagArchive } from '../../rsc/JagArchive';
+
+const KNOWN_RSC_FILENAMES = [
+    'jagex.txt', 'jagex.dat', 'index.dat',
+    'item.dat', 'npc.dat', 'obj.dat', 'spell.dat', 'prayer.dat',
+    'tile.dat', 'boundary.dat', 'fill.dat', 'wall.dat', 'floor.dat',
+    'dialogue.dat', 'world.dat', 'textures.dat', 'models.dat',
+    'entity.dat', 'media.dat', 'sounds.dat', 'fonts.dat',
+    'land.dat', 'maps.dat', 'land.mem', 'maps.mem',
+    'land63.jag', 'maps63.jag', 'entity24.jag', 'config85.jag',
+    'media58.jag', 'sounds1.jag', 'textures17.jag', 'models36.jag'
+];
 
 export class RelicLimb extends NeuralLimb {
+    private hashLookup: Map<number, string> = new Map();
+
+    constructor(config: LimbConfig) {
+        super(config);
+        for (const name of KNOWN_RSC_FILENAMES) {
+            this.hashLookup.set(hashFilename(name), name);
+        }
+    }
     async excavate_cache(params: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
         const { id: cacheId = 0, major = 0 } = params || {};
@@ -65,68 +85,190 @@ export class RelicLimb extends NeuralLimb {
         };
     }
 
-    async decode_relic(params: any) {
-        this.enforceCapability(AgentCapability.READ_FILES);
-        const { id, type } = params;
+    async synchronize_relic_index(params: any) {
+        this.enforceCapability(AgentCapability.WRITE_FILES);
 
-        // This would traditionally load from disk, but in Cloudflare we load from KV via manifest lookup
-        // For now, we simulate the decoding process using the ported Stream class 
-        // to prove "no holds barred" authenticity.
+        if (!this.env?.RELIC_DO) return { status: 'error', message: 'RELIC_DO not bound' };
 
-        try {
-            // --- CLOUD-NATIVE ASSET RETRIEVAL (Primacy) ---
-            // 1. Try Runtime KV (__STATIC_CONTENT)
-            // 2. Try R2 (ASSETS_BUCKET)
-            // 3. Fallback to Local Bridge (LEGACY)
+        const sources = [
+            { path: 'rsc-data/config/npcs.json', cat: 'npcs' },
+            { path: 'rsc-data/config/items.json', cat: 'items' },
+            { path: 'rsc-data/config/objects.json', cat: 'objects' },
+            { path: 'rsc-data/config/spells.json', cat: 'spells' },
+            { path: 'rsc-data/config/prayers.json', cat: 'prayers' },
+            { path: 'rsc-data/config/animations.json', cat: 'animations' },
+            { path: 'rsc-data/config/tiles.json', cat: 'tiles' },
+            { path: 'rsc-data/config/wall-objects.json', cat: 'wall_objects' },
+            { path: 'rsc-data/locations/npcs.json', cat: 'spawns_npc' },
+            { path: 'rsc-data/locations/items.json', cat: 'spawns_item' },
+            { path: 'rsc-data/locations/objects.json', cat: 'spawns_obj' },
+            { path: 'rsc-data/locations/wall-objects.json', cat: 'spawns_wall' },
+            { path: 'rsc-data/rolls/drops.json', cat: 'rolls_drops' },
+            { path: 'rsc-data/rolls/casket.json', cat: 'rolls_casket' },
+            { path: 'rsc-data/rolls/cracker.json', cat: 'rolls_cracker' },
+            { path: 'rsc-data/rolls/crystal-chest.json', cat: 'rolls_chest' },
+            // Skills
+            { path: 'rsc-data/skills/agility.json', cat: 'skill_agility' },
+            { path: 'rsc-data/skills/cooking.json', cat: 'skill_cooking' },
+            { path: 'rsc-data/skills/crafting.json', cat: 'skill_crafting' },
+            { path: 'rsc-data/skills/fishing.json', cat: 'skill_fishing' },
+            { path: 'rsc-data/skills/fletching.json', cat: 'skill_fletching' },
+            { path: 'rsc-data/skills/herblaw.json', cat: 'skill_herblaw' },
+            { path: 'rsc-data/skills/magic.json', cat: 'skill_magic' },
+            { path: 'rsc-data/skills/mining.json', cat: 'skill_mining' },
+            { path: 'rsc-data/skills/prayer.json', cat: 'skill_prayer' },
+            { path: 'rsc-data/skills/smithing.json', cat: 'skill_smithing' },
+            { path: 'rsc-data/skills/thieving.json', cat: 'skill_thieving' },
+            { path: 'rsc-data/skills/woodcutting.json', cat: 'skill_woodcutting' },
+        ];
 
-            let buffer: Buffer | ArrayBuffer | null = null;
-            let loadedFrom = 'unknown';
+        let totalIndexed = 0;
+        const doId = this.env.RELIC_DO.idFromName('global_relic_matrix');
+        const obj = this.env.RELIC_DO.get(doId);
 
-            // Check Manifest for Static Content (KV)
-            // @ts-ignore
-            const manifest = typeof manifestJSON === 'string' ? JSON.parse(manifestJSON) : manifestJSON;
-            const assetKey = manifest ? manifest[id] : null;
+        for (const source of sources) {
+            let content: any[] = [];
 
-            if (assetKey && this.env?.__STATIC_CONTENT) {
-                const kvAsset = await this.env.__STATIC_CONTENT.get(assetKey, { type: 'arrayBuffer' });
-                if (kvAsset) {
-                    buffer = kvAsset;
-                    loadedFrom = 'kv_static';
+            try {
+                if (this.env?.ASSETS_BUCKET) {
+                    const r2Obj = await this.env.ASSETS_BUCKET.get(source.path);
+                    if (r2Obj) content = JSON.parse(await r2Obj.text());
                 }
+            } catch (e) {
+                console.error(`[RelicLimb] Failed to load ${source.path}:`, e);
+                continue;
             }
 
-            // Check R2 Assets Bucket
-            if (!buffer && this.env?.ASSETS_BUCKET) {
-                const r2Object = await this.env.ASSETS_BUCKET.get(id);
-                if (r2Object) {
-                    buffer = await r2Object.arrayBuffer();
-                    loadedFrom = 'r2_bucket';
+            if (content.length > 0) {
+                const chunkSize = 500;
+                for (let i = 0; i < content.length; i += chunkSize) {
+                    const chunk = content.slice(i, i + chunkSize).map((item: any, idx: number) => {
+                        // Unique ID across categories
+                        const itemId = item.id !== undefined ? item.id : `${source.cat}_${i + idx}`;
+
+                        // Sovereign Logic: Attempt to link JSON to its parent JAG source
+                        const parentJag = source.cat === 'scripts' ? 'jagex.jag' :
+                            source.cat.includes('npc') ? 'entity24.jag' :
+                                source.cat.includes('item') ? 'config85.jag' :
+                                    source.cat.includes('skill') ? 'config85.jag' : 'unknown';
+
+                        return {
+                            id: `${source.cat}_${itemId}`,
+                            category: source.cat,
+                            name: item.name || item.examine || source.cat.toUpperCase(),
+                            type: item.type || source.cat,
+                            metadata: {
+                                ...item,
+                                parent_jag_relic: parentJag !== 'unknown' ? parentJag : undefined
+                            },
+                            source: 'preservation'
+                        };
+                    });
+
+                    const res = await obj.fetch('http://relic-do/index_bulk?action=index_bulk', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Sovereign-Internal': 'museum-agent-auth'
+                        },
+                        body: JSON.stringify(chunk)
+                    });
+
+                    if (res.ok) totalIndexed += chunk.length;
+                    else console.error(`[RelicLimb] Indexing failed for ${source.cat} chunk ${i}`);
                 }
             }
-
-            if (!buffer) {
-                throw new Error(`Relic artifact not found in cloud storage: ${id}`);
-            }
-            // Initialize authentic Stream
-            // @ts-ignore - Buffer compatibility is handled by the polyfill
-            this.stream = new Stream(Buffer.from(buffer as any));
-
-            return {
-                status: 'success',
-                relicId: id,
-                decoded: true,
-                authenticity: 'verified',
-                source: loadedFrom,
-                data: {
-                    type: type || 'unknown',
-                    size: buffer.byteLength,
-                    message: "Authentic RSC Decoding Protocol Initialized"
-                }
-            };
-        } catch (e: any) {
-            console.error(`[RelicLimb] Decode failed for ${id}:`, e);
-            return { status: 'error', message: `Decoding failed: ${e.message}` };
         }
+
+        return {
+            status: 'success',
+            message: `Global Synchronization complete. Total relics indexed: ${totalIndexed}`,
+            total: totalIndexed
+        };
+    }
+
+    async index_jag_archive_contents(params: any) {
+        this.enforceCapability(AgentCapability.WRITE_FILES);
+
+        if (!this.env?.RELIC_DO) return { status: 'error', message: 'RELIC_DO not bound' };
+        if (!this.env?.ASSETS_BUCKET) return { status: 'error', message: 'ASSETS_BUCKET not bound' };
+
+        const { JagArchive } = await import('../../rsc/JagArchive');
+
+        const archives = [
+            'public/data204/jagex.jag',
+            'public/data204/config85.jag',
+            'public/data204/entity24.jag',
+            'public/data204/models36.jag',
+            'public/data204/textures17.jag',
+            'public/data204/media58.jag',
+            'public/data204/maps63.jag',
+            'public/data204/land63.jag'
+        ];
+
+        let totalIndexed = 0;
+        const doId = this.env.RELIC_DO.idFromName('global_relic_matrix');
+        const obj = this.env.RELIC_DO.get(doId);
+
+        for (const archivePath of archives) {
+            const archiveName = archivePath.split('/').pop()!;
+
+            try {
+                const r2Obj = await this.env.ASSETS_BUCKET.get(archivePath);
+                if (!r2Obj) continue;
+
+                const buffer = Buffer.from(await r2Obj.arrayBuffer());
+                const archive = new JagArchive();
+                archive.readArchive(buffer);
+
+                const chunk: any[] = [];
+                for (const [hash, data] of archive.entries) {
+                    const resolvedName = this.hashLookup.get(hash);
+                    const name = resolvedName ? `${archiveName}:${resolvedName}` : `${archiveName}:${hash}`;
+
+                    chunk.push({
+                        id: `bin_${archiveName}_${hash}`,
+                        category: 'binary_archive',
+                        name: name,
+                        type: resolvedName ? 'resolved_binary' : 'raw_binary',
+                        metadata: {
+                            archive: archiveName,
+                            hash: hash,
+                            filename: resolvedName || 'unknown',
+                            size: data.length,
+                            path: archivePath
+                        },
+                        source: 'preservation'
+                    });
+
+                    if (chunk.length >= 500) {
+                        await obj.fetch('http://relic-do/index_bulk?action=index_bulk', {
+                            method: 'POST',
+                            body: JSON.stringify(chunk)
+                        });
+                        totalIndexed += chunk.length;
+                        chunk.length = 0;
+                    }
+                }
+
+                if (chunk.length > 0) {
+                    await obj.fetch('http://relic-do/index_bulk?action=index_bulk', {
+                        method: 'POST',
+                        body: JSON.stringify(chunk)
+                    });
+                    totalIndexed += chunk.length;
+                }
+
+            } catch (e) {
+                console.error(`[RelicLimb] Failed to index archive ${archivePath}:`, e);
+            }
+        }
+
+        return {
+            status: 'success',
+            message: `Binary Indexing complete. Indexed ${totalIndexed} entries from Jagex archives.`,
+            total: totalIndexed
+        };
     }
 
     async get_state(params: any) {
@@ -213,7 +355,18 @@ export class RelicLimb extends NeuralLimb {
         const { path: filePath, base64 } = params || {};
         if (!filePath) throw new Error("Missing path for read_record");
 
-        // 1. Try R2/KV (Cloud Primacy)
+        // 1. Try Sovereign RelicDO (Fastest + Resolved)
+        if (this.env?.RELIC_DO) {
+            const id = this.env.RELIC_DO.idFromName('global_relic_matrix');
+            const obj = this.env.RELIC_DO.get(id);
+            const res = await obj.fetch(`http://relic-do/get_artifact?action=get_artifact&id=${encodeURIComponent(filePath)}`);
+            if (res.ok) {
+                const content = base64 ? btoa(String.fromCharCode(...new Uint8Array(await res.arrayBuffer()))) : await res.text();
+                return { status: 'success', content, source: 'relic_do' };
+            }
+        }
+
+        // 2. Try R2 (Direct)
         if (this.env?.ASSETS_BUCKET) {
             const obj = await this.env.ASSETS_BUCKET.get(filePath);
             if (obj) {
@@ -359,7 +512,27 @@ export class RelicLimb extends NeuralLimb {
         const { path: relativePath, category } = params || {};
         const projectRoot = this.env?.PROJECT_ROOT || '.';
 
-        // Priority 1: Cloud-Native R2 (Innovation/Staged Layer)
+        // Priority 1: Sovereign RelicDO (High-Speed Access)
+        if (this.env?.RELIC_DO) {
+            try {
+                const id = this.env.RELIC_DO.idFromName('global_relic_matrix');
+                const obj = this.env.RELIC_DO.get(id);
+                const res = await obj.fetch(`http://relic-do/get_artifact?action=get_artifact&id=${encodeURIComponent(relativePath)}`, {
+                    headers: { 'X-Sovereign-Internal': 'museum-agent-auth' }
+                });
+                if (res.ok) {
+                    const content = await res.text();
+                    return {
+                        status: 'success',
+                        content,
+                        path: `relic://${relativePath}`,
+                        source: 'relic_do'
+                    };
+                }
+            } catch (e) { }
+        }
+
+        // Priority 2: Cloud-Native R2 (Innovation/Staged Layer)
         if (this.env?.ASSETS_BUCKET) {
             try {
                 const r2Key = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
@@ -413,93 +586,34 @@ export class RelicLimb extends NeuralLimb {
      */
     async explore_museum(params: { category?: string, limit?: number, offset?: number, search?: string }) {
         this.enforceCapability(AgentCapability.READ_FILES);
-        const { category = 'archives', limit = 50, offset = 0, search } = params || {};
+        const { category = 'binary_archive', limit = 50, offset = 0, search } = params || {};
 
-        const projectRoot = this.env?.PROJECT_ROOT || '.';
+        if (this.env?.RELIC_DO) {
+            const id = this.env.RELIC_DO.idFromName('global_relic_matrix');
+            const obj = this.env.RELIC_DO.get(id);
 
-        let subPath = 'public/data204';
-        if (category === 'config') subPath = 'rsc-data/config';
-        if (category === 'ids') subPath = 'rsc-data/config';
-        if (category === 'locations') subPath = 'rsc-data/locations';
-        if (category === 'landscape') subPath = 'rsc-data/landscape';
-        if (category === 'skills') subPath = 'rsc-data/skills';
-        if (category === 'audio') subPath = 'public/data204'; // Sounds often in media58.jag or raw in data204
+            const searchUrl = new URL('http://relic-do/search');
+            searchUrl.searchParams.set('action', 'search');
+            searchUrl.searchParams.set('category', category);
+            if (search) searchUrl.searchParams.set('query', search);
+            searchUrl.searchParams.set('limit', limit.toString());
+            searchUrl.searchParams.set('offset', offset.toString());
 
-        // Static manifest fallback - the authentic data204 archive contents
-        const STATIC_DATA204_MANIFEST = [
-            { name: 'config85.jag', size: 58819 },
-            { name: 'entity24.jag', size: 244467 },
-            { name: 'entity24.mem', size: 48212 },
-            { name: 'filter2.jag', size: 15377 },
-            { name: 'fonts1.jag', size: 9784 },
-            { name: 'jagex.jag', size: 4990 },
-            { name: 'land63.jag', size: 142383 },
-            { name: 'land63.mem', size: 154683 },
-            { name: 'maps63.jag', size: 37629 },
-            { name: 'maps63.mem', size: 59481 },
-            { name: 'media58.jag', size: 98729 },
-            { name: 'models36.jag', size: 289822 },
-            { name: 'sounds1.mem', size: 114375 },
-            { name: 'textures17.jag', size: 63685 }
-        ];
-
-        const categorizeArtifact = (f: { name: string; size: number }) => {
-            let type = 'unknown';
-            if (f.name.endsWith('.jag')) type = 'archive';
-            if (f.name.endsWith('.mem')) type = 'memory_dump';
-            if (f.name.endsWith('.wav') || f.name.endsWith('.pcm')) type = 'audio_raw';
-
-            if (category === 'config' || category === 'ids') type = 'configuration';
-            if (category === 'locations') type = 'location_data';
-            if (category === 'skills') type = 'game_rules';
-            if (category === 'landscape') type = 'landscape_data';
-
-            if (f.name.startsWith('config')) type = 'configuration';
-            if (f.name.startsWith('models')) type = '3d_models';
-            if (f.name.startsWith('media')) type = 'media_assets';
-            if (f.name.startsWith('entity')) type = 'entities';
-            if (f.name.startsWith('land')) type = 'landscape';
-            if (f.name.startsWith('maps')) type = 'maps';
-            if (f.name.startsWith('textures')) type = 'textures';
-            if (f.name.startsWith('sounds')) type = 'audio';
-            if (f.name.startsWith('fonts')) type = 'fonts';
-
-            return {
-                id: f.name,
-                name: f.name,
-                type,
-                size: f.size,
-                path: `${subPath}/${f.name}`,
-                url: `/${subPath}/${f.name}`
-            };
-        };
-
-        let artifacts = [
-            ...STATIC_DATA204_MANIFEST,
-            { name: 'items.json', size: 102400 },
-            { name: 'npcs.json', size: 85000 },
-            { name: 'objects.json', size: 92000 }
-        ].map(categorizeArtifact);
-
-        // Filter by Search
-        if (search) {
-            const lowerSearch = search.toLowerCase();
-            artifacts = artifacts.filter(a => a.name.toLowerCase().includes(lowerSearch) || a.type.toLowerCase().includes(lowerSearch));
+            const res = await obj.fetch(searchUrl.toString(), {
+                headers: { 'X-Sovereign-Internal': 'museum-agent-auth' }
+            });
+            if (res.ok) {
+                const data = (await res.json()) as any;
+                return {
+                    status: 'success',
+                    mode: 'museum_204_sovereign',
+                    source: 'relic_do_sql',
+                    ...data
+                };
+            }
         }
 
-        // Apply Pagination
-        const total = artifacts.length;
-        const pagedArtifacts = artifacts.slice(offset, offset + limit);
-
-        return {
-            status: 'success',
-            mode: 'museum_204_cloud',
-            source: 'manifest',
-            total,
-            offset,
-            limit,
-            artifacts: pagedArtifacts
-        };
+        return { status: 'error', message: 'RelicDO not available for museum exploration.' };
     }
 
     /**
@@ -540,90 +654,35 @@ export class RelicLimb extends NeuralLimb {
      */
     /**
      * GET RELIC CATALOG: Provides granular metadata for game assets.
-     * Performs server-side search and pagination to prevent client-side flooding.
+     * Performs server-side search and pagination via RELIC_DO.
      */
     async get_relic_catalog(params: { category: string; search?: string; limit?: number; offset?: number }) {
         this.enforceCapability(AgentCapability.READ_FILES);
         const { category, search = '', limit = 50, offset = 0 } = params;
 
-        // Map category to file path
-        // Sovereignty: RSC Archives are stored in data204 or generated assets
-        const fileMap: Record<string, string> = {
-            'npcs': 'npcs.json',
-            'items': 'items.json',
-            'objects': 'objects.json',
-            'spells': 'rsc-data/config/spells.json', // Hypothetical path
-            'prayers': 'rsc-data/config/prayers.json'
-        };
+        if (this.env?.RELIC_DO) {
+            const id = this.env.RELIC_DO.idFromName('global_relic_matrix');
+            const obj = this.env.RELIC_DO.get(id);
 
-        const fileName = fileMap[category] || `${category}.json`;
-        let fullData: any[] = [];
+            const searchUrl = new URL('http://relic-do/search');
+            searchUrl.searchParams.set('action', 'search');
+            if (category && category !== 'all') searchUrl.searchParams.set('category', category);
+            searchUrl.searchParams.set('query', search);
+            searchUrl.searchParams.set('limit', limit.toString());
+            searchUrl.searchParams.set('offset', offset.toString());
 
-        try {
-            // 1. Try Fetching from R2/KV (Innovation/Cache Layer)
-            // We reuse fetch_relic_content logic implicitly or directly
-            // Optimization: If the file is huge, we should consider a KV index, 
-            // but for RSC (<5mb JSONs), parsing in Worker is acceptable for now.
-
-            let contentString = '';
-
-            if (this.env?.ASSETS_BUCKET) {
-                // Try data204 root first, then generated
-                let obj = await this.env.ASSETS_BUCKET.get(`public/data204/${fileName}`);
-                if (!obj) obj = await this.env.ASSETS_BUCKET.get(`data204/${fileName}`);
-                if (!obj) obj = await this.env.ASSETS_BUCKET.get(fileName); // Root fallback
-
-                if (obj) {
-                    contentString = await obj.text();
-                }
+            const res = await obj.fetch(searchUrl.toString());
+            if (res.ok) {
+                return await res.json();
             }
-
-            // Fallback to KV Static if R2 miss
-            if (!contentString && this.env?.__STATIC_CONTENT) {
-                // @ts-ignore
-                const manifest = typeof manifestJSON === 'string' ? JSON.parse(manifestJSON) : manifestJSON;
-                const assetKey = manifest ? manifest[fileName] : null;
-                if (assetKey) {
-                    const kvAsset = await this.env.__STATIC_CONTENT.get(assetKey, { type: 'text' });
-                    if (kvAsset) contentString = kvAsset;
-                }
-            }
-
-            if (contentString) {
-                fullData = JSON.parse(contentString);
-            } else {
-                // Last Resort: Mock for bootstrapping if file missing (dev mode)
-                console.warn(`[RelicLimb] Catalog ${fileName} not found. Returning empty.`);
-                fullData = [];
-            }
-
-        } catch (e) {
-            console.error(`[RelicLimb] Catalog load error:`, e);
-            fullData = [];
         }
 
-        // 2. Filter
-        let filtered = fullData;
-        if (search) {
-            const lowerSearch = search.toLowerCase();
-            filtered = fullData.filter((item: any) =>
-                (item.name && item.name.toLowerCase().includes(lowerSearch)) ||
-                (item.examine && item.examine.toLowerCase().includes(lowerSearch)) ||
-                String(item.id).includes(lowerSearch)
-            );
-        }
-
-        // 3. Paginate
-        const sliced = filtered.slice(offset, offset + limit);
-
+        // Fallback: This only happens if RELIC_DO is not yet indexed or bound
         return {
-            status: 'success',
-            category,
-            items: sliced,
-            total: filtered.length,
-            limit,
-            offset,
-            source: 'cloud_catalog_v1'
+            status: 'warning',
+            message: 'Relic search engine not yet synchronized. Falling back to basic manifest.',
+            items: [],
+            total: 0
         };
     }
 
@@ -752,5 +811,72 @@ export class RelicLimb extends NeuralLimb {
                 status: 'AUTH_TRUTH_VERIFIED'
             }
         };
+    }
+
+    /**
+     * AI KNOWLEDGE BRIDGE: Resolve and understand relic IDs and maps.
+     * Fulfills the user's request for the AI to "instant knowledgebase" RSC archetypes.
+     */
+    async query_relic_knowledge(params: { query: string; category?: string }) {
+        this.enforceCapability(AgentCapability.READ_FILES);
+        const { query, category = 'all' } = params;
+
+        if (this.env?.RELIC_DO) {
+            const doId = this.env.RELIC_DO.idFromName('global_relic_matrix');
+            const obj = this.env.RELIC_DO.get(doId);
+
+            const searchUrl = new URL('http://relic-do/search');
+            searchUrl.searchParams.set('action', 'search');
+            searchUrl.searchParams.set('query', query);
+            if (category !== 'all') searchUrl.searchParams.set('category', category);
+            searchUrl.searchParams.set('limit', '10');
+
+            const res = await obj.fetch(searchUrl.toString(), {
+                headers: { 'X-Sovereign-Internal': 'museum-agent-auth' }
+            });
+            if (res.ok) {
+                const data = await res.json() as any;
+
+                // Format for AI consumption (compact knowledge injection)
+                const knowledge = data.artifacts?.map((a: any) =>
+                    `[RELIC] ID: ${a.id} | NAME: ${a.name} | CAT: ${a.category} | HINT: ${a.metadata?.examine || 'N/A'}`
+                ).join('\n');
+
+                return {
+                    status: 'success',
+                    knowledge,
+                    message: `Found ${data.total || 0} relative artifacts for context.`
+                };
+            }
+        }
+
+        return { status: 'error', message: 'Relic Knowledge Base (DO) unavailable.' };
+    }
+
+    /**
+     * CODE LIMB SYNC: Returns ID maps for common entities.
+     */
+    async get_id_maps(params: { category: string }) {
+        this.enforceCapability(AgentCapability.READ_FILES);
+        const { category } = params;
+
+        // This targets small, frequently used maps like skill names or specific NPC IDs
+        const path = `rsc-data/config/${category}s.json`;
+        try {
+            if (this.env?.ASSETS_BUCKET) {
+                const obj = await this.env.ASSETS_BUCKET.get(path);
+                if (obj) {
+                    const data = JSON.parse(await obj.text());
+                    // Return just the ID -> Name map to save token space
+                    const map = data.reduce((acc: any, val: any) => {
+                        acc[val.id] = val.name;
+                        return acc;
+                    }, {});
+                    return { status: 'success', map };
+                }
+            }
+        } catch (e) { }
+
+        return { status: 'error', message: `ID map for ${category} not found.` };
     }
 }

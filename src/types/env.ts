@@ -7,6 +7,8 @@ export interface Env {
     COLLABORATION_SERVER: DurableObjectNamespace;
     SESSION_DO: DurableObjectNamespace;
     METABOLISM_DO: DurableObjectNamespace;
+    RELIC_DO: DurableObjectNamespace;
+    GAME_WORLD_DO: DurableObjectNamespace;
     AI: any; // Workers AI
     ASSETS_BUCKET: R2Bucket;
     PLATFORM_BACKUP_KEY: string; // Secret
@@ -21,6 +23,7 @@ export interface Env {
     INSTANT_APP_ID: string;
     INSTANT_ADMIN_TOKEN: string;
     GOOGLE_CLIENT_SECRET: string; // OAuth Client Secret (Confidential)
+    RSC_AUTHENTIC_WORKER_URL: string; // Remote Source of Truth
     __STATIC_CONTENT: KVNamespace; // Workers Sites
     [key: string]: unknown;
 }

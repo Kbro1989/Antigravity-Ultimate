@@ -1,0 +1,60 @@
+﻿
+> pog-ultimate@1.0.0 type-check
+> tsc --noEmit
+
+src/agents/SessionAgent.ts(51,13): error TS2740: Type 'LimbRegistry' is missing the following properties from type 'INeuralRegistry': executeCapability, getCapabilities, isHealthy, getMetrics, and 2 more.
+src/agents/SessionAgent.ts(304,20): error TS2554: Expected 1 arguments, but got 2.
+src/agents/SessionAgent.ts(327,21): error TS2353: Object literal may only specify known properties, and 'apiKeys' does not exist in type 'BaseIntent & { modelId?: string | undefined; provider?: string | undefined; }'.
+src/agents/SessionAgent.ts(350,21): error TS2353: Object literal may only specify known properties, and 'apiKeys' does not exist in type 'BaseIntent & { modelId?: string | undefined; provider?: string | undefined; }'.
+src/agents/SessionAgent.ts(418,21): error TS2353: Object literal may only specify known properties, and 'apiKeys' does not exist in type 'BaseIntent & { modelId?: string | undefined; provider?: string | undefined; }'.
+src/agents/SessionAgent.ts(569,20): error TS2554: Expected 1 arguments, but got 2.
+src/agents/SessionAgent.ts(737,78): error TS2339: Property 'response' does not exist on type 'ModelResponse | ReadableStream<any>'.
+  Property 'response' does not exist on type 'ModelResponse'.
+src/agents/SessionAgent.ts(752,85): error TS2339: Property 'response' does not exist on type 'ModelResponse | ReadableStream<any>'.
+  Property 'response' does not exist on type 'ModelResponse'.
+src/frontend/components/hub/POGDashboard.tsx(307,30): error TS2304: Cannot find name 'OrchestratorPanel'.
+src/frontend/components/hub/POGDashboard.tsx(316,30): error TS2304: Cannot find name 'SettingsPanel'.
+src/frontend/components/hub/WorkspaceSpine.tsx(27,11): error TS2739: Type '{ code: ({ id: string; icon: string; label: string; hotkey: string; color: string; capability: string; defaultParams: { code: string; prompt?: undefined; }; } | { id: string; icon: string; label: string; hotkey: string; color: string; capability: string; defaultParams: { ...; }; } | { ...; })[]; ... 35 more ...; ins...' is missing the following properties from type 'Record<WorkspaceMode, Tool[]>': signature, behavior, proxy, vision, metabolism
+src/frontend/components/workspaces/InstantWorkspace.tsx(9,44): error TS2353: Object literal may only specify known properties, and 'serverTime' does not exist in type '{ timestamp?: Direction | undefined; layer?: Direction | undefined; userId?: Direction | undefined; } & { serverCreatedAt?: Direction | undefined; }'.
+src/frontend/components/workspaces/InstantWorkspace.tsx(29,26): error TS18048: 'metabolism' is possibly 'undefined'.
+src/frontend/components/workspaces/InstantWorkspace.tsx(55,26): error TS18048: 'traces' is possibly 'undefined'.
+src/frontend/hooks/useServiceHub.ts(57,21): error TS2322: Type 'BridgeStatus | { success: boolean; status: string; message: string; }' is not assignable to type 'BridgeStatus'.
+  Type '{ success: boolean; status: string; message: string; }' is missing the following properties from type 'BridgeStatus': isConnected, isCloudMode, syncMode
+src/services/ai/CloudflareImagesService.ts(18,9): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/services/ai/CloudflareImagesService.ts(19,9): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/services/ai/CloudflareStreamService.ts(26,9): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/services/ai/CloudflareStreamService.ts(27,9): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/services/ai/limbs/AssetPipelineLimb.ts(34,13): error TS2353: Object literal may only specify known properties, and 'apiKeys' does not exist in type 'ModelRequest'.
+src/services/ai/limbs/AssetPipelineLimb.ts(34,29): error TS2339: Property 'apiKeys' does not exist on type 'BaseIntent & { modelId?: string | undefined; provider?: string | undefined; }'.
+src/services/ai/limbs/AssetPipelineLimb.ts(35,31): error TS2339: Property 'allowPaid' does not exist on type 'BaseIntent & { modelId?: string | undefined; provider?: string | undefined; }'.
+src/services/ai/limbs/AudioLimb.ts(283,48): error TS2551: Property 'AUDIO_OPERATIONS' does not exist on type 'typeof AgentCapability'. Did you mean 'VIDEO_OPERATIONS'?
+src/services/ai/limbs/AudioLimb.ts(325,48): error TS2551: Property 'AUDIO_OPERATIONS' does not exist on type 'typeof AgentCapability'. Did you mean 'VIDEO_OPERATIONS'?
+src/services/ai/limbs/AudioLimb.ts(354,48): error TS2551: Property 'AUDIO_OPERATIONS' does not exist on type 'typeof AgentCapability'. Did you mean 'VIDEO_OPERATIONS'?
+src/services/ai/limbs/AudioLimb.ts(384,48): error TS2551: Property 'AUDIO_OPERATIONS' does not exist on type 'typeof AgentCapability'. Did you mean 'VIDEO_OPERATIONS'?
+src/services/ai/limbs/MeshOpsLimb.ts(79,17): error TS2353: Object literal may only specify known properties, and 'apiKeys' does not exist in type 'ModelRequest'.
+src/services/ai/limbs/MeshOpsLimb.ts(114,13): error TS2353: Object literal may only specify known properties, and 'apiKeys' does not exist in type 'ModelRequest'.
+src/services/ai/limbs/MeshOpsLimb.ts(145,13): error TS2353: Object literal may only specify known properties, and 'apiKeys' does not exist in type 'ModelRequest'.
+src/services/ai/limbs/MeshOpsLimb.ts(160,13): error TS2353: Object literal may only specify known properties, and 'apiKeys' does not exist in type 'ModelRequest'.
+src/services/ai/limbs/MeshOpsLimb.ts(232,13): error TS2353: Object literal may only specify known properties, and 'apiKeys' does not exist in type 'ModelRequest'.
+src/services/ai/limbs/MeshOpsLimb.ts(398,13): error TS2353: Object literal may only specify known properties, and 'apiKeys' does not exist in type 'ModelRequest'.
+src/services/ai/limbs/NeuralLimb.ts(127,55): error TS2345: Argument of type '{ action: AIAction; limbId?: string; sessionId?: string; modelId?: string; provider?: string; payload: Record<string, any>; }' is not assignable to parameter of type 'ModelRequest'.
+  Type '{ action: AIAction; limbId?: string | undefined; sessionId?: string | undefined; modelId?: string | undefined; provider?: string | undefined; payload: Record<string, any>; }' is missing the following properties from type 'ModelRequest': type, prompt
+src/services/ai/limbs/NeuralLimb.ts(128,13): error TS2783: 'action' is specified more than once, so this usage will be overwritten.
+src/services/ai/limbs/NeuralLimb.ts(129,13): error TS2783: 'payload' is specified more than once, so this usage will be overwritten.
+src/services/ai/limbs/OrchestratorLimb.ts(204,13): error TS2416: Property 'cache' in type 'OrchestratorLimb' is not assignable to the same property in base type 'NeuralLimb'.
+  Type 'Map<string, { response: any; expires: number; }>' is not assignable to type 'Map<string, CacheEntry>'.
+    Type '{ response: any; expires: number; }' is missing the following properties from type 'CacheEntry': result, expiry, hits
+src/services/ai/limbs/RelicLimb.ts(603,21): error TS2698: Spread types may only be created from object types.
+src/services/ai/limbs/RelicLimb.ts(831,35): error TS18046: 'data' is of type 'unknown'.
+src/services/ai/limbs/RelicLimb.ts(838,39): error TS18046: 'data' is of type 'unknown'.
+src/services/ai/trinity/TrinityPipeline.ts(442,17): error TS2353: Object literal may only specify known properties, and 'systemPrompt' does not exist in type 'Task'.
+src/services/ai/trinity/TrinityPipeline.ts(442,203): error TS2339: Property 'systemPrompt' does not exist on type 'Task'.
+src/services/durable_objects/RelicDO.ts(3,14): error TS2720: Class 'RelicDO' incorrectly implements class 'DurableObject<Env, {}>'. Did you mean to extend 'DurableObject<Env, {}>' and inherit its members as a subclass?
+  Type 'RelicDO' is missing the following properties from type 'DurableObject<Env, {}>': ctx, [Rpc.__DURABLE_OBJECT_BRAND]
+src/services/durable_objects/RelicDO.ts(69,113): error TS2339: Property 'first' does not exist on type 'SqlStorageStatement'.
+src/services/durable_objects/RelicDO.ts(85,78): error TS2339: Property 'first' does not exist on type 'SqlStorageStatement'.
+src/services/durable_objects/RelicDO.ts(141,24): error TS2339: Property 'run' does not exist on type 'SqlStorageStatement'.
+src/services/durable_objects/RelicDO.ts(174,47): error TS2339: Property 'all' does not exist on type 'SqlStorageStatement'.
+src/services/durable_objects/RelicDO.ts(183,55): error TS2339: Property 'first' does not exist on type 'SqlStorageStatement'.
+src/services/durable_objects/RelicDO.ts(187,32): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/services/durable_objects/RelicDO.ts(197,78): error TS2339: Property 'first' does not exist on type 'SqlStorageStatement'.

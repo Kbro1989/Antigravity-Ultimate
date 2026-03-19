@@ -22,6 +22,8 @@ export class SecurityLimb extends NeuralLimb {
 
     private dbInitialized = false;
 
+    // SOVEREIGN LOCK: Shared D1 schema init disabled.
+    /*
     async ensureSchema() {
         if (!this.env?.DB || this.dbInitialized) return;
         try {
@@ -39,10 +41,10 @@ export class SecurityLimb extends NeuralLimb {
             console.error('Failed to init security_logs table', e);
         }
     }
+    */
 
     async audit(params: any, intent: BaseIntent) {
         this.enforceCapability(AgentCapability.METRIC_ACCESS);
-        await this.ensureSchema();
         const { content, targetIntent } = params;
 
         let risk: 'low' | 'medium' | 'high' | 'blocked' = 'low';
@@ -55,6 +57,8 @@ export class SecurityLimb extends NeuralLimb {
         const logEntry = { ...targetIntent, risk, timestamp: Date.now() };
         this.auditLog.push(logEntry);
 
+        // SOVEREIGN LOCK: Shared D1 write disabled. Using in-memory auditLog.
+        /*
         if (this.env?.DB) {
             try {
                 await this.env.DB.prepare(
@@ -69,6 +73,7 @@ export class SecurityLimb extends NeuralLimb {
                 console.error('Failed to write audit log to D1', e);
             }
         }
+        */
 
         if (risk === 'blocked') {
             throw new Error(`Governance Violation: High-risk action blocked. [Law: First Law]`);
@@ -80,6 +85,8 @@ export class SecurityLimb extends NeuralLimb {
     async get_logs(params: any) {
         this.enforceCapability(AgentCapability.READ_FILES);
 
+        // SOVEREIGN LOCK: Shared D1 read disabled.
+        /*
         if (this.env?.DB) {
             try {
                 const { results } = await this.env.DB.prepare('SELECT * FROM security_logs ORDER BY timestamp DESC LIMIT 50').all();
@@ -88,6 +95,7 @@ export class SecurityLimb extends NeuralLimb {
                 // Fallback to memory
             }
         }
+        */
         return { status: 'success', data: this.auditLog };
     }
 

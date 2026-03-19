@@ -26,19 +26,24 @@ export class LandscapeGenerationLimb extends NeuralLimb {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
         await this.logActivity('generate_landscape', 'pending', { name: params.name });
 
-        // RSC Forensic Version Mapping (Cloud Sovereign)
+        // RSC Forensic Version Mapping (Sovereign Integration)
         let referenceTemplate: Buffer | null = null;
-        if ((params.baseVersion.includes('63') || params.baseVersion === 'relic') && this.env?.ASSETS_BUCKET) {
+        if ((params.baseVersion.includes('63') || params.baseVersion === 'relic') && this.env.RELIC_DO) {
             try {
-                const r2Path = `landscape/land63.jag`;
-                const r2Object = await this.env.ASSETS_BUCKET.get(r2Path);
-                if (r2Object) {
-                    console.log(`[LandscapeLimb] Sourcing salvaged relic template from R2: ${r2Path}`);
-                    const arrayBuffer = await r2Object.arrayBuffer();
+                const relicId = `land${params.baseVersion.replace(/\D/g, '')}.jag`; // e.g. land63.jag
+                const relicDOId = this.env.RELIC_DO.idFromName("global_relic_matrix");
+                const stub = this.env.RELIC_DO.get(relicDOId);
+                const res = await stub.fetch(`http://relic-do/get_artifact?id=${relicId}`, {
+                    headers: { 'X-Sovereign-Internal': 'museum-agent-auth' }
+                });
+
+                if (res.ok) {
+                    console.log(`[LandscapeLimb] Sourcing salvaged relic template from Sovereign RelicDO: ${relicId}`);
+                    const arrayBuffer = await res.arrayBuffer();
                     referenceTemplate = Buffer.from(arrayBuffer);
                 }
             } catch (e) {
-                console.warn('[LandscapeLimb] Cloud template fetch failed:', e);
+                console.warn('[LandscapeLimb] Sovereign template fetch failed:', e);
             }
         }
 

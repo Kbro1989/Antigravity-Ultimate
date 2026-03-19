@@ -227,12 +227,40 @@ export class VideoLimb extends NeuralLimb {
      * List all videos in the Stream account.
      * Provides gallery listing for VideoWorkspace.
      */
-    async inventory_videos(params: { limit?: number; after?: string; before?: string } = {}) {
+    async inventory_videos(params: any = {}) {
         this.enforceCapability(AgentCapability.VIDEO_OPERATIONS);
 
-        await this.logActivity('video_inventory', 'pending', params);
+        // 1. Sovereign Logic: Query RelicDO for indexed RSC Sprites/Frames
+        if (this.env.RELIC_DO) {
+            try {
+                const relicDOId = this.env.RELIC_DO.idFromName("global_relic_matrix");
+                const stub = this.env.RELIC_DO.get(relicDOId);
+                const query = params?.query || '';
+                const res = await stub.fetch(`http://relic-do/search?action=search&category=sprite&query=${query}`, {
+                    headers: { 'X-Sovereign-Internal': 'museum-agent-auth' }
+                });
 
+                if (res.ok) {
+                    const { items } = await res.json() as any;
+                    const videos = items.map((v: any) => ({
+                        uid: v.id,
+                        name: v.name || v.id,
+                        duration: 0, // static sprite sequence
+                        thumbnail: v.metadata?.path ? `/ai/assets/${v.metadata.path}` : null,
+                        ready: true,
+                        source: 'sovereign_relic',
+                        type: 'sprite_sheet'
+                    }));
+                    return { status: 'success', count: videos.length, videos };
+                }
+            } catch (e: any) {
+                console.warn(`[VideoLimb] Sovereign RELIC_DO sweep failed: ${e.message}`);
+            }
+        }
+
+        await this.logActivity('video_inventory', 'pending', params);
         const streamService = new CloudflareStreamService(this.env);
+        // ... rest of cloud stream logic
 
         try {
             const videos = await streamService.listVideos(params);
@@ -314,6 +342,25 @@ export class VideoLimb extends NeuralLimb {
             count: finalResults.length,
             results: finalResults
         };
+    }
+
+    /**
+     * SOVEREIGN SYNCHRONIZATION: Trigger a cutscene in the live game world.
+     */
+    async trigger_cutscene(params: { videoUid: string; duration?: number; fullscreen?: boolean }) {
+        this.enforceCapability(AgentCapability.VIDEO_OPERATIONS);
+        const { videoUid, duration = 5000, fullscreen = true } = params;
+
+        // Broadcast to GameWorldDO via Mesh
+        return await this.send('live_action', {
+            actionType: 'start_cutscene',
+            payload: {
+                videoUid,
+                duration,
+                fullscreen,
+                timestamp: Date.now()
+            }
+        });
     }
 }
 

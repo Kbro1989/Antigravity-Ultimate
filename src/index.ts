@@ -19,6 +19,9 @@ export { SessionDO as SessionDOSQL } from './services/symphony/SessionDO';
 export { SessionDO } from './services/symphony/SessionDO'; // Legacy export for v3
 export { MetabolismDO as MetabolismDOSQL } from './services/durable_objects/MetabolismDO';
 export { MetabolismDO } from './services/durable_objects/MetabolismDO';
+export { RelicDO as RelicDOSQL } from './services/durable_objects/RelicDO';
+export { RelicDO } from './services/durable_objects/RelicDO';
+export { GameWorldDO } from './services/durable_objects/GameWorldDO';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -38,6 +41,18 @@ app.route('/session', apiApp); // For direct /session/ID proxies that might bypa
 
 // 3. [Distribution] Static Assets & Limbs (The Catch-All)
 app.route('/', assetApp);
+
+// 4. [Real-time] Game World DO (Sovereign World State)
+app.all('/world/:worldId/*', async (c) => {
+    try {
+        const worldId = c.req.param('worldId');
+        const id = c.env.GAME_WORLD_DO.idFromName(worldId);
+        const stub = c.env.GAME_WORLD_DO.get(id);
+        return await stub.fetch(c.req.raw);
+    } catch (e: any) {
+        return c.text(`GameWorld Error: ${e.message}`, 500);
+    }
+});
 
 app.onError((err, c) => {
     console.error("[GLOBAL_ERROR]", err);

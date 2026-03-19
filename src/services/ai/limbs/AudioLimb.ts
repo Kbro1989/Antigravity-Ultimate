@@ -186,7 +186,33 @@ export class AudioLimb extends NeuralLimb {
 
         const root = 'audio/generated'; // Normalized R2 prefix
 
-        // 1. Try Cloud R2 (Primacy)
+        // 1. Sovereign Logic: Query RelicDO for indexed RSC Audio (MIDI/SFX)
+        if (this.env.RELIC_DO) {
+            try {
+                const relicDOId = this.env.RELIC_DO.idFromName("global_relic_matrix");
+                const stub = this.env.RELIC_DO.get(relicDOId);
+                const query = params?.query || '';
+                const res = await stub.fetch(`http://relic-do/search?action=search&category=audio&query=${query}`);
+
+                if (res.ok) {
+                    const { items } = await res.json() as any;
+                    const sounds = items.map((f: any) => ({
+                        id: f.id,
+                        name: f.name || f.id,
+                        format: f.type || 'mid',
+                        size: f.metadata?.size || 0,
+                        url: f.metadata?.path ? `/ai/assets/${f.metadata.path}` : `/ai/assets/audio/${f.id}`,
+                        playable: true,
+                        source: 'sovereign_relic'
+                    }));
+                    return { status: 'success', count: sounds.length, sounds };
+                }
+            } catch (e: any) {
+                console.warn(`[AudioLimb] Sovereign RELIC_DO sweep failed: ${e.message}`);
+            }
+        }
+
+        // 2. Fallback: Cloud R2 (Direct Objects)
         if (this.env?.ASSETS_BUCKET) {
             try {
                 const list = await this.env.ASSETS_BUCKET.list({ prefix: root + '/' });
@@ -267,11 +293,10 @@ export class AudioLimb extends NeuralLimb {
             return {
                 status: 'success',
                 relicId,
-                audioUrl: `rsmv://relic:${relicId}`,
+                audioUrl: relicData.url || `rsmv://relic:${relicId}`,
                 format: relicData.format || 'midi',
-                duration: relicData.duration || 0,
-                data: relicData,
-                source: 'relic_direct'
+                metadata: relicData.metadata || {},
+                source: 'relic_sovereign'
             };
         }
 
@@ -350,6 +375,25 @@ export class AudioLimb extends NeuralLimb {
             mixManifest,
             trackCount: trackIds.length
         };
+    }
+
+    /**
+     * SOVEREIGN SYNCHRONIZATION: Trigger SFX in the live game world.
+     */
+    async trigger_live_audio(params: { relicId: string; volume?: number; loop?: boolean }) {
+        this.enforceCapability(AgentCapability.AUDIO_OPERATIONS);
+        const { relicId, volume = 1.0, loop = false } = params;
+
+        // Broadcast to GameWorldDO via Mesh
+        return await this.send('live_action', {
+            actionType: 'trigger_sfx',
+            payload: {
+                relicId,
+                volume,
+                loop,
+                timestamp: Date.now()
+            }
+        });
     }
 }
 

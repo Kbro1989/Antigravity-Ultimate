@@ -12,6 +12,8 @@ import { WorkspaceSpine } from './WorkspaceSpine';
 import { LimbRegistryClient } from '../../../services/LimbRegistryClient';
 import { useServiceHub } from '../../hooks';
 import { db } from '../InstantProvider';
+import { OrchestratorPanel } from '../orchestrator/OrchestratorPanel';
+import { SettingsPanel } from './SettingsPanel';
 
 // Specialized Workspaces (Lazy Loaded to optimize bundle and break circular dependencies)
 const CodeWorkspace = React.lazy(() => import('../workspaces/CodeWorkspace').then(m => ({ default: m.CodeWorkspace })));
@@ -43,9 +45,10 @@ const ClassicWorkspace = React.lazy(() => import('../workspaces/ClassicWorkspace
 const ArchitectInterface = React.lazy(() => import('../workspaces/ArchitectInterface').then(m => ({ default: m.ArchitectInterface })));
 const InstantWorkspace = React.lazy(() => import('../workspaces/InstantWorkspace').then(m => ({ default: m.InstantWorkspace })));
 
-import { OrchestratorPanel } from '../orchestrator/OrchestratorPanel';
-import { SettingsPanel } from './SettingsPanel';
 import { NeuralTerminal } from './NeuralTerminal';
+import { CodeTracesPanel } from './CodeTracesPanel';
+import { InstantSyncPanel } from './InstantSyncPanel';
+import { RelicMatrixPanel } from './RelicMatrixPanel';
 import { useStateManager } from '../../../services/core/StateManager';
 import { WorkspaceMode } from '../../../types/workspace';
 import '../../styles/hub.css';
@@ -212,7 +215,12 @@ export function POGDashboard() {
         landscape: WorldWorkspace,
         idauditor: ArchitectInterface,
         versioncontrol: CodeWorkspace,
-        instant: InstantWorkspace
+        instant: InstantWorkspace,
+        behavior: GhostWorkspace,
+        proxy: NetworkWorkspace,
+        signature: SecurityWorkspace,
+        vision: CreativeWorkspace,
+        metabolism: SystemWorkspace
     };
 
     const WorkspaceComponent = activeWorkspace ? WorkspaceComponents[activeWorkspace as WorkspaceMode] : null;
@@ -231,6 +239,11 @@ export function POGDashboard() {
                 <div className="hud-bracket br" />
 
                 <BubbleWorldHUD onSelectWorkspace={handleSelectWorkspace} activeWorkspace={activeWorkspace as WorkspaceMode} />
+
+                {/* Precision Telemetry Panels */}
+                <CodeTracesPanel />
+                <InstantSyncPanel />
+                <RelicMatrixPanel />
 
                 {/* Status Bar */}
                 <div className="fixed bottom-12 left-1/2 -translate-x-1/2 w-[600px] z-[100]">

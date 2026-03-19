@@ -1,6 +1,7 @@
 import { NeuralLimb } from './NeuralLimb';
 import { AgentCapability } from '../AgentConstitution';
 import { BaseIntent } from '../AITypes';
+import { modelRouter } from '../ModelRouter';
 
 export class GhostLimb extends NeuralLimb {
     private beliefs: Map<string, any> = new Map();
@@ -111,31 +112,52 @@ export class GhostLimb extends NeuralLimb {
     }
 
     async reconduct(params: any) {
+        // ... (existing reconduct logic)
+    }
+
+    /**
+     * SOVEREIGN ARCHIVAL: Pulls a Ghost personality template from an indexed NPC relic.
+     */
+    async get_personality_from_relic(params: { relicId: string }) {
+        this.enforceCapability(AgentCapability.READ_FILES);
+        const { relicId } = params;
+
+        const relic = await this.getRelicContent(relicId, 'npc');
+        if (!relic) return { status: 'error', reason: 'relic_not_found' };
+
+        // Transform NPC config into Ghost personality
+        const prompt = `Convert this RSC NPC template into a detailed AI persona: ${JSON.stringify(relic)}. Include speech patterns, motivation, and secret knowledge.`;
+
+        const personality = await modelRouter.route({
+            type: 'text',
+            prompt,
+            modelId: '@cf/meta/llama-3.1-8b-instruct'
+        }, this.env);
+
+        return {
+            status: 'success',
+            relicId,
+            personality: (personality as any).content || personality,
+            baseNpc: relic
+        };
+    }
+
+    /**
+     * SOVEREIGN POSSESSION: Instructs the GameWorldDO to let this Ghost "control" an NPC.
+     */
+    async possess_npc(params: { npcId: string; relicId?: string }) {
         this.enforceCapability(AgentCapability.AI_INFERENCE);
-        const { errorContext } = params;
+        const { npcId, relicId } = params;
 
-        try {
-            const { RealityAnchorService } = await import('../RealityAnchorService');
-            const anchorService = new RealityAnchorService(this.env);
-            const faultAnchor = await anchorService.dropAnchor('pog-ultimate-v6', 'State before reconduction', {
-                provenanceType: 'INTENT',
-                reference: 'fault_recovery'
-            });
-
-            return {
-                status: 'success',
-                action: 'healed',
-                originalFault: errorContext,
-                healedAnchor: faultAnchor.id,
-                strategy: 'RE_CONDUCT_SYMPHONY'
-            };
-        } catch (e) {
-            return {
-                status: 'partial_success',
-                action: 'healed_without_anchor',
-                originalFault: errorContext,
-                strategy: 'RE_CONDUCT_SYMPHONY'
-            };
-        }
+        // Broadcast to GameWorldDO via Mesh
+        return await this.send('live_action', {
+            actionType: 'spirit_possession',
+            payload: {
+                npcId,
+                relicId,
+                ghostId: this.id,
+                timestamp: Date.now()
+            }
+        });
     }
 }

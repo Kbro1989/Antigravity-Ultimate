@@ -1,9 +1,10 @@
 import { AgentCapability } from './AgentConstitution';
 import { ExtensionManager } from './ExtensionManager';
 import { RealityAnchorService } from './RealityAnchorService';
-import { BaseIntent } from './AITypes';
+import { BaseIntent, LimbResponse } from './AITypes';
+import { INeuralRegistry } from './trinity/types/pog-adapters';
 
-export class LimbRegistry {
+export class LimbRegistry implements INeuralRegistry {
     private userId: string;
     private limbs: Map<string, any> = new Map();
     private events: Map<string, Array<(data: any) => void>> = new Map();
@@ -136,6 +137,43 @@ export class LimbRegistry {
             payload: params,
             limbId
         });
+    }
+
+    public async executeCapability(limbId: string, intent: BaseIntent): Promise<LimbResponse> {
+        const result = await this.processIntent(intent);
+        return {
+            success: true,
+            output: result,
+            confidence: 1.0 // Default
+        };
+    }
+
+    public getCapabilities(): Map<string, string[]> {
+        const caps = new Map<string, string[]>();
+        for (const [id, limb] of this.limbs.entries()) {
+            caps.set(id, limb.config?.capabilities || []);
+        }
+        return caps;
+    }
+
+    public isHealthy(limbId: string): boolean {
+        return this.limbs.has(limbId);
+    }
+
+    public getMetrics(limbId: string): any {
+        return { status: 'pulsing' };
+    }
+
+    public hasLimb(limbId: string): boolean {
+        return this.limbs.has(limbId);
+    }
+
+    public getAllLimbs(): Map<string, any> {
+        return this.limbs;
+    }
+
+    public async dispose() {
+        this.limbs.clear();
     }
 
     public async processIntent(intent: BaseIntent & { modelId?: string; provider?: string }) {

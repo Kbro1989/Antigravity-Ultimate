@@ -199,6 +199,25 @@ export abstract class NeuralLimb {
     }
 
     /**
+     * AI KNOWLEDGE RESOLUTION: Resolves ambiguous terms into authentic RSC Relic Knowledge.
+     * Accessible by ALL limbs to prevent hallucination of NPC/Item IDs.
+     */
+    protected async resolveKnowledge(query: string, category: string = 'all'): Promise<string> {
+        if (this.limbs && typeof this.limbs.call === 'function') {
+            try {
+                const result = await this.limbs.call('relic', 'query_relic_knowledge', {
+                    query,
+                    category
+                });
+                return result.knowledge || "No specific archeological matches found.";
+            } catch (e) {
+                return "Knowledge base unavailable.";
+            }
+        }
+        return "Limb Registry disconnected.";
+    }
+
+    /**
      * Generates a hash key for caching based on request properties.
      */
     private hashRequest(request: any): string {
@@ -324,7 +343,10 @@ export abstract class NeuralLimb {
             'video': 'mp4',
             'mesh': 'glb',
             'material': 'json',
-            'code': 'ts'
+            'code': 'ts',
+            'archive': 'jag',
+            'landscape': 'mem',
+            'music': 'mid'
         };
         return map[type] || 'bin';
     }
